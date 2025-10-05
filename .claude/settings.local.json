@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(mysql:*)",
+      "Bash(findstr:*)",
+      "Bash(rm:*)",
+      "Bash(timeout:*)",
+      "Bash(grep:*)",
+      "Bash(taskkill:*)",
+      "Bash(awk:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

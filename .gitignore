@@ -1,0 +1,63 @@
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribuciones
+*.egg-info/
+dist/
+build/
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+parking_env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Base de datos local (si aplica)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Configuración local
+local_settings.py
+.env
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Scripts temporales de migración/fix
+fix_*.py
+check_*.py
+update_*.py
+migrate_*.py
+
+# Documentación temporal de cambios
+CAMBIOS_*.md
+TODO_*.md
+NOTAS_*.md
+
+# Archivos SQL temporales de migración
+add_*.sql
+update_*.sql
+migrate_*.sql
+fix_*.sql
+
+# Archivos de backup
+*.bak
+*.backup
+*.old
+*_backup.*
+*_old.*

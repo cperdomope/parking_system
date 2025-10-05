@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Sistema de Gestión de Parqueadero - Aplicación Principal"""
+
+import sys
+import csv
+from datetime import datetime
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QTabWidget, QMessageBox, QDesktopWidget
+)
+
+from src.database.manager import DatabaseManager
+from src.ui.dashboard_tab import DashboardWidget
+from src.ui.funcionarios_tab import FuncionariosTab
+from src.ui.vehiculos_tab import VehiculosTab
+from src.ui.parqueaderos_tab import ParqueaderosTab
+from src.ui.asignaciones_tab import AsignacionesTab
+from src.widgets.styles import AppStyles
+
+
+class MainWindow(QMainWindow):
+    """Ventana principal de la aplicación modular"""
+
+    def __init__(self):
+        super().__init__()
+        self.db = DatabaseManager()
+
+        if not self.db.connection:
+            QMessageBox.critical(self, "Error", "No se pudo conectar a la base de datos")
+            sys.exit(1)
+
+        self.setup_ui()
+        self.setStyleSheet(AppStyles.MAIN_STYLE)
+
+    def setup_ui(self):
+        """Configura la interfaz de usuario principal"""
+        self.setWindowTitle("Sistema de Gestión de Parqueadero - Ssalud Plaza Claro")
+
+        # Configurar tamaño y posición de ventana
+        self.resize(1400, 800)
+        self.setMinimumSize(1200, 700)
+
+        # Centrar ventana en pantalla
+        self.center_window()
+
+        # Widget central con pestañas
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
+
+        # Crear las pestañas principales usando los nuevos módulos
+        self.tab_dashboard = DashboardWidget(self.db)
+        self.tab_funcionarios = FuncionariosTab(self.db)
+        self.tab_vehiculos = VehiculosTab(self.db)
+        self.tab_parqueaderos = ParqueaderosTab(self.db)
+        self.tab_asignaciones = AsignacionesTab(self.db)
+
+        # Agregar pestañas
+        self.tabs.addTab(self.tab_dashboard, "🏠 Dashboard")
+        self.tabs.addTab(self.tab_funcionarios, "👥 Funcionarios")
+        self.tabs.addTab(self.tab_vehiculos, "🚗 Vehículos")
+        self.tabs.addTab(self.tab_parqueaderos, "🅿️ Parqueaderos")
+        self.tabs.addTab(self.tab_asignaciones, "📋 Asignaciones")
+
+        # Conectar señales entre pestañas
+        self.conectar_senales()
+
+        # Barra de estado
+        self.statusBar().showMessage("Sistema modular iniciado correctamente")
+
+        # Configurar menú
+        self.crear_menu()
+
+    def conectar_senales(self):
+        """Conecta las señales entre las diferentes pestañas para sincronización completa"""
+
+        # ============================================
+        # CONEXIONES DESDE FUNCIONARIOS
+        # ============================================
+        # Cuando se cree un funcionario, actualizar:
+        self.tab_funcionarios.funcionario_creado.connect(self.tab_vehiculos.actualizar_combo_funcionarios)  # Combo en vehículos
+        self.tab_funcionarios.funcionario_creado.connect(self.tab_dashboard.actualizar_dashboard)  # Dashboard
+
+        # Cuando se ELIMINE un funcionario en cascada, actualizar TODAS las pestañas:
+        self.tab_funcionarios.funcionario_eliminado.connect(self.tab_vehiculos.actualizar_vehiculos)  # Eliminar vehículos de la tabla
+        self.tab_funcionarios.funcionario_eliminado.connect(self.tab_vehiculos.actualizar_combo_funcionarios)  # Actualizar combo
+        self.tab_funcionarios.funcionario_eliminado.connect(self.tab_asignaciones.actualizar_asignaciones)  # Eliminar asignaciones de la tabla
+        self.tab_funcionarios.funcionario_eliminado.connect(self.tab_parqueaderos.actualizar_parqueaderos)  # Actualizar estados de parqueaderos
+        self.tab_funcionarios.funcionario_eliminado.connect(self.tab_dashboard.actualizar_dashboard)  # Actualizar estadísticas
+
+        # ============================================
+        # CONEXIONES DESDE VEHÍCULOS
+        # ============================================
+        # Cuando se cree un vehículo, actualizar:
+        self.tab_vehiculos.vehiculo_creado.connect(self.tab_asignaciones.actualizar_vehiculos_sin_asignar)  # Lista sin asignar
+        self.tab_vehiculos.vehiculo_creado.connect(self.tab_dashboard.actualizar_dashboard)  # Dashboard
+        self.tab_vehiculos.vehiculo_creado.connect(self.tab_funcionarios.actualizar_funcionarios)  # Tabla funcionarios (contador vehículos)
+
+        # ============================================
+        # CONEXIONES DESDE ASIGNACIONES
+        # ============================================
+        # Cuando se actualicen asignaciones, actualizar:
+        self.tab_asignaciones.asignacion_actualizada.connect(self.tab_parqueaderos.actualizar_parqueaderos)  # Vista parqueaderos
+        self.tab_asignaciones.asignacion_actualizada.connect(self.tab_dashboard.actualizar_dashboard)  # Dashboard
+        self.tab_asignaciones.asignacion_actualizada.connect(self.tab_vehiculos.actualizar_vehiculos)  # Tabla vehículos
+        self.tab_asignaciones.asignacion_actualizada.connect(self.tab_funcionarios.actualizar_funcionarios)  # Tabla funcionarios
+
+        # ============================================
+        # CONEXIONES DESDE PARQUEADEROS
+        # ============================================
+        # Cuando se actualicen parqueaderos, actualizar:
+        self.tab_parqueaderos.parqueaderos_actualizados.connect(self.tab_dashboard.actualizar_dashboard)  # Dashboard
+
+        # ============================================
+        # CONEXIONES DESDE DASHBOARD
+        # ============================================
+        # La funcionalidad de búsqueda fue eliminada del dashboard.
+
+    def crear_menu(self):
+        """Crea el menú de la aplicación"""
+        menubar = self.menuBar()
+
+        # Menú Archivo
+        menu_archivo = menubar.addMenu("&Archivo")
+
+        accion_exportar = menu_archivo.addAction("Exportar datos")
+        accion_exportar.triggered.connect(self.exportar_datos)
+
+        menu_archivo.addSeparator()
+
+        accion_salir = menu_archivo.addAction("Salir")
+        accion_salir.triggered.connect(self.close)
+
+        # Menú Ayuda
+        menu_ayuda = menubar.addMenu("&Ayuda")
+
+        accion_acerca = menu_ayuda.addAction("Acerca de")
+        accion_acerca.triggered.connect(self.mostrar_acerca_de)
+
+    def exportar_datos(self):
+        """Exporta los datos a un archivo CSV"""
+
+        filename = f"reporte_parqueadero_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        try:
+            query = """
+                SELECT
+                    f.cedula,
+                    f.nombre,
+                    f.apellidos,
+                    f.direccion_grupo,
+                    f.cargo,
+                    f.celular,
+                    f.no_tarjeta_proximidad,
+                    v.tipo_vehiculo,
+                    v.placa,
+                    v.tipo_circulacion,
+                    p.numero_parqueadero
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+                WHERE f.activo = TRUE
+                ORDER BY f.apellidos, f.nombre
+            """
+
+            datos = self.db.fetch_all(query)
+
+            with open(filename, 'w', newline='', encoding='utf-8') as file:
+                if datos:
+                    writer = csv.DictWriter(file, fieldnames=datos[0].keys())
+                    writer.writeheader()
+                    writer.writerows(datos)
+
+            QMessageBox.information(self, "Éxito", f"Datos exportados a {filename}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al exportar: {str(e)}")
+
+    def mostrar_acerca_de(self):
+        """Muestra el diálogo 'Acerca de'"""
+        QMessageBox.about(
+            self,
+            "Acerca de",
+            "Sistema de Gestión de Parqueadero - Versión Modular\n"
+            "Versión 1.0\n\n"
+            "Desarrollado por Carlos Ivan Perdomo con una arquitectura modular para facilitar"
+            " el mantenimiento y la depuración.\n\n"
+            "© 2025 - Sistema de Gestión"
+        )
+
+    def center_window(self):
+        """Centra la ventana en la pantalla"""
+        screen = QDesktopWidget().screenGeometry()
+
+        # Obtener geometría de la ventana
+        window = self.geometry()
+
+        # Calcular posición centrada
+        x = (screen.width() - window.width()) // 2
+        y = (screen.height() - window.height()) // 2
+
+        # Mover ventana al centro
+        self.move(x, y)
+
+    def closeEvent(self, event):
+        """Evento al cerrar la aplicación"""
+        reply = QMessageBox.question(
+            self,
+            "Confirmar salida",
+            "¿Está seguro de que desea salir?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.db.disconnect()
+            event.accept()
+        else:
+            event.ignore()
+
+
+def main():
+    """Función principal para iniciar la aplicación"""
+    app = QApplication(sys.argv)
+
+    # Configurar el estilo de la aplicación
+    app.setStyle('Fusion')
+
+    # Crear y mostrar la ventana principal
+    window = MainWindow()
+    window.show()
+
+    # Ejecutar el loop de eventos
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
