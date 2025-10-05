@@ -110,7 +110,7 @@ class VehiculosTab(QWidget):
         self.tabla_vehiculos.setColumnWidth(6, 240)  # Acciones
 
         # Configurar altura de filas fija
-        self.tabla_vehiculos.verticalHeader().setDefaultSectionSize(60)
+        self.tabla_vehiculos.verticalHeader().setDefaultSectionSize(58)
 
         # Estilo de encabezados
         self.tabla_vehiculos.horizontalHeader().setStyleSheet("""
@@ -293,7 +293,7 @@ class VehiculosTab(QWidget):
 
             # Botón Editar
             btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(35, 35)
+            btn_editar.setFixedSize(40, 40)
             btn_editar.setToolTip("Editar vehículo")
             btn_editar.setStyleSheet("""
                 QPushButton {
@@ -315,7 +315,7 @@ class VehiculosTab(QWidget):
 
             # Botón Ver
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(35, 35)
+            btn_ver.setFixedSize(40, 40)
             btn_ver.setToolTip("Ver detalles del vehículo")
             btn_ver.setStyleSheet("""
                 QPushButton {
@@ -337,7 +337,7 @@ class VehiculosTab(QWidget):
 
             # Botón Eliminar
             btn_eliminar = QPushButton("🗑️")
-            btn_eliminar.setFixedSize(35, 35)
+            btn_eliminar.setFixedSize(40, 40)
             btn_eliminar.setToolTip("Eliminar vehículo")
             btn_eliminar.setStyleSheet("""
                 QPushButton {

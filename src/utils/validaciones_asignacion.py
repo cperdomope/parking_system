@@ -18,12 +18,14 @@ class ValidadorAsignacion:
         Valida si un funcionario puede compartir parqueadero
 
         Args:
-            funcionario_data: Datos del funcionario (debe incluir 'permite_compartir', 'nombre', 'apellidos', 'cargo')
+            funcionario_data: Datos del funcionario (debe incluir 'permite_compartir', 'pico_placa_solidario',
+                             'discapacidad', 'nombre', 'apellidos', 'cargo')
             asignaciones_existentes: Número de asignaciones activas en el parqueadero
 
         Returns:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
+        # Verificar si el funcionario NO permite compartir (Parqueadero Exclusivo)
         if not funcionario_data.get('permite_compartir', True) and asignaciones_existentes > 0:
             return False, (
                 f"🚫 Asignación bloqueada por política de parqueadero exclusivo\n\n"
@@ -32,6 +34,29 @@ class ValidadorAsignacion:
                 f"⚠️ Este funcionario NO permite compartir parqueadero\n\n"
                 f"💡 Seleccione un parqueadero completamente disponible"
             )
+
+        # Verificar si tiene Pico y Placa Solidario activo
+        if funcionario_data.get('pico_placa_solidario', False) and asignaciones_existentes > 0:
+            return False, (
+                f"🚫 Asignación bloqueada por Pico y Placa Solidario\n\n"
+                f"👤 {funcionario_data.get('nombre', 'N/A')} {funcionario_data.get('apellidos', 'N/A')}\n"
+                f"💼 Cargo: {funcionario_data.get('cargo', 'N/A')}\n"
+                f"🔄 Este funcionario tiene Pico y Placa Solidario activo\n"
+                f"⚠️ El parqueadero será exclusivo y se marcará como COMPLETO\n\n"
+                f"💡 Seleccione un parqueadero completamente disponible"
+            )
+
+        # Verificar si tiene Discapacidad
+        if funcionario_data.get('discapacidad', False) and asignaciones_existentes > 0:
+            return False, (
+                f"🚫 Asignación bloqueada por condición de discapacidad\n\n"
+                f"👤 {funcionario_data.get('nombre', 'N/A')} {funcionario_data.get('apellidos', 'N/A')}\n"
+                f"💼 Cargo: {funcionario_data.get('cargo', 'N/A')}\n"
+                f"♿ Este funcionario tiene condición de discapacidad\n"
+                f"⚠️ El parqueadero será exclusivo y se marcará como COMPLETO\n\n"
+                f"💡 Seleccione un parqueadero completamente disponible"
+            )
+
         return True, ""
 
     @staticmethod
@@ -45,14 +70,39 @@ class ValidadorAsignacion:
         Returns:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
-        if ocupante_data and not ocupante_data.get('permite_compartir', True):
-            return False, (
-                f"🚫 Parqueadero ocupado por funcionario con política exclusiva\n\n"
-                f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
-                f"💼 Cargo: {ocupante_data.get('cargo', 'N/A')}\n"
-                f"⚠️ Este funcionario NO permite compartir su parqueadero\n\n"
-                f"💡 Seleccione otro parqueadero disponible"
-            )
+        if ocupante_data:
+            # Verificar si NO permite compartir (Parqueadero Exclusivo)
+            if not ocupante_data.get('permite_compartir', True):
+                return False, (
+                    f"🚫 Parqueadero ocupado por funcionario con política exclusiva\n\n"
+                    f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
+                    f"💼 Cargo: {ocupante_data.get('cargo', 'N/A')}\n"
+                    f"⚠️ Este funcionario NO permite compartir su parqueadero\n\n"
+                    f"💡 Seleccione otro parqueadero disponible"
+                )
+
+            # Verificar si tiene Pico y Placa Solidario
+            if ocupante_data.get('pico_placa_solidario', False):
+                return False, (
+                    f"🚫 Parqueadero ocupado por funcionario con Pico y Placa Solidario\n\n"
+                    f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
+                    f"💼 Cargo: {ocupante_data.get('cargo', 'N/A')}\n"
+                    f"🔄 Este funcionario tiene Pico y Placa Solidario activo\n"
+                    f"⚠️ El parqueadero es exclusivo\n\n"
+                    f"💡 Seleccione otro parqueadero disponible"
+                )
+
+            # Verificar si tiene Discapacidad
+            if ocupante_data.get('discapacidad', False):
+                return False, (
+                    f"🚫 Parqueadero ocupado por funcionario con discapacidad\n\n"
+                    f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
+                    f"💼 Cargo: {ocupante_data.get('cargo', 'N/A')}\n"
+                    f"♿ Este funcionario tiene condición de discapacidad\n"
+                    f"⚠️ El parqueadero es exclusivo\n\n"
+                    f"💡 Seleccione otro parqueadero disponible"
+                )
+
         return True, ""
 
     @staticmethod

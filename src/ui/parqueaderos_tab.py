@@ -35,11 +35,11 @@ class ParqueaderosTab(QWidget):
         layout = QVBoxLayout()
 
         # Header con controles
-        header_group = QGroupBox(" Vista de Parqueaderos - Solo Carros")
+        header_group = QGroupBox("🅿️ Vista de Parqueaderos")
         header_layout = QGridLayout()
 
         # Estadísticas rápidas
-        self.lbl_total = QLabel("Total: 250")
+        self.lbl_total = QLabel("Total: -")
         self.lbl_disponibles = QLabel("Disponibles: -")
         self.lbl_parciales = QLabel("Parciales: -")
         self.lbl_completos = QLabel("Completos: -")
@@ -56,41 +56,50 @@ class ParqueaderosTab(QWidget):
         header_layout.addWidget(self.lbl_parciales, 0, 2)
         header_layout.addWidget(self.lbl_completos, 0, 3)
 
-        # Controles de filtrado mejorados
-        header_layout.addWidget(QLabel("Sótano:"), 1, 0)
+        # Controles de filtrado mejorados - FILA 1
+        header_layout.addWidget(QLabel("Tipo de Vehículo:"), 1, 0)
+
+        # NUEVO: Filtro por tipo de vehículo
+        self.combo_filtro_tipo = QComboBox()
+        self.combo_filtro_tipo.addItem("🅿️ Todos", None)
+        self.combo_filtro_tipo.addItem("🚗 Carros", "Carro")
+        self.combo_filtro_tipo.addItem("🏍️ Motos", "Moto")
+        self.combo_filtro_tipo.addItem("🚲 Bicicletas", "Bicicleta")
+        self.combo_filtro_tipo.currentTextChanged.connect(self.aplicar_filtros)
+        header_layout.addWidget(self.combo_filtro_tipo, 1, 1)
+
+        header_layout.addWidget(QLabel("Sótano:"), 1, 2)
 
         # Filtro por sótano
         self.combo_filtro_sotano = QComboBox()
         self.combo_filtro_sotano.addItem("Todos los sótanos", None)
         self.combo_filtro_sotano.currentTextChanged.connect(self.aplicar_filtros)
-        header_layout.addWidget(self.combo_filtro_sotano, 1, 1)
+        header_layout.addWidget(self.combo_filtro_sotano, 1, 3)
 
-        header_layout.addWidget(QLabel("Estado:"), 1, 2)
+        # FILA 2
+        header_layout.addWidget(QLabel("Estado:"), 2, 0)
 
-        # Filtro por estado (manteniendo compatibilidad)
+        # Filtro por estado
         self.combo_filtro_estado = QComboBox()
         self.combo_filtro_estado.addItems(["Todos", "Disponible", "Parcialmente Asignado", "Completo"])
         self.combo_filtro_estado.currentTextChanged.connect(self.aplicar_filtros)
         self.combo_filtro_estado.setToolTip(
-            "Estados basados solo en carros:\n"
-            "• Disponible: 0 carros\n"
-            "• Parcialmente Asignado: 1 carro\n"
-            "• Completo: 2 carros\n\n"
-            "Nota: Si un funcionario tiene parqueadero\n"
-            "exclusivo (permite_compartir=NO), se muestra\n"
-            "como 'Completo' aunque tenga solo 1 carro.\n\n"
-            "Motos y bicicletas no afectan el estado"
+            "Estados de ocupación:\n"
+            "• Carros: Disponible (0), Parcial (1), Completo (2)\n"
+            "• Motos/Bicicletas: Disponible (0), Completo (1)\n\n"
+            "Nota: Parqueaderos exclusivos se muestran\n"
+            "como 'Completo' con 1 solo vehículo asignado."
         )
-        header_layout.addWidget(self.combo_filtro_estado, 1, 3)
+        header_layout.addWidget(self.combo_filtro_estado, 2, 1)
 
-        self.btn_refrescar = QPushButton(" Refrescar")
+        self.btn_refrescar = QPushButton("🔄 Refrescar")
         self.btn_refrescar.clicked.connect(self.cargar_parqueaderos)
-        header_layout.addWidget(self.btn_refrescar, 2, 0)
+        header_layout.addWidget(self.btn_refrescar, 2, 2)
 
         # Botón de ayuda
         btn_ayuda = QPushButton("ℹ️ Ayuda")
         btn_ayuda.clicked.connect(self.mostrar_ayuda)
-        header_layout.addWidget(btn_ayuda, 2, 1)
+        header_layout.addWidget(btn_ayuda, 2, 3)
 
         header_group.setLayout(header_layout)
         layout.addWidget(header_group)
@@ -115,13 +124,13 @@ class ParqueaderosTab(QWidget):
         self.setLayout(layout)
 
     def cargar_parqueaderos(self):
-        """Carga y muestra todos los parqueaderos de carros organizados en una grilla optimizada
+        """Carga y muestra parqueaderos según el tipo de vehículo seleccionado"""
+        # Obtener el tipo de vehículo seleccionado del filtro
+        tipo_vehiculo = self.combo_filtro_tipo.currentData()
+        # Si es None, significa "Todos", no aplicar filtro de tipo
 
-        IMPORTANTE: Esta pestaña solo muestra espacios para carros.
-        Los estados reflejan únicamente la ocupación por carros.
-        """
-        # Solo cargar parqueaderos para carros
-        parqueaderos = self.parqueadero_model.obtener_todos(tipo_vehiculo="Carro")
+        # Cargar parqueaderos del tipo seleccionado (o todos si es None)
+        parqueaderos = self.parqueadero_model.obtener_todos(tipo_vehiculo=tipo_vehiculo)
 
         # Limpiar grilla actual de forma segura
         for i in reversed(range(self.parking_grid.count())):
@@ -152,7 +161,8 @@ class ParqueaderosTab(QWidget):
                 parqueadero_id=park['id'],
                 numero=park['numero_parqueadero'],
                 estado=estado_mostrar,
-                asignados=park.get('asignados', '') or ''
+                asignados=park.get('asignados', '') or '',
+                tipo_espacio=park.get('tipo_espacio', 'Carro')
             )
 
             # Conectar señal de clic
@@ -191,7 +201,17 @@ class ParqueaderosTab(QWidget):
         parciales = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Parcialmente_Asignado'])
         completos = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Completo'])
 
-        self.lbl_total.setText(f"Total: {total}")
+        # Obtener tipo de vehículo seleccionado para el prefijo
+        tipo_seleccionado = self.combo_filtro_tipo.currentData()
+        prefix = ""
+        if tipo_seleccionado:
+            iconos_tipo = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}
+            icono = iconos_tipo.get(tipo_seleccionado, "")
+            prefix = f"{icono} "
+        else:
+            prefix = "🅿️ Todos - "
+
+        self.lbl_total.setText(f"{prefix}Total: {total}")
         self.lbl_disponibles.setText(f"Disponibles: {disponibles}")
         self.lbl_parciales.setText(f"Parciales: {parciales}")
         self.lbl_completos.setText(f"Completos: {completos}")
@@ -231,31 +251,30 @@ class ParqueaderosTab(QWidget):
         """Muestra información de ayuda sobre la vista"""
         QMessageBox.information(
             self,
-            " Ayuda - Vista de Parqueaderos (Solo Carros)",
-            "<h3>Vista de espacios para carros:</h3>"
+            "ℹ️ Ayuda - Vista de Parqueaderos",
+            "<h3>Vista de espacios de parqueadero:</h3>"
             "<ul>"
             "<li><b>Clic en cualquier parqueadero</b> para ver información detallada</li>"
             "<li><b>Filtros disponibles</b>:</li>"
             "  <ul>"
+            "    <li><b>Tipo de Vehículo:</b> Todos, Carros 🚗, Motos 🏍️, Bicicletas 🚲</li>"
             "    <li><b>Sótano:</b> Filtrar por Sótano-1, Sótano-2 o Sótano-3</li>"
             "    <li><b>Estado:</b> Disponible, Parcialmente Asignado o Completo</li>"
             "  </ul>"
             "<li><b>Colores de estado</b>:</li>"
             "  <ul>"
-            "    <li>🟢 Verde: Disponible (0 carros)</li>"
-            "    <li>🟡 Naranja: Parcialmente Asignado (1 carro)</li>"
-            "    <li> Rojo: Completo (2 carros)</li>"
+            "    <li>🟢 Verde: Disponible (sin vehículos)</li>"
+            "    <li>🟡 Naranja: Parcialmente Asignado (1 carro, solo para carros)</li>"
+            "    <li>🔴 Rojo: Completo (lleno según tipo de vehículo)</li>"
             "  </ul>"
-            "<li><b>Regla de Parqueaderos Exclusivos 🚫:</b></li>"
+            "<li><b>Reglas especiales</b>:</li>"
             "  <ul>"
-            "    <li>Si un funcionario tiene <b>permite_compartir = NO</b>,</li>"
-            "    <li>el parqueadero se muestra como <b>Completo</b></li>"
-            "    <li>aunque solo tenga 1 vehículo asignado.</li>"
-            "    <li>Esto previene asignaciones adicionales.</li>"
+            "    <li><b>Carros:</b> Pueden compartir espacio (máx. 2) según pico y placa</li>"
+            "    <li><b>Motos/Bicicletas:</b> 1 vehículo = Completo (no comparten)</li>"
+            "    <li><b>Parqueaderos Exclusivos:</b> Se muestran como Completo con 1 vehículo</li>"
             "  </ul>"
             "</ul>"
-            "<p><b>Importante:</b> Esta pestaña muestra únicamente los 250 espacios para carros.<br>"
-            "Los espacios para motos y bicicletas se gestionan en otras secciones.</p>"
+            "<p><b>Íconos:</b> Cada tarjeta muestra el ícono del tipo de espacio 🚗🏍️🚲</p>"
         )
 
     def resizeEvent(self, event):
@@ -319,8 +338,7 @@ class ParqueaderosTab(QWidget):
         try:
             # Obtener valores de filtros
             sotano_seleccionado = self.combo_filtro_sotano.currentData()
-            # Siempre filtrar solo por carros
-            tipo_seleccionado = "Carro"
+            tipo_seleccionado = self.combo_filtro_tipo.currentData()  # Puede ser None para "Todos"
 
             # Mapear estado seleccionado
             estado_texto = self.combo_filtro_estado.currentText()
@@ -374,7 +392,8 @@ class ParqueaderosTab(QWidget):
                     parqueadero_id=park['id'],
                     numero=park['numero_parqueadero'],
                     estado=estado_mostrar,
-                    asignados=park.get('asignados', '') or ''
+                    asignados=park.get('asignados', '') or '',
+                    tipo_espacio=park.get('tipo_espacio', 'Carro')
                 )
 
                 # Conectar señal de clic
@@ -397,34 +416,33 @@ class ParqueaderosTab(QWidget):
     def actualizar_estadisticas_con_filtros(self, parqueaderos, sotano=None):
         """Actualiza las estadísticas basado en los parqueaderos filtrados"""
         try:
-            if sotano:
-                # Para estadísticas por sótano, calcular manualmente con estado_display
-                total = len(parqueaderos)
-                disponibles = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Disponible'])
-                parciales = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Parcialmente_Asignado'])
-                completos = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Completo'])
+            # Obtener tipo de vehículo seleccionado
+            tipo_seleccionado = self.combo_filtro_tipo.currentData()
 
-                stats = {
-                    'total_parqueaderos': total,
-                    'disponibles': disponibles,
-                    'parcialmente_asignados': parciales,
-                    'completos': completos
-                }
-                prefix = f"{sotano} - "
+            # Calcular estadísticas manualmente con estado_display
+            total = len(parqueaderos)
+            disponibles = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Disponible'])
+            parciales = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Parcialmente_Asignado'])
+            completos = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Completo'])
+
+            stats = {
+                'total_parqueaderos': total,
+                'disponibles': disponibles,
+                'parcialmente_asignados': parciales,
+                'completos': completos
+            }
+
+            # Construir prefijo contextual
+            prefix = ""
+            if tipo_seleccionado:
+                iconos_tipo = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}
+                icono = iconos_tipo.get(tipo_seleccionado, "")
+                prefix = f"{icono} "
             else:
-                # Estadísticas de los parqueaderos mostrados actualmente
-                total = len(parqueaderos)
-                disponibles = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Disponible'])
-                parciales = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Parcialmente_Asignado'])
-                completos = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Completo'])
+                prefix = "🅿️ Todos - "
 
-                stats = {
-                    'total_parqueaderos': total,
-                    'disponibles': disponibles,
-                    'parcialmente_asignados': parciales,
-                    'completos': completos
-                }
-                prefix = "Filtrados - "
+            if sotano:
+                prefix += f"{sotano} - "
 
             self.lbl_total.setText(f"{prefix}Total: {stats['total_parqueaderos']}")
             self.lbl_disponibles.setText(f"Disponibles: {stats['disponibles']}")

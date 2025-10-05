@@ -14,12 +14,13 @@ class ParkingSpaceWidget(QFrame):
     # Señal emitida cuando se hace clic en el parqueadero
     clicked = pyqtSignal(int, int)  # parqueadero_id, numero_parqueadero
 
-    def __init__(self, parqueadero_id: int, numero: int, estado: str, asignados: str = ""):
+    def __init__(self, parqueadero_id: int, numero: int, estado: str, asignados: str = "", tipo_espacio: str = "Carro"):
         super().__init__()
         self.parqueadero_id = parqueadero_id
         self.numero = numero
         self.estado = estado
         self.asignados = asignados
+        self.tipo_espacio = tipo_espacio
         self.setup_ui()
 
     def setup_ui(self):
@@ -32,11 +33,15 @@ class ParkingSpaceWidget(QFrame):
         layout = QVBoxLayout()
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # Número del parqueadero (clickeable)
-        self.lbl_numero = QLabel(f"P-{self.numero:03d}")
+        # Ícono según tipo de espacio
+        iconos = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲", "Mixto": "🅿️"}
+        icono = iconos.get(self.tipo_espacio, "🅿️")
+
+        # Número del parqueadero con ícono (clickeable)
+        self.lbl_numero = QLabel(f"{icono} P-{self.numero:03d}")
         self.lbl_numero.setAlignment(Qt.AlignCenter)
         self.lbl_numero.setStyleSheet(
-            "font-size: 16px; font-weight: bold; "
+            "font-size: 14px; font-weight: bold; "
             "color: #1976D2; "
             "padding: 5px; border-radius: 3px;"
         )

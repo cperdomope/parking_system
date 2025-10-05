@@ -53,10 +53,12 @@ class VehiculoModel:
         Returns:
             Tuple[bool, str]: (éxito, mensaje)
         """
-        # Validación 1: Placa única en el sistema
-        es_unica, mensaje_placa = self.validar_placa_unica(placa)
-        if not es_unica:
-            return False, mensaje_placa
+        # Validación 1: Placa única en el sistema (solo si se proporciona)
+        # Para Bicicletas, la placa es opcional
+        if placa and placa.strip():
+            es_unica, mensaje_placa = self.validar_placa_unica(placa)
+            if not es_unica:
+                return False, mensaje_placa
 
         # Obtener vehículos actuales del funcionario
         vehiculos_actuales = self.obtener_por_funcionario(funcionario_id)
@@ -70,16 +72,25 @@ class VehiculoModel:
             return False, mensaje_validacion
 
         # Si las validaciones pasan, crear el vehículo
+        # Para Bicicletas sin placa, guardar NULL en lugar de cadena vacía
+        placa_final = placa.upper() if placa and placa.strip() else None
+
         query = """
             INSERT INTO vehiculos (funcionario_id, tipo_vehiculo, placa)
             VALUES (%s, %s, %s)
         """
-        exito, error = self.db.execute_query(query, (funcionario_id, tipo_vehiculo, placa.upper()))
+        exito, error = self.db.execute_query(query, (funcionario_id, tipo_vehiculo, placa_final))
 
         if exito:
+            # Mensaje de éxito personalizado según si tiene placa o no
+            if placa_final:
+                mensaje_placa = f"🏷️ Placa: {placa_final}\n"
+            else:
+                mensaje_placa = f"🏷️ Placa: Sin placa (Bicicleta)\n"
+
             return True, f"✅ Vehículo registrado exitosamente\n\n" \
                         f"🚗 Tipo: {tipo_vehiculo}\n" \
-                        f"🏷️ Placa: {placa.upper()}\n" \
+                        f"{mensaje_placa}" \
                         f"👤 Funcionario ID: {funcionario_id}"
         else:
             # Manejo de errores específicos de BD
@@ -201,10 +212,11 @@ class VehiculoModel:
             if not vehiculo_actual:
                 return False, "Vehículo no encontrado"
 
-            # Validación 1: Placa única (excluyendo el vehículo actual)
-            es_unica, mensaje_placa = self.validar_placa_unica(placa, vehiculo_id)
-            if not es_unica:
-                return False, mensaje_placa
+            # Validación 1: Placa única (solo si se proporciona)
+            if placa and placa.strip():
+                es_unica, mensaje_placa = self.validar_placa_unica(placa, vehiculo_id)
+                if not es_unica:
+                    return False, mensaje_placa
 
             # Obtener otros vehículos del funcionario (excluyendo el actual)
             vehiculos_funcionario = self.obtener_por_funcionario(funcionario_id)
@@ -219,17 +231,25 @@ class VehiculoModel:
                 return False, mensaje_validacion
 
             # Actualizar el vehículo
+            placa_final = placa.upper() if placa and placa.strip() else None
+
             query = """
                 UPDATE vehiculos
                 SET funcionario_id = %s, tipo_vehiculo = %s, placa = %s
                 WHERE id = %s AND activo = TRUE
             """
-            exito, error = self.db.execute_query(query, (funcionario_id, tipo_vehiculo, placa.upper(), vehiculo_id))
+            exito, error = self.db.execute_query(query, (funcionario_id, tipo_vehiculo, placa_final, vehiculo_id))
 
             if exito:
+                # Mensaje personalizado según si tiene placa o no
+                if placa_final:
+                    mensaje_placa = f"🏷️ Placa: {placa_final}\n"
+                else:
+                    mensaje_placa = f"🏷️ Placa: Sin placa (Bicicleta)\n"
+
                 return True, f"✅ Vehículo actualizado exitosamente\n\n" \
                             f"🚗 Tipo: {tipo_vehiculo}\n" \
-                            f"🏷️ Placa: {placa.upper()}\n" \
+                            f"{mensaje_placa}" \
                             f"👤 Funcionario ID: {funcionario_id}"
             else:
                 return False, f"🚫 Error al actualizar el vehículo: {error}"

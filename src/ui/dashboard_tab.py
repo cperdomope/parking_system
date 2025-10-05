@@ -54,7 +54,7 @@ class DashboardWidget(QWidget):
         kpi_grid_layout = QGridLayout()
         kpi_grid_layout.setSpacing(12)
 
-        self.total_card = self._crear_kpi_card("Total Parqueaderos Carros ", "0", "🅿️", "#6366F1")
+        self.total_card = self._crear_kpi_card("Total Parqueaderos", "0", "🅿️", "#6366F1")
         self.ocupacion_card = self._crear_kpi_card("Ocupación Total", "0%", "📊", "#3B82F6")
         self.disponibles_card = self._crear_kpi_card("Espacios Disponibles", "0", "✅", "#10B981")
         self.vehiculos_card = self._crear_kpi_card("Vehículos Estacionados", "0", "🚗", "#F59E0B")
@@ -65,6 +65,20 @@ class DashboardWidget(QWidget):
         kpi_grid_layout.addWidget(self.vehiculos_card, 0, 3)
 
         main_layout.addLayout(kpi_grid_layout)
+
+        # Grid para tarjetas de vehículos específicos (Carros, Motos, Bicicletas)
+        vehiculos_grid = QGridLayout()
+        vehiculos_grid.setSpacing(12)
+
+        self.carros_card = self._crear_kpi_card("Parqueaderos Carros", "0/0", "🚗", "#3B82F6")
+        self.motos_card = self._crear_kpi_card("Parqueaderos Motos", "0/0", "🏍️", "#8B5CF6")
+        self.bicicletas_card = self._crear_kpi_card("Parqueaderos Bicicletas", "0/0", "🚲", "#10B981")
+
+        vehiculos_grid.addWidget(self.carros_card, 0, 0)
+        vehiculos_grid.addWidget(self.motos_card, 0, 1)
+        vehiculos_grid.addWidget(self.bicicletas_card, 0, 2)
+
+        main_layout.addLayout(vehiculos_grid)
 
         # Layout de dos columnas para detalles
         columns_layout = QHBoxLayout()
@@ -92,30 +106,31 @@ class DashboardWidget(QWidget):
         card.setStyleSheet(f"""
             QFrame {{
                 background-color: #EFEFEF;
-                border-radius: 12px;
+                border-radius: 8px;
                 border: 1px solid #E5E7EB;
-                min-height: 80px;
+                min-height: 35px;
+                max-height: 90px;
             }}
             QFrame:hover {{
                 border: 1px solid {color};
             }}
         """)
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(15, 15, 15, 15)
-        card_layout.setSpacing(8)
+        card_layout.setContentsMargins(10, 8, 10, 8)
+        card_layout.setSpacing(4)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 14px; color: #6B7280; font-weight: 500;")
+        title_label.setStyleSheet("font-size: 11px; color: #6B7280; font-weight: 500;")
         title_label.setWordWrap(True)
         title_label.setAlignment(Qt.AlignCenter)
 
         value_layout = QHBoxLayout()
         value_label = QLabel(value)
-        value_label.setStyleSheet(f"font-size: 32px; font-weight: bold; color: {color};")
+        value_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {color};")
         value_label.setAlignment(Qt.AlignCenter)
 
         icon_label = QLabel(icon)
-        icon_label.setStyleSheet(f"font-size: 28px; color: {color};")
+        icon_label.setStyleSheet(f"font-size: 18px; color: {color};")
         icon_label.setAlignment(Qt.AlignCenter)
 
         value_layout.addStretch()
@@ -140,15 +155,15 @@ class DashboardWidget(QWidget):
             }
         """)
         section_layout = QVBoxLayout(section_frame)
-        section_layout.setContentsMargins(12, 8, 12, 8)
-        section_layout.setSpacing(8)
+        section_layout.setContentsMargins(10, 6, 10, 6)
+        section_layout.setSpacing(6)
 
         title_label = QLabel(title)
         title_label.setStyleSheet("""
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             color: #374151;
-            padding-bottom: 5px;
+            padding-bottom: 3px;
         """)
         title_label.setAlignment(Qt.AlignCenter)
 
@@ -161,34 +176,44 @@ class DashboardWidget(QWidget):
         return section_frame, content_frame
 
     def _crear_detalle_card(self, title, value, total, color):
-        """Crea una tarjeta de detalle para sótanos o tipos de vehículo."""
+        """Crea una tarjeta de detalle profesional para sótanos o tipos de vehículo."""
         card = QFrame()
         card.setStyleSheet("""
             QFrame {
-                background-color: #F8FAFC;
+                background-color: #FFFFFF;
                 border-radius: 10px;
                 border: 1px solid #E5E7EB;
-                min-height: 60px;
+                min-height: 70px;
+                max-height: 78px;
+            }
+            QFrame:hover {
+                border: 1px solid #D1D5DB;
+                background-color: #F9FAFB;
             }
         """)
-        main_layout = QVBoxLayout(card)
-        main_layout.setContentsMargins(15, 10, 15, 10)
-        main_layout.setSpacing(6)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(14, 10, 14, 10)
+        card_layout.setSpacing(8)
 
-        # Layout superior con título y valor
+        # Layout con título y valor
         top_layout = QHBoxLayout()
+        top_layout.setSpacing(8)
+
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 14px; font-weight: 500; color: #374151;")
+        title_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #1F2937;")
         title_label.setWordWrap(True)
 
+        # Calcular porcentaje
+        percentage = (int(value) / int(total) * 100) if total > 0 else 0
+
         value_label = QLabel(f"{value} / {total}")
-        value_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {color};")
+        value_label.setStyleSheet(f"font-size: 13px; font-weight: 700; color: {color};")
 
         top_layout.addWidget(title_label)
         top_layout.addStretch()
         top_layout.addWidget(value_label)
 
-        # Barra de progreso
+        # Barra de progreso integrada dentro de la tarjeta
         progress_bar = QProgressBar()
         progress_bar.setMinimum(0)
         progress_bar.setMaximum(int(total) if total > 0 else 1)
@@ -196,16 +221,13 @@ class DashboardWidget(QWidget):
         progress_bar.setTextVisible(False)
         progress_bar.setMaximumHeight(6)
 
-        # Calcular porcentaje para el color
-        percentage = (int(value) / int(total) * 100) if total > 0 else 0
-
         # Definir color según porcentaje
         if percentage >= 90:
-            bar_color = "#EF4444"  # Rojo
+            bar_color = "#EF4444"  # Rojo - Crítico
         elif percentage >= 70:
-            bar_color = "#F59E0B"  # Amarillo
+            bar_color = "#F59E0B"  # Amarillo - Alerta
         else:
-            bar_color = "#10B981"  # Verde
+            bar_color = "#10B981"  # Verde - OK
 
         progress_bar.setStyleSheet(f"""
             QProgressBar {{
@@ -219,8 +241,8 @@ class DashboardWidget(QWidget):
             }}
         """)
 
-        main_layout.addLayout(top_layout)
-        main_layout.addWidget(progress_bar)
+        card_layout.addLayout(top_layout)
+        card_layout.addWidget(progress_bar)
 
         card.value_label = value_label
         card.progress_bar = progress_bar
@@ -248,6 +270,21 @@ class DashboardWidget(QWidget):
             self.ocupacion_card.value_label.setText(f"{tasa_ocupacion:.1f}%")
             self.disponibles_card.value_label.setText(str(espacios_disponibles))
             self.vehiculos_card.value_label.setText(str(vehiculos_estacionados))
+
+            # Actualizar tarjetas de vehículos específicos
+            tipos_data = self.parqueadero_model.obtener_ocupacion_por_tipo_vehiculo()
+
+            # Carros
+            carros_data = tipos_data.get('Carro', {'ocupados': 0, 'total': 0})
+            self.carros_card.value_label.setText(f"{carros_data['ocupados']}/{carros_data['total']}")
+
+            # Motos
+            motos_data = tipos_data.get('Moto', {'ocupados': 0, 'total': 0})
+            self.motos_card.value_label.setText(f"{motos_data['ocupados']}/{motos_data['total']}")
+
+            # Bicicletas
+            bicicletas_data = tipos_data.get('Bicicleta', {'ocupados': 0, 'total': 0})
+            self.bicicletas_card.value_label.setText(f"{bicicletas_data['ocupados']}/{bicicletas_data['total']}")
 
         except Exception as e:
             print(f"Error al actualizar estadísticas: {e}")
@@ -291,14 +328,17 @@ class DashboardWidget(QWidget):
                     widget.deleteLater()
 
             colores = {"Carro": "#3B82F6", "Moto": "#8B5CF6", "Bicicleta": "#10B981"}
+            iconos = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}
 
             for tipo in ["Carro", "Moto", "Bicicleta"]:
                 data = tipos_data.get(tipo, {'ocupados': 0, 'total': 0})
                 ocupados = data['ocupados']
                 total = data['total']
                 color = colores.get(tipo, "#6B7280")
+                icono = iconos.get(tipo, "")
 
-                card = self._crear_detalle_card(tipo, ocupados, total, color)
+                tipo_con_icono = f"{icono} {tipo}s"
+                card = self._crear_detalle_card(tipo_con_icono, ocupados, total, color)
                 self.tipos_layout.addWidget(card)
 
             self.tipos_layout.addStretch()

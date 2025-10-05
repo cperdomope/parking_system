@@ -184,17 +184,17 @@ class DetalleParqueaderoModal(QDialog):
         )
         layout.addWidget(self.lbl_tipo_espacio, 1, 3)
 
-        # Ocupación actual con ícono
+        # Ocupación actual con ícono (FILA 2 para evitar sobreescritura)
         lbl_ocupacion_label = QLabel("Ocupación Actual:")
         lbl_ocupacion_label.setStyleSheet("font-size: 14px; font-weight: bold;")
-        layout.addWidget(lbl_ocupacion_label, 1, 2)
+        layout.addWidget(lbl_ocupacion_label, 2, 0)
 
         self.lbl_ocupacion = QLabel("Cargando...")
         self.lbl_ocupacion.setStyleSheet(
             "font-size: 16px; font-weight: bold; "
             "padding: 6px 12px; border-radius: 4px;"
         )
-        layout.addWidget(self.lbl_ocupacion, 1, 3)
+        layout.addWidget(self.lbl_ocupacion, 2, 1, 1, 3)  # Expandir a lo largo de 3 columnas
 
         group.setLayout(layout)
         return group
@@ -390,7 +390,7 @@ class DetalleParqueaderoModal(QDialog):
 
     def actualizar_header(self, info):
         """Actualiza la información del header"""
-        estado = info['estado']
+        estado_db = info['estado']
         tipo_espacio = info['tipo_espacio']
         sotano = info['sotano']
         carros_asignados = info.get('carros_asignados', 0)
@@ -409,6 +409,35 @@ class DetalleParqueaderoModal(QDialog):
         }
         icono_tipo = iconos_tipo.get(tipo_espacio, '🚗')
         self.lbl_tipo_espacio.setText(f"{icono_tipo} {tipo_espacio}")
+
+        # CALCULAR ESTADO CORRECTO según tipo de vehículo y asignaciones
+        total_asignaciones = carros_asignados + motos_asignadas + bicicletas_asignadas
+
+        if tipo_espacio == 'Moto':
+            # Motos: 0 asignaciones = Disponible, ≥1 = Completo
+            if motos_asignadas == 0:
+                estado = 'Disponible'
+            else:
+                estado = 'Completo'
+        elif tipo_espacio == 'Bicicleta':
+            # Bicicletas: 0 asignaciones = Disponible, ≥1 = Completo
+            if bicicletas_asignadas == 0:
+                estado = 'Disponible'
+            else:
+                estado = 'Completo'
+        elif tipo_espacio == 'Carro':
+            # Carros: lógica normal (0=Disponible, 1=Parcial, 2=Completo)
+            if carros_asignados == 0:
+                estado = 'Disponible'
+            elif carros_asignados == 1:
+                estado = 'Parcialmente_Asignado'
+            else:
+                estado = 'Completo'
+        else:  # Mixto
+            if total_asignaciones == 0:
+                estado = 'Disponible'
+            else:
+                estado = 'Completo'
 
         # Actualizar estado con color y fondo
         color_estado, bg_color = self.get_colors_estado(estado)
@@ -572,11 +601,22 @@ class DetalleParqueaderoModal(QDialog):
         )
         vehiculo_layout.addWidget(lbl_placa, 0, 1)
 
-        # Tipo de circulación destacado
+        # Tipo de circulación destacado (solo para carros)
         vehiculo_layout.addWidget(QLabel("Circulación:"), 0, 2)
-        lbl_circulacion = QLabel(vehiculo['tipo_circulacion'])
-        color_bg = "#FFEBEE" if vehiculo['tipo_circulacion'] == 'IMPAR' else "#E8EAF6"
-        color_text = "#C62828" if vehiculo['tipo_circulacion'] == 'IMPAR' else "#3F51B5"
+        tipo_circulacion = vehiculo['tipo_circulacion'] or 'N/A'
+
+        # Configurar colores según tipo de circulación
+        if tipo_circulacion == 'IMPAR':
+            color_bg = "#FFEBEE"
+            color_text = "#C62828"
+        elif tipo_circulacion == 'PAR':
+            color_bg = "#E8EAF6"
+            color_text = "#3F51B5"
+        else:  # N/A para motos y bicicletas
+            color_bg = "#F5F5F5"
+            color_text = "#757575"
+
+        lbl_circulacion = QLabel(tipo_circulacion)
         lbl_circulacion.setStyleSheet(
             f"font-size: 14px; font-weight: bold; color: {color_text}; "
             f"padding: 4px 8px; background-color: {color_bg}; border-radius: 4px;"
@@ -724,25 +764,34 @@ class DetalleParqueaderoModal(QDialog):
             item_funcionario.setForeground(QBrush(QColor(0, 0, 0)))
             self.tabla_historial.setItem(row, 3, item_funcionario)
 
-            # Vehículo
-            item_vehiculo = QTableWidgetItem(registro['tipo_vehiculo'])
+            # Vehículo con ícono
+            iconos_vehiculo = {'Carro': '🚗', 'Moto': '🏍️', 'Bicicleta': '🚲'}
+            icono_veh = iconos_vehiculo.get(registro['tipo_vehiculo'], '')
+            item_vehiculo = QTableWidgetItem(f"{icono_veh} {registro['tipo_vehiculo']}")
             item_vehiculo.setTextAlignment(Qt.AlignCenter)
             item_vehiculo.setForeground(QBrush(QColor(0, 0, 0)))
             # Color por tipo de vehículo
             if registro['tipo_vehiculo'] == 'Carro':
                 item_vehiculo.setBackground(QColor('#E3F2FD'))
+            elif registro['tipo_vehiculo'] == 'Moto':
+                item_vehiculo.setBackground(QColor('#F3E5F5'))
+            elif registro['tipo_vehiculo'] == 'Bicicleta':
+                item_vehiculo.setBackground(QColor('#E8F5E9'))
             self.tabla_historial.setItem(row, 4, item_vehiculo)
 
             # Placa con tipo de circulación
-            placa_texto = f"{registro['placa']}\n({registro['tipo_circulacion']})"
+            tipo_circ = registro['tipo_circulacion'] or 'N/A'
+            placa_texto = f"{registro['placa']}\n({tipo_circ})"
             item_placa = QTableWidgetItem(placa_texto)
             item_placa.setTextAlignment(Qt.AlignCenter)
             item_placa.setForeground(QBrush(QColor(0, 0, 0)))
             # Color por tipo de circulación
-            if registro['tipo_circulacion'] == 'IMPAR':
+            if tipo_circ == 'IMPAR':
                 item_placa.setBackground(QColor('#FFEBEE'))
-            elif registro['tipo_circulacion'] == 'PAR':
+            elif tipo_circ == 'PAR':
                 item_placa.setBackground(QColor('#E8EAF6'))
+            elif tipo_circ == 'N/A':
+                item_placa.setBackground(QColor('#F5F5F5'))
             self.tabla_historial.setItem(row, 5, item_placa)
 
             # Estado con color mejorado

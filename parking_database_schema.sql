@@ -38,7 +38,7 @@ CREATE TABLE vehiculos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     funcionario_id INT NOT NULL,
     tipo_vehiculo ENUM('Carro', 'Moto', 'Bicicleta') NOT NULL,
-    placa VARCHAR(10) UNIQUE NOT NULL,
+    placa VARCHAR(10) UNIQUE NULL,  -- NULL permitido para bicicletas sin placa
     ultimo_digito CHAR(1),
     tipo_circulacion ENUM('PAR', 'IMPAR', 'N/A') DEFAULT 'N/A',
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

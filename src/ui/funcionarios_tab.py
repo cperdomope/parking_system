@@ -95,6 +95,8 @@ class FuncionariosTab(QWidget):
         form_layout.addWidget(self.txt_tarjeta, 3, 1)
 
         # ===== NUEVOS CHECKBOXES - REGLAS DE NEGOCIO (Solo uno puede estar activo) =====
+        # Contenedor horizontal para los tres checkboxes
+        checkboxes_layout = QHBoxLayout()
 
         # Checkbox: Pico y Placa Solidario
         self.chk_pico_placa_solidario = QCheckBox("🔄 Pico y Placa Solidario")
@@ -118,7 +120,6 @@ class FuncionariosTab(QWidget):
             }
         """)
         self.chk_pico_placa_solidario.stateChanged.connect(self.on_pico_placa_changed_main)
-        form_layout.addWidget(self.chk_pico_placa_solidario, 4, 0, 1, 2)
 
         # Checkbox: Discapacidad
         self.chk_discapacidad = QCheckBox("♿ Funcionario con Discapacidad")
@@ -142,7 +143,6 @@ class FuncionariosTab(QWidget):
             }
         """)
         self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed_main)
-        form_layout.addWidget(self.chk_discapacidad, 4, 2, 1, 2)
 
         # Checkbox: Parqueadero Exclusivo (No compartir)
         self.chk_no_compartir = QCheckBox("🚫 Parqueadero Exclusivo (No compartido)")
@@ -166,7 +166,15 @@ class FuncionariosTab(QWidget):
             }
         """)
         self.chk_no_compartir.stateChanged.connect(self.on_no_compartir_changed_main)
-        form_layout.addWidget(self.chk_no_compartir, 5, 0, 1, 4)
+
+        # Agregar los tres checkboxes al layout horizontal
+        checkboxes_layout.addWidget(self.chk_pico_placa_solidario)
+        checkboxes_layout.addWidget(self.chk_discapacidad)
+        checkboxes_layout.addWidget(self.chk_no_compartir)
+        checkboxes_layout.addStretch()
+
+        # Agregar el layout horizontal completo al grid en una sola fila
+        form_layout.addLayout(checkboxes_layout, 4, 0, 1, 4)
 
         # Botones
         btn_layout = QHBoxLayout()
@@ -218,7 +226,7 @@ class FuncionariosTab(QWidget):
         self.tabla_funcionarios.setColumnWidth(11, 240) # Acciones
 
         # Configurar altura de filas fija
-        self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(50)
+        self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(60)
 
         # Estilo de encabezados
         self.tabla_funcionarios.horizontalHeader().setStyleSheet("""
@@ -442,10 +450,20 @@ class FuncionariosTab(QWidget):
             # ===== NUEVAS COLUMNAS: Indicadores visuales =====
 
             # Columna 8: Permite Compartir
+            # Mostrar "NO" si tiene marcado cualquiera de las tres opciones:
+            # - NO permite_compartir (Parqueadero Exclusivo)
+            # - pico_placa_solidario (Pico y Placa Solidario)
+            # - discapacidad (Funcionario con Discapacidad)
             permite_compartir = func.get('permite_compartir', True)
-            compartir_item = QTableWidgetItem("✅ Sí" if permite_compartir else "🚫 NO")
+            tiene_pico_placa = func.get('pico_placa_solidario', False)
+            tiene_discapacidad = func.get('discapacidad', False)
+
+            # Si tiene alguna de las tres opciones, NO comparte
+            no_comparte = (not permite_compartir) or tiene_pico_placa or tiene_discapacidad
+
+            compartir_item = QTableWidgetItem("🚫 NO" if no_comparte else "✅ Sí")
             compartir_item.setTextAlignment(0x0004 | 0x0080)  # Centro
-            if not permite_compartir:
+            if no_comparte:
                 # Fondo rojo para exclusivo
                 compartir_item.setBackground(QBrush(QColor("#fadbd8")))
                 compartir_item.setForeground(QBrush(QColor("#c0392b")))
@@ -455,7 +473,7 @@ class FuncionariosTab(QWidget):
             self.tabla_funcionarios.setItem(i, 8, compartir_item)
 
             # Columna 9: Pico Placa Solidario
-            pico_placa = func.get('pico_placa_solidario', False)
+            pico_placa = tiene_pico_placa
             solidario_item = QTableWidgetItem("🔄 Sí" if pico_placa else "❌")
             solidario_item.setTextAlignment(0x0004 | 0x0080)  # Centro
             if pico_placa:
@@ -464,7 +482,7 @@ class FuncionariosTab(QWidget):
             self.tabla_funcionarios.setItem(i, 9, solidario_item)
 
             # Columna 10: Discapacidad
-            discapacidad = func.get('discapacidad', False)
+            discapacidad = tiene_discapacidad
             discap_item = QTableWidgetItem("♿ Sí" if discapacidad else "❌")
             discap_item.setTextAlignment(0x0004 | 0x0080)  # Centro
             if discapacidad:
@@ -480,7 +498,7 @@ class FuncionariosTab(QWidget):
 
             # Botón Editar
             btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(35, 35)
+            btn_editar.setFixedSize(40, 40)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet("""
                 QPushButton {
@@ -502,7 +520,7 @@ class FuncionariosTab(QWidget):
 
             # Botón Ver
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(35, 35)
+            btn_ver.setFixedSize(40, 40)
             btn_ver.setToolTip("Ver detalles del funcionario")
             btn_ver.setStyleSheet("""
                 QPushButton {
@@ -524,7 +542,7 @@ class FuncionariosTab(QWidget):
 
             # Botón Eliminar
             btn_eliminar = QPushButton("🗑️")
-            btn_eliminar.setFixedSize(35, 35)
+            btn_eliminar.setFixedSize(40, 40)
             btn_eliminar.setToolTip("Eliminar funcionario")
             btn_eliminar.setStyleSheet("""
                 QPushButton {

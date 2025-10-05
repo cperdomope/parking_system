@@ -57,7 +57,21 @@ class ParqueaderoModel:
                         JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
                         JOIN funcionarios f2 ON v2.funcionario_id = f2.id
                         WHERE a2.parqueadero_id = p.id AND a2.activo = TRUE
-                    ) AS permite_compartir_ocupante
+                    ) AS permite_compartir_ocupante,
+                    (
+                        SELECT MAX(f2.pico_placa_solidario)
+                        FROM asignaciones a2
+                        JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
+                        JOIN funcionarios f2 ON v2.funcionario_id = f2.id
+                        WHERE a2.parqueadero_id = p.id AND a2.activo = TRUE
+                    ) AS pico_placa_solidario_ocupante,
+                    (
+                        SELECT MAX(f2.discapacidad)
+                        FROM asignaciones a2
+                        JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
+                        JOIN funcionarios f2 ON v2.funcionario_id = f2.id
+                        WHERE a2.parqueadero_id = p.id AND a2.activo = TRUE
+                    ) AS discapacidad_ocupante
                 FROM parqueaderos p
                 LEFT JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
                 LEFT JOIN vehiculos v ON a.vehiculo_id = v.id
@@ -89,7 +103,21 @@ class ParqueaderoModel:
                         JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
                         JOIN funcionarios f2 ON v2.funcionario_id = f2.id
                         WHERE a2.parqueadero_id = p.id AND a2.activo = TRUE
-                    ) AS permite_compartir_ocupante
+                    ) AS permite_compartir_ocupante,
+                    (
+                        SELECT MAX(f2.pico_placa_solidario)
+                        FROM asignaciones a2
+                        JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
+                        JOIN funcionarios f2 ON v2.funcionario_id = f2.id
+                        WHERE a2.parqueadero_id = p.id AND a2.activo = TRUE
+                    ) AS pico_placa_solidario_ocupante,
+                    (
+                        SELECT MAX(f2.discapacidad)
+                        FROM asignaciones a2
+                        JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
+                        JOIN funcionarios f2 ON v2.funcionario_id = f2.id
+                        WHERE a2.parqueadero_id = p.id AND a2.activo = TRUE
+                    ) AS discapacidad_ocupante
                 FROM parqueaderos p
                 LEFT JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
                 LEFT JOIN vehiculos v ON a.vehiculo_id = v.id AND v.tipo_vehiculo = 'Carro'
@@ -123,16 +151,27 @@ class ParqueaderoModel:
 
         results = self.db.fetch_all(query, tuple(params) if params else None)
 
-        # Post-procesamiento: calcular estado "display" considerando permite_compartir
+        # Post-procesamiento: calcular estado "display" considerando permite_compartir, pico_placa_solidario, discapacidad
+        # y tipo de espacio (Motos y Bicicletas solo permiten 1 vehículo)
         if results:
             for park in results:
                 estado_display = park['estado']
                 total_asigs = park.get('total_asignaciones', 0)
                 permite_compartir = park.get('permite_compartir_ocupante')
+                pico_placa_solidario = park.get('pico_placa_solidario_ocupante')
+                discapacidad = park.get('discapacidad_ocupante')
+                tipo_espacio = park.get('tipo_espacio', 'Carro')
 
-                # Si hay 1 asignación Y el funcionario NO permite compartir → mostrar como Completo
-                if total_asigs == 1 and permite_compartir == 0:  # 0 = FALSE en MySQL
+                # REGLA 1: Motos y Bicicletas SIEMPRE se marcan como Completo con 1 asignación
+                if tipo_espacio in ['Moto', 'Bicicleta'] and total_asigs >= 1:
                     estado_display = 'Completo'
+
+                # REGLA 2: Carros con condiciones especiales (1 asignación → Completo)
+                elif tipo_espacio == 'Carro' and total_asigs == 1:
+                    if (permite_compartir == 0 or  # NO permite compartir (Parqueadero Exclusivo)
+                        pico_placa_solidario == 1 or  # Tiene Pico y Placa Solidario
+                        discapacidad == 1):  # Tiene Discapacidad
+                        estado_display = 'Completo'
 
                 # Agregar el estado calculado
                 park['estado_display'] = estado_display
@@ -232,11 +271,11 @@ class ParqueaderoModel:
             if not es_valido:
                 return (False, mensaje)
 
-            # 5. VALIDACIÓN: Si hay ocupantes, verificar si permiten compartir
+            # 5. VALIDACIÓN: Si hay ocupantes, verificar si permiten compartir, pico_placa_solidario o discapacidad
             ocupante_data = None
             if asignaciones_existentes > 0:
                 query_ocupante = """
-                    SELECT f.nombre, f.apellidos, f.cargo, f.permite_compartir
+                    SELECT f.nombre, f.apellidos, f.cargo, f.permite_compartir, f.pico_placa_solidario, f.discapacidad
                     FROM asignaciones a
                     JOIN vehiculos v ON a.vehiculo_id = v.id
                     JOIN funcionarios f ON v.funcionario_id = f.id
@@ -323,14 +362,53 @@ class ParqueaderoModel:
                 return (False, f"🚫 Error en asignación: {error_msg}")
 
     def liberar_asignacion(self, vehiculo_id: int) -> bool:
-        """Libera la asignación de un vehículo"""
-        query = """
-            UPDATE asignaciones
-            SET activo = NULL, fecha_fin_asignacion = NOW()
-            WHERE vehiculo_id = %s AND activo = TRUE
-        """
-        exito, _ = self.db.execute_query(query, (vehiculo_id,))
-        return exito
+        """Libera la asignación de un vehículo y actualiza el estado del parqueadero"""
+        try:
+            # Primero obtener el parqueadero_id antes de liberar
+            query_get_park = """
+                SELECT parqueadero_id
+                FROM asignaciones
+                WHERE vehiculo_id = %s AND activo = TRUE
+            """
+            resultado = self.db.fetch_one(query_get_park, (vehiculo_id,))
+
+            if not resultado:
+                return False
+
+            parqueadero_id = resultado['parqueadero_id']
+
+            # Liberar la asignación
+            query_liberar = """
+                UPDATE asignaciones
+                SET activo = NULL, fecha_fin_asignacion = NOW()
+                WHERE vehiculo_id = %s AND activo = TRUE
+            """
+            exito, _ = self.db.execute_query(query_liberar, (vehiculo_id,))
+
+            if not exito:
+                return False
+
+            # Recalcular el estado del parqueadero
+            query_update_estado = """
+                UPDATE parqueaderos p
+                SET estado = CASE
+                    WHEN (SELECT COUNT(*) FROM asignaciones WHERE parqueadero_id = p.id AND activo = TRUE) = 0
+                        THEN 'Disponible'
+                    WHEN p.tipo_espacio IN ('Moto', 'Bicicleta')
+                        THEN 'Completo'
+                    WHEN p.tipo_espacio = 'Carro' AND (SELECT COUNT(*) FROM asignaciones WHERE parqueadero_id = p.id AND activo = TRUE) = 1
+                        THEN 'Parcialmente_Asignado'
+                    ELSE 'Completo'
+                END
+                WHERE id = %s
+            """
+            self.db.execute_query(query_update_estado, (parqueadero_id,))
+
+            return True
+
+        except Exception as e:
+            print(f"Error al liberar asignación: {e}")
+            return False
 
     def obtener_estadisticas(self, sotano: str = None) -> Dict:
         """Obtiene estadísticas del parqueadero, opcionalmente filtradas por sótano"""

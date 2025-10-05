@@ -1,0 +1,11 @@
+# Requisitos del Sistema de Gestión de Parqueadero
+# Python 3.8+
+
+# Framework GUI
+PyQt5>=5.15.0
+
+# Conector de Base de Datos MySQL
+mysql-connector-python>=8.0.0
+
+# Opcional: Para gestión de variables de entorno (recomendado para producción)
+# python-dotenv>=0.19.0

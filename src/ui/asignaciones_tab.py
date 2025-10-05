@@ -614,31 +614,30 @@ class AsignacionesTab(QWidget):
         self.cargar_vehiculos_sin_asignar()
 
     def setup_ui(self):
-        """Configura la interfaz de usuario"""
+        """Configura la interfaz de usuario - Diseño reorganizado profesionalmente"""
         main_layout = QVBoxLayout()
         main_layout.setSpacing(15)
-        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setContentsMargins(15, 15, 15, 15)
 
-        # Crear splitter principal para mejor organización
-        main_splitter = QSplitter()
-        main_splitter.setOrientation(1)  # Qt.Vertical
+        # ============= SECCIÓN SUPERIOR: Filtros y Nueva Asignación en horizontal =============
+        top_section = QWidget()
+        top_section_layout = QHBoxLayout(top_section)
+        top_section_layout.setSpacing(15)
+        top_section_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Sección superior: Nueva asignación y filtros
-        top_widget = QWidget()
-        top_layout = QVBoxLayout(top_widget)
-        top_layout.setSpacing(15)
-
-        # Filtro de búsqueda
-        filter_group = QGroupBox("🔍 Filtro de Búsqueda")
+        # ===== PANEL IZQUIERDO: Filtro de Búsqueda =====
+        filter_group = QGroupBox("🔍 Filtrar Asignaciones")
+        filter_group.setMaximumWidth(350)
         filter_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
                 color: #2c3e50;
                 border: 2px solid #3498db;
                 border-radius: 8px;
                 margin-top: 10px;
-                padding-top: 10px;
+                padding-top: 15px;
+                background-color: #f8f9fa;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
@@ -648,31 +647,35 @@ class AsignacionesTab(QWidget):
             }
         """)
 
-        filter_layout = QHBoxLayout()
-        filter_layout.setSpacing(15)
+        filter_layout = QVBoxLayout()
+        filter_layout.setSpacing(10)
+        filter_layout.setContentsMargins(15, 15, 15, 15)
 
-        filter_layout.addWidget(QLabel("Buscar por Cédula:"))
+        lbl_cedula = QLabel("Buscar por Cédula:")
+        lbl_cedula.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
+        filter_layout.addWidget(lbl_cedula)
+
         self.cedula_filter = QLineEdit()
-        self.cedula_filter.setPlaceholderText("Ingrese número de cédula...")
-        self.cedula_filter.setFixedHeight(35)
+        self.cedula_filter.setPlaceholderText("Ingrese cédula...")
+        self.cedula_filter.setFixedHeight(38)
         self.cedula_filter.setStyleSheet("""
             QLineEdit {
                 border: 2px solid #bdc3c7;
                 border-radius: 6px;
                 padding: 8px 12px;
-                font-size: 13px;
+                font-size: 12px;
                 background-color: white;
             }
             QLineEdit:focus {
                 border-color: #3498db;
-                background-color: #f8f9fa;
+                background-color: #ffffff;
             }
         """)
         self.cedula_filter.textChanged.connect(self.filtrar_por_cedula)
         filter_layout.addWidget(self.cedula_filter)
 
-        btn_limpiar_filtro = QPushButton("🗑️ Limpiar")
-        btn_limpiar_filtro.setFixedSize(100, 35)
+        btn_limpiar_filtro = QPushButton("🗑️ Limpiar Filtro")
+        btn_limpiar_filtro.setFixedHeight(38)
         btn_limpiar_filtro.setStyleSheet("""
             QPushButton {
                 background-color: #95a5a6;
@@ -685,25 +688,29 @@ class AsignacionesTab(QWidget):
             QPushButton:hover {
                 background-color: #7f8c8d;
             }
+            QPushButton:pressed {
+                background-color: #5d6d7e;
+            }
         """)
         btn_limpiar_filtro.clicked.connect(self.limpiar_filtro)
         filter_layout.addWidget(btn_limpiar_filtro)
 
         filter_layout.addStretch()
         filter_group.setLayout(filter_layout)
-        top_layout.addWidget(filter_group)
+        top_section_layout.addWidget(filter_group)
 
-        # Sección de nueva asignación con mejor diseño
+        # ===== PANEL DERECHO: Nueva Asignación =====
         assign_group = QGroupBox("✨ Nueva Asignación de Parqueadero")
         assign_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
                 color: #2c3e50;
                 border: 2px solid #27ae60;
                 border-radius: 8px;
                 margin-top: 10px;
                 padding-top: 15px;
+                background-color: #f8f9fa;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
@@ -714,16 +721,16 @@ class AsignacionesTab(QWidget):
         """)
 
         assign_layout = QGridLayout()
-        assign_layout.setSpacing(12)
-        assign_layout.setContentsMargins(20, 20, 20, 20)
+        assign_layout.setSpacing(10)
+        assign_layout.setContentsMargins(15, 15, 15, 15)
 
         # Fila 1: Vehículo
-        lbl_vehiculo = QLabel("🚗 Vehículo sin asignar:")
-        lbl_vehiculo.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 13px;")
+        lbl_vehiculo = QLabel("🚗 Vehículo:")
+        lbl_vehiculo.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
         assign_layout.addWidget(lbl_vehiculo, 0, 0)
 
         self.combo_vehiculo_sin_asignar = QComboBox()
-        self.combo_vehiculo_sin_asignar.setFixedHeight(40)
+        self.combo_vehiculo_sin_asignar.setFixedHeight(38)
         self.combo_vehiculo_sin_asignar.setStyleSheet("""
             QComboBox {
                 border: 2px solid #bdc3c7;
@@ -768,32 +775,15 @@ class AsignacionesTab(QWidget):
                 font-weight: bold;
             }
         """)
-        assign_layout.addWidget(self.combo_vehiculo_sin_asignar, 0, 1, 1, 3)
+        assign_layout.addWidget(self.combo_vehiculo_sin_asignar, 0, 1, 1, 2)
 
-        # Fila 2: Información del vehículo
-        self.lbl_info_vehiculo = QLabel("")
-        self.lbl_info_vehiculo.setStyleSheet("""
-            background-color: #e8f5e8;
-            color: #2e7d32;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #a5d6a7;
-            font-size: 12px;
-            font-weight: 500;
-        """)
-        self.lbl_info_vehiculo.setMinimumHeight(50)
-        assign_layout.addWidget(self.lbl_info_vehiculo, 1, 0, 1, 4)
-
-        # Conectar evento para mostrar info del vehículo
-        self.combo_vehiculo_sin_asignar.currentTextChanged.connect(self.mostrar_info_vehiculo_seleccionado)
-
-        # Fila 3: Sótano y Parqueadero
+        # Fila 2: Sótano y Parqueadero en una sola fila
         lbl_sotano = QLabel("🏢 Sótano:")
-        lbl_sotano.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 13px;")
-        assign_layout.addWidget(lbl_sotano, 2, 0)
+        lbl_sotano.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
+        assign_layout.addWidget(lbl_sotano, 1, 0)
 
         self.combo_sotano = QComboBox()
-        self.combo_sotano.setFixedHeight(40)
+        self.combo_sotano.setFixedHeight(38)
         self.combo_sotano.setStyleSheet("""
             QComboBox {
                 border: 2px solid #bdc3c7;
@@ -829,14 +819,14 @@ class AsignacionesTab(QWidget):
             }
         """)
         self.combo_sotano.currentTextChanged.connect(self.cargar_parqueaderos_por_sotano)
-        assign_layout.addWidget(self.combo_sotano, 2, 1)
+        assign_layout.addWidget(self.combo_sotano, 1, 1)
 
         lbl_parqueadero = QLabel("🅿️ Parqueadero:")
-        lbl_parqueadero.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 13px;")
-        assign_layout.addWidget(lbl_parqueadero, 2, 2)
+        lbl_parqueadero.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
+        assign_layout.addWidget(lbl_parqueadero, 1, 2)
 
         self.combo_parqueadero_disponible = QComboBox()
-        self.combo_parqueadero_disponible.setFixedHeight(40)
+        self.combo_parqueadero_disponible.setFixedHeight(38)
         self.combo_parqueadero_disponible.setStyleSheet("""
             QComboBox {
                 border: 2px solid #bdc3c7;
@@ -871,15 +861,32 @@ class AsignacionesTab(QWidget):
                 font-weight: bold;
             }
         """)
-        assign_layout.addWidget(self.combo_parqueadero_disponible, 2, 3)
+        assign_layout.addWidget(self.combo_parqueadero_disponible, 1, 3)
 
-        # Fila 4: Campo de observaciones
+        # Conectar evento para mostrar info del vehículo
+        self.combo_vehiculo_sin_asignar.currentTextChanged.connect(self.mostrar_info_vehiculo_seleccionado)
+
+        # Fila 3: Información del vehículo seleccionado
+        self.lbl_info_vehiculo = QLabel("")
+        self.lbl_info_vehiculo.setStyleSheet("""
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #90caf9;
+            font-size: 11px;
+            font-weight: 500;
+        """)
+        self.lbl_info_vehiculo.setMinimumHeight(40)
+        assign_layout.addWidget(self.lbl_info_vehiculo, 2, 0, 1, 4)
+
+        # Fila 4: Observaciones
         lbl_observaciones = QLabel("📝 Observaciones:")
-        lbl_observaciones.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 13px;")
+        lbl_observaciones.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
         assign_layout.addWidget(lbl_observaciones, 3, 0)
 
         self.txt_observaciones = QTextEdit()
-        self.txt_observaciones.setFixedHeight(80)
+        self.txt_observaciones.setFixedHeight(60)
         self.txt_observaciones.setPlaceholderText("Ingrese observaciones sobre esta asignación (opcional)...")
         self.txt_observaciones.setStyleSheet("""
             QTextEdit {
@@ -897,13 +904,9 @@ class AsignacionesTab(QWidget):
         """)
         assign_layout.addWidget(self.txt_observaciones, 3, 1, 1, 3)
 
-        # Fila 5: Botón de asignar (más estrecho y centrado)
-        btn_container = QWidget()
-        btn_layout = QHBoxLayout(btn_container)
-        btn_layout.setContentsMargins(0, 15, 0, 0)
-
+        # Fila 5: Botón de asignar centrado
         self.btn_asignar = QPushButton("✅ Asignar Parqueadero")
-        self.btn_asignar.setFixedSize(200, 45)  # Menos ancho que antes
+        self.btn_asignar.setFixedSize(220, 42)
         self.btn_asignar.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -926,20 +929,22 @@ class AsignacionesTab(QWidget):
         """)
         self.btn_asignar.clicked.connect(self.realizar_asignacion)
 
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.btn_asignar)
-        btn_layout.addStretch()
+        btn_container = QWidget()
+        btn_layout_inner = QHBoxLayout(btn_container)
+        btn_layout_inner.setContentsMargins(0, 10, 0, 0)
+        btn_layout_inner.addStretch()
+        btn_layout_inner.addWidget(self.btn_asignar)
+        btn_layout_inner.addStretch()
 
         assign_layout.addWidget(btn_container, 4, 0, 1, 4)
 
         assign_group.setLayout(assign_layout)
-        top_layout.addWidget(assign_group)
+        top_section_layout.addWidget(assign_group)
 
-        main_splitter.addWidget(top_widget)
+        # Agregar la sección superior al layout principal
+        main_layout.addWidget(top_section)
 
-        # Sección inferior: Tabla de asignaciones
-        bottom_widget = QWidget()
-        bottom_layout = QVBoxLayout(bottom_widget)
+        # ============= SECCIÓN INFERIOR: Tabla de Asignaciones (Ancho completo) =============
 
         tabla_group = QGroupBox("📋 Asignaciones Actuales")
         tabla_group.setStyleSheet("""
@@ -950,17 +955,18 @@ class AsignacionesTab(QWidget):
                 border: 2px solid #e67e22;
                 border-radius: 8px;
                 margin-top: 10px;
-                padding-top: 10px;
+                padding-top: 15px;
+                background-color: white;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 15px;
-                padding: 0 8px 0 8px;
+                left: 20px;
+                padding: 0 10px 0 10px;
                 background-color: white;
             }
         """)
         tabla_layout = QVBoxLayout()
-        tabla_layout.setContentsMargins(15, 15, 15, 15)
+        tabla_layout.setContentsMargins(15, 20, 15, 15)
 
         self.tabla_asignaciones = QTableWidget()
         self.tabla_asignaciones.setColumnCount(9)  # Agregamos columna para observaciones
@@ -986,7 +992,7 @@ class AsignacionesTab(QWidget):
         self.tabla_asignaciones.setColumnWidth(8, 160)  # Acciones
 
         # Configurar altura de filas fija para acomodar los botones
-        self.tabla_asignaciones.verticalHeader().setDefaultSectionSize(70)
+        self.tabla_asignaciones.verticalHeader().setDefaultSectionSize(62)
 
         # Estilo de encabezados
         self.tabla_asignaciones.horizontalHeader().setStyleSheet("""
@@ -1029,27 +1035,17 @@ class AsignacionesTab(QWidget):
 
         tabla_layout.addWidget(self.tabla_asignaciones)
         tabla_group.setLayout(tabla_layout)
-        bottom_layout.addWidget(tabla_group)
 
-        main_splitter.addWidget(bottom_widget)
+        # Agregar la tabla directamente al layout principal (ocupa todo el ancho)
+        main_layout.addWidget(tabla_group, 1)  # El '1' es el stretch factor para que ocupe más espacio
 
-        # Configurar proporciones del splitter
-        main_splitter.setSizes([400, 600])  # Más espacio para la tabla
-        main_splitter.setStretchFactor(0, 0)  # Sección superior fija
-        main_splitter.setStretchFactor(1, 1)  # Sección inferior expandible
-
-        main_layout.addWidget(main_splitter)
         self.setLayout(main_layout)
 
         # Variables para filtrado
         self.asignaciones_completas = []  # Lista completa sin filtrar
 
     def cargar_vehiculos_sin_asignar(self):
-        """Carga los vehículos sin asignar en el combo
-
-        NOTA: Solo carga carros, ya que motos y bicicletas no requieren
-        asignación de espacios de parqueadero
-        """
+        """Carga TODOS los vehículos sin asignar (Carros, Motos y Bicicletas)"""
         # Query personalizada para obtener vehículos con información del funcionario
         query = """
             SELECT v.*,
@@ -1058,16 +1054,23 @@ class AsignacionesTab(QWidget):
             FROM vehiculos v
             JOIN funcionarios f ON v.funcionario_id = f.id
             LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
-            WHERE v.activo = TRUE AND a.id IS NULL AND v.tipo_vehiculo = 'Carro'
-            ORDER BY f.apellidos, f.nombre
+            WHERE v.activo = TRUE AND a.id IS NULL
+            ORDER BY v.tipo_vehiculo, f.apellidos, f.nombre
         """
         vehiculos = self.db.fetch_all(query)
 
         self.combo_vehiculo_sin_asignar.clear()
-        self.combo_vehiculo_sin_asignar.addItem("-- Seleccione --", None)
+        self.combo_vehiculo_sin_asignar.addItem("-- Seleccione vehículo --", None)
 
         for vehiculo in vehiculos:
-            # Agregar indicadores visuales en el texto
+            # Icono según tipo de vehículo
+            icono_tipo = {
+                'Carro': '🚗',
+                'Moto': '🏍️',
+                'Bicicleta': '🚲'
+            }.get(vehiculo.get('tipo_vehiculo', 'Carro'), '🚗')
+
+            # Agregar indicadores visuales
             indicadores = []
             if not vehiculo.get('permite_compartir', True):
                 indicadores.append("🚫EXCLUSIVO")
@@ -1077,7 +1080,11 @@ class AsignacionesTab(QWidget):
                 indicadores.append("♿DISC")
 
             indicadores_str = f" [{' '.join(indicadores)}]" if indicadores else ""
-            texto = f"{vehiculo['placa']} - {vehiculo['nombre']} {vehiculo['apellidos']} ({vehiculo['tipo_circulacion']}){indicadores_str}"
+
+            # Formato: [ICONO] PLACA - NOMBRE (CIRCULACIÓN) [INDICADORES]
+            tipo_circ = vehiculo.get('tipo_circulacion', 'N/A')
+            circulacion_str = f" ({tipo_circ})" if tipo_circ != 'N/A' else ""
+            texto = f"{icono_tipo} {vehiculo['placa']} - {vehiculo['nombre']} {vehiculo['apellidos']}{circulacion_str}{indicadores_str}"
             self.combo_vehiculo_sin_asignar.addItem(texto, vehiculo)
 
     def cargar_sotanos(self):
@@ -1101,7 +1108,7 @@ class AsignacionesTab(QWidget):
             self.combo_sotano.addItem("Sótano-3", "Sótano-3")
 
     def cargar_parqueaderos_por_sotano(self):
-        """Carga los parqueaderos disponibles del sótano seleccionado"""
+        """Carga los parqueaderos disponibles del sótano seleccionado según el tipo de vehículo"""
         try:
             vehiculo_data = self.combo_vehiculo_sin_asignar.currentData()
             sotano_seleccionado = self.combo_sotano.currentData()
@@ -1110,31 +1117,47 @@ class AsignacionesTab(QWidget):
             self.combo_parqueadero_disponible.addItem("-- Seleccione parqueadero --", None)
 
             if vehiculo_data and sotano_seleccionado:
-                # Obtener parqueaderos del sótano específico
-                parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
-                    sotano=sotano_seleccionado,
-                    tipo_vehiculo='Carro',  # Solo espacios para carros
-                    estado='Disponible'
-                )
+                tipo_vehiculo = vehiculo_data.get('tipo_vehiculo', 'Carro')
 
-                # También obtener parcialmente asignados que necesiten el complemento
-                parqueaderos_complemento = self.parqueadero_model.obtener_disponibles(vehiculo_data['tipo_circulacion'])
+                # Para CARROS: buscar disponibles y parcialmente asignados con complemento
+                if tipo_vehiculo == 'Carro':
+                    # Obtener parqueaderos disponibles para carros
+                    parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
+                        sotano=sotano_seleccionado,
+                        tipo_vehiculo='Carro',
+                        estado='Disponible'
+                    )
 
-                # Filtrar por sótano
-                parqueaderos_complemento_sotano = [
-                    p for p in parqueaderos_complemento
-                    if p.get('sotano', 'Sótano-1') == sotano_seleccionado
-                ]
+                    # También obtener parcialmente asignados que necesiten el complemento PAR/IMPAR
+                    parqueaderos_complemento = self.parqueadero_model.obtener_disponibles(vehiculo_data['tipo_circulacion'])
 
-                # Combinar listas sin duplicados
-                todos_parqueaderos = {p['id']: p for p in parqueaderos_disponibles}
-                todos_parqueaderos.update({p['id']: p for p in parqueaderos_complemento_sotano})
+                    # Filtrar por sótano
+                    parqueaderos_complemento_sotano = [
+                        p for p in parqueaderos_complemento
+                        if p.get('sotano', 'Sótano-1') == sotano_seleccionado
+                    ]
 
+                    # Combinar listas sin duplicados
+                    todos_parqueaderos = {p['id']: p for p in parqueaderos_disponibles}
+                    todos_parqueaderos.update({p['id']: p for p in parqueaderos_complemento_sotano})
+
+                # Para MOTOS y BICICLETAS: solo buscar completamente disponibles
+                else:
+                    # Motos y bicicletas solo ocupan parqueaderos disponibles (estado='Disponible')
+                    parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
+                        sotano=sotano_seleccionado,
+                        tipo_vehiculo=tipo_vehiculo,
+                        estado='Disponible'
+                    )
+                    todos_parqueaderos = {p['id']: p for p in parqueaderos_disponibles}
+
+                # Llenar el combo con los parqueaderos encontrados
                 for park in sorted(todos_parqueaderos.values(), key=lambda x: x['numero_parqueadero']):
-                    texto = f"P-{park['numero_parqueadero']:03d} ({park['estado'].replace('_', ' ')})"
+                    estado_str = park.get('estado_display', park['estado']).replace('_', ' ')
+                    texto = f"P-{park['numero_parqueadero']:03d} ({estado_str})"
                     self.combo_parqueadero_disponible.addItem(texto, park['id'])
 
-                print(f"Parqueaderos cargados para {sotano_seleccionado}: {len(todos_parqueaderos)}")
+                print(f"Parqueaderos cargados para {tipo_vehiculo} en {sotano_seleccionado}: {len(todos_parqueaderos)}")
 
         except Exception as e:
             print(f"Error al cargar parqueaderos por sótano: {e}")
@@ -1144,9 +1167,17 @@ class AsignacionesTab(QWidget):
         vehiculo_data = self.combo_vehiculo_sin_asignar.currentData()
 
         if vehiculo_data:
-            info = f"Funcionario: {vehiculo_data['nombre']} {vehiculo_data['apellidos']} | "
-            info += f"Cédula: {vehiculo_data['cedula']} | "
-            info += f"Tipo de circulación: {vehiculo_data['tipo_circulacion']}"
+            tipo_vehiculo = vehiculo_data.get('tipo_vehiculo', 'Carro')
+            icono_tipo = {'Carro': '🚗', 'Moto': '🏍️', 'Bicicleta': '🚲'}.get(tipo_vehiculo, '🚗')
+
+            info = f"{icono_tipo} {tipo_vehiculo} | "
+            info += f"Funcionario: {vehiculo_data['nombre']} {vehiculo_data['apellidos']} | "
+            info += f"Cédula: {vehiculo_data['cedula']}"
+
+            # Solo mostrar circulación para carros
+            if tipo_vehiculo == 'Carro':
+                info += f" | Circulación: {vehiculo_data.get('tipo_circulacion', 'N/A')}"
+
             self.lbl_info_vehiculo.setText(info)
 
             # Cargar parqueaderos si ya hay un sótano seleccionado
@@ -1460,7 +1491,7 @@ class AsignacionesTab(QWidget):
 
             # Botón Ver
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(35, 35)
+            btn_ver.setFixedSize(40, 40)
             btn_ver.setToolTip("Ver detalles de la asignación")
             btn_ver.setStyleSheet("""
                 QPushButton {
@@ -1482,7 +1513,7 @@ class AsignacionesTab(QWidget):
 
             # Botón Liberar
             btn_liberar = QPushButton("🔓")
-            btn_liberar.setFixedSize(35, 35)
+            btn_liberar.setFixedSize(40, 40)
             btn_liberar.setToolTip("Liberar asignación")
             btn_liberar.setStyleSheet("""
                 QPushButton {

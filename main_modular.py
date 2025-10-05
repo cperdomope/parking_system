@@ -6,7 +6,7 @@ import sys
 import csv
 from datetime import datetime
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTabWidget, QMessageBox, QDesktopWidget
+    QApplication, QMainWindow, QTabWidget, QMessageBox
 )
 
 from src.database.manager import DatabaseManager
@@ -36,12 +36,11 @@ class MainWindow(QMainWindow):
         """Configura la interfaz de usuario principal"""
         self.setWindowTitle("Sistema de Gestión de Parqueadero - Ssalud Plaza Claro")
 
-        # Configurar tamaño y posición de ventana
-        self.resize(1400, 800)
+        # Configurar tamaño mínimo de ventana
         self.setMinimumSize(1200, 700)
 
-        # Centrar ventana en pantalla
-        self.center_window()
+        # Maximizar ventana automáticamente al iniciar
+        self.showMaximized()
 
         # Widget central con pestañas
         self.tabs = QTabWidget()
@@ -54,12 +53,12 @@ class MainWindow(QMainWindow):
         self.tab_parqueaderos = ParqueaderosTab(self.db)
         self.tab_asignaciones = AsignacionesTab(self.db)
 
-        # Agregar pestañas
+        # Agregar pestañas en el orden solicitado
         self.tabs.addTab(self.tab_dashboard, "🏠 Dashboard")
         self.tabs.addTab(self.tab_funcionarios, "👥 Funcionarios")
         self.tabs.addTab(self.tab_vehiculos, "🚗 Vehículos")
-        self.tabs.addTab(self.tab_parqueaderos, "🅿️ Parqueaderos")
         self.tabs.addTab(self.tab_asignaciones, "📋 Asignaciones")
+        self.tabs.addTab(self.tab_parqueaderos, "🅿️ Parqueaderos")
 
         # Conectar señales entre pestañas
         self.conectar_senales()
@@ -186,20 +185,6 @@ class MainWindow(QMainWindow):
             " el mantenimiento y la depuración.\n\n"
             "© 2025 - Sistema de Gestión"
         )
-
-    def center_window(self):
-        """Centra la ventana en la pantalla"""
-        screen = QDesktopWidget().screenGeometry()
-
-        # Obtener geometría de la ventana
-        window = self.geometry()
-
-        # Calcular posición centrada
-        x = (screen.width() - window.width()) // 2
-        y = (screen.height() - window.height()) // 2
-
-        # Mover ventana al centro
-        self.move(x, y)
 
     def closeEvent(self, event):
         """Evento al cerrar la aplicación"""
