@@ -15,6 +15,7 @@ from src.ui.funcionarios_tab import FuncionariosTab
 from src.ui.vehiculos_tab import VehiculosTab
 from src.ui.parqueaderos_tab import ParqueaderosTab
 from src.ui.asignaciones_tab import AsignacionesTab
+from src.ui.reportes_tab import ReportesTab
 from src.widgets.styles import AppStyles
 
 
@@ -52,6 +53,7 @@ class MainWindow(QMainWindow):
         self.tab_vehiculos = VehiculosTab(self.db)
         self.tab_parqueaderos = ParqueaderosTab(self.db)
         self.tab_asignaciones = AsignacionesTab(self.db)
+        self.tab_reportes = ReportesTab(self.db)
 
         # Agregar pestañas en el orden solicitado
         self.tabs.addTab(self.tab_dashboard, "🏠 Dashboard")
@@ -59,6 +61,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.tab_vehiculos, "🚗 Vehículos")
         self.tabs.addTab(self.tab_asignaciones, "📋 Asignaciones")
         self.tabs.addTab(self.tab_parqueaderos, "🅿️ Parqueaderos")
+        self.tabs.addTab(self.tab_reportes, "📊 Reportes")
 
         # Conectar señales entre pestañas
         self.conectar_senales()
@@ -108,6 +111,13 @@ class MainWindow(QMainWindow):
         # ============================================
         # Cuando se actualicen parqueaderos, actualizar:
         self.tab_parqueaderos.parqueaderos_actualizados.connect(self.tab_dashboard.actualizar_dashboard)  # Dashboard
+
+        # ============================================
+        # CONEXIONES HACIA REPORTES
+        # ============================================
+        # Actualizar reportes cuando cambien asignaciones o parqueaderos:
+        self.tab_asignaciones.asignacion_actualizada.connect(self.tab_reportes.actualizar_reportes)  # Actualizar reportes
+        self.tab_parqueaderos.parqueaderos_actualizados.connect(self.tab_reportes.actualizar_reportes)  # Actualizar reportes
 
         # ============================================
         # CONEXIONES DESDE DASHBOARD
@@ -204,6 +214,34 @@ class MainWindow(QMainWindow):
 
 def main():
     """Función principal para iniciar la aplicación"""
+    # Imprimir información del sistema en consola
+    print("=" * 70)
+    print("  SISTEMA DE GESTION DE PARQUEADERO - Ssalud Plaza Claro")
+    print("=" * 70)
+    print(f"  Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Version: 1.0")
+    print()
+    print("  Modulos cargados:")
+    print("    [OK] DatabaseManager")
+    print("    [OK] Dashboard")
+    print("    [OK] Funcionarios")
+    print("    [OK] Vehiculos")
+    print("    [OK] Parqueaderos")
+    print("    [OK] Asignaciones")
+    print("    [OK] Reportes (7 pestanas)")
+    print()
+    print("  Pestanas de Reportes:")
+    print("    1. Reporte General")
+    print("    2. Funcionarios")
+    print("    3. Vehiculos")
+    print("    4. Parqueaderos")
+    print("    5. Asignaciones")
+    print("    6. Excepciones Pico y Placa")
+    print("    7. Estadisticas (graficos)")
+    print()
+    print("=" * 70)
+    print()
+
     app = QApplication(sys.argv)
 
     # Configurar el estilo de la aplicación

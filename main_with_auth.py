@@ -216,6 +216,33 @@ class AuthenticatedApp:
 
 def main():
     """Función principal de la aplicación"""
+    from datetime import datetime
+
+    # Imprimir información del sistema en consola
+    print("=" * 70)
+    print("  SISTEMA DE GESTION DE PARQUEADERO - Ssalud Plaza Claro")
+    print("  (Con Autenticacion)")
+    print("=" * 70)
+    print(f"  Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Version: 1.0")
+    print()
+    print("  Modulos cargados:")
+    print("    [OK] Sistema de Autenticacion")
+    print("    [OK] DatabaseManager")
+    print("    [OK] Dashboard")
+    print("    [OK] Funcionarios")
+    print("    [OK] Vehiculos")
+    print("    [OK] Parqueaderos")
+    print("    [OK] Asignaciones")
+    print("    [OK] Reportes (7 pestanas)")
+    print()
+    print("  Credenciales de prueba:")
+    print("    Usuario: splaza")
+    print("    Password: splaza123*")
+    print()
+    print("=" * 70)
+    print()
+
     # Habilitar DPI alto en Windows
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
