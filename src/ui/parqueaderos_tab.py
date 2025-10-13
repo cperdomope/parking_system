@@ -3,12 +3,18 @@
 Módulo de la pestaña Parqueaderos del sistema de gestión de parqueadero
 """
 
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QGroupBox, QGridLayout, QScrollArea, QFrame,
-    QSplitter, QTextEdit, QMessageBox
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import pyqtSignal, Qt
 
 from ..database.manager import DatabaseManager
 from ..models.parqueadero import ParqueaderoModel
@@ -108,7 +114,7 @@ class ParqueaderosTab(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # NO scroll horizontal
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)     # Solo scroll vertical
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)  # Solo scroll vertical
 
         # Widget contenedor optimizado para scroll vertical únicamente
         self.parking_container = QWidget()
@@ -155,21 +161,21 @@ class ParqueaderosTab(QWidget):
             col = i % columnas
 
             # Usar estado_display si está disponible (considera permite_compartir)
-            estado_mostrar = park.get('estado_display', park['estado'])
+            estado_mostrar = park.get("estado_display", park["estado"])
 
             widget = ParkingSpaceWidget(
-                parqueadero_id=park['id'],
-                numero=park['numero_parqueadero'],
+                parqueadero_id=park["id"],
+                numero=park["numero_parqueadero"],
                 estado=estado_mostrar,
-                asignados=park.get('asignados', '') or '',
-                tipo_espacio=park.get('tipo_espacio', 'Carro')
+                asignados=park.get("asignados", "") or "",
+                tipo_espacio=park.get("tipo_espacio", "Carro"),
             )
 
             # Conectar señal de clic
             widget.clicked.connect(self.mostrar_detalle_parqueadero)
 
             self.parking_grid.addWidget(widget, row, col)
-            self.parqueaderos_data[park['id']] = park
+            self.parqueaderos_data[park["id"]] = park
 
         # Actualizar estadísticas
         self.actualizar_estadisticas(parqueaderos)
@@ -197,9 +203,9 @@ class ParqueaderosTab(QWidget):
         """Actualiza las estadísticas mostradas en el header"""
         total = len(parqueaderos)
         # Usar estado_display que considera permite_compartir
-        disponibles = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Disponible'])
-        parciales = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Parcialmente_Asignado'])
-        completos = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Completo'])
+        disponibles = len([p for p in parqueaderos if p.get("estado_display", p["estado"]) == "Disponible"])
+        parciales = len([p for p in parqueaderos if p.get("estado_display", p["estado"]) == "Parcialmente_Asignado"])
+        completos = len([p for p in parqueaderos if p.get("estado_display", p["estado"]) == "Completo"])
 
         # Obtener tipo de vehículo seleccionado para el prefijo
         tipo_seleccionado = self.combo_filtro_tipo.currentData()
@@ -231,10 +237,7 @@ class ParqueaderosTab(QWidget):
                 raise ValueError(f"El parqueadero con ID {parqueadero_id} no existe")
 
             modal = DetalleParqueaderoModal(
-                parqueadero_id=parqueadero_id,
-                numero_parqueadero=numero_parqueadero,
-                db_manager=self.db,
-                parent=self
+                parqueadero_id=parqueadero_id, numero_parqueadero=numero_parqueadero, db_manager=self.db, parent=self
             )
             modal.exec_()
         except Exception as e:
@@ -244,7 +247,7 @@ class ParqueaderosTab(QWidget):
                 " Error",
                 f"No se pudo cargar la información del parqueadero:\n\n{str(e)}\n\n"
                 f"Parqueadero ID: {parqueadero_id}\n"
-                f"Número: {numero_parqueadero}"
+                f"Número: {numero_parqueadero}",
             )
 
     def mostrar_ayuda(self):
@@ -274,24 +277,24 @@ class ParqueaderosTab(QWidget):
             "    <li><b>Parqueaderos Exclusivos:</b> Se muestran como Completo con 1 vehículo</li>"
             "  </ul>"
             "</ul>"
-            "<p><b>Íconos:</b> Cada tarjeta muestra el ícono del tipo de espacio 🚗🏍️🚲</p>"
+            "<p><b>Íconos:</b> Cada tarjeta muestra el ícono del tipo de espacio 🚗🏍️🚲</p>",
         )
 
     def resizeEvent(self, event):
         """Recalcula la distribución al cambiar el tamaño de la ventana"""
         super().resizeEvent(event)
         # Solo recargar si el cambio de tamaño es significativo para evitar lag
-        if hasattr(self, 'parqueaderos_data') and hasattr(self, '_last_width'):
+        if hasattr(self, "parqueaderos_data") and hasattr(self, "_last_width"):
             new_width = self.width()
             if abs(new_width - self._last_width) > 100:  # Solo si cambió más de 100px
                 self._last_width = new_width
                 self.reorganizar_parqueaderos()
-        elif hasattr(self, 'parqueaderos_data'):
+        elif hasattr(self, "parqueaderos_data"):
             self._last_width = self.width()
 
     def reorganizar_parqueaderos(self):
         """Reorganiza los widgets existentes sin recargar datos"""
-        if not hasattr(self, 'parqueaderos_data') or not self.parqueaderos_data:
+        if not hasattr(self, "parqueaderos_data") or not self.parqueaderos_data:
             return
 
         # Obtener widgets existentes
@@ -325,13 +328,12 @@ class ParqueaderosTab(QWidget):
         self.combo_filtro_sotano.addItem("Todos los sótanos", None)
 
         # Siempre cargar exactamente los 3 sótanos principales (sin duplicaciones)
-        sotanos_disponibles = ['Sótano-1', 'Sótano-2', 'Sótano-3']
+        sotanos_disponibles = ["Sótano-1", "Sótano-2", "Sótano-3"]
 
         for sotano in sotanos_disponibles:
             self.combo_filtro_sotano.addItem(sotano, sotano)
 
         print(f"Sotanos cargados en parqueaderos: {sotanos_disponibles}")
-
 
     def aplicar_filtros(self):
         """Aplica todos los filtros seleccionados"""
@@ -361,9 +363,7 @@ class ParqueaderosTab(QWidget):
         """Carga parqueaderos con filtros específicos"""
         try:
             parqueaderos = self.parqueadero_model.obtener_todos(
-                sotano=sotano,
-                tipo_vehiculo=tipo_vehiculo,
-                estado=estado
+                sotano=sotano, tipo_vehiculo=tipo_vehiculo, estado=estado
             )
 
             # Limpiar grilla actual de forma segura
@@ -386,21 +386,21 @@ class ParqueaderosTab(QWidget):
                 col = i % columnas
 
                 # Usar estado_display si está disponible (considera permite_compartir)
-                estado_mostrar = park.get('estado_display', park['estado'])
+                estado_mostrar = park.get("estado_display", park["estado"])
 
                 widget = ParkingSpaceWidget(
-                    parqueadero_id=park['id'],
-                    numero=park['numero_parqueadero'],
+                    parqueadero_id=park["id"],
+                    numero=park["numero_parqueadero"],
                     estado=estado_mostrar,
-                    asignados=park.get('asignados', '') or '',
-                    tipo_espacio=park.get('tipo_espacio', 'Carro')
+                    asignados=park.get("asignados", "") or "",
+                    tipo_espacio=park.get("tipo_espacio", "Carro"),
                 )
 
                 # Conectar señal de clic
                 widget.clicked.connect(self.mostrar_detalle_parqueadero)
 
                 self.parking_grid.addWidget(widget, row, col)
-                self.parqueaderos_data[park['id']] = park
+                self.parqueaderos_data[park["id"]] = park
 
             # Actualizar estadísticas con filtros
             self.actualizar_estadisticas_con_filtros(parqueaderos, sotano)
@@ -421,15 +421,17 @@ class ParqueaderosTab(QWidget):
 
             # Calcular estadísticas manualmente con estado_display
             total = len(parqueaderos)
-            disponibles = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Disponible'])
-            parciales = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Parcialmente_Asignado'])
-            completos = len([p for p in parqueaderos if p.get('estado_display', p['estado']) == 'Completo'])
+            disponibles = len([p for p in parqueaderos if p.get("estado_display", p["estado"]) == "Disponible"])
+            parciales = len(
+                [p for p in parqueaderos if p.get("estado_display", p["estado"]) == "Parcialmente_Asignado"]
+            )
+            completos = len([p for p in parqueaderos if p.get("estado_display", p["estado"]) == "Completo"])
 
             stats = {
-                'total_parqueaderos': total,
-                'disponibles': disponibles,
-                'parcialmente_asignados': parciales,
-                'completos': completos
+                "total_parqueaderos": total,
+                "disponibles": disponibles,
+                "parcialmente_asignados": parciales,
+                "completos": completos,
             }
 
             # Construir prefijo contextual
@@ -454,14 +456,8 @@ class ParqueaderosTab(QWidget):
             # Estadísticas por defecto
             self.actualizar_estadisticas(parqueaderos)
 
-    def filtrar_parqueaderos(self):
-        """Método de compatibilidad - redirige a aplicar_filtros"""
-        self.aplicar_filtros()
-
-
     def actualizar_parqueaderos(self):
         """Actualiza la vista de parqueaderos"""
         self.cargar_filtros_iniciales()
-
 
         self.cargar_parqueaderos()

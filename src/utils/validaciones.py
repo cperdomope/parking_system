@@ -6,6 +6,7 @@ Centraliza validaciones comunes para evitar duplicación de código.
 
 import re
 from typing import Tuple
+
 from ..config.settings import TipoCirculacion
 
 
@@ -13,11 +14,11 @@ class ValidadorCampos:
     """Validador central para campos comunes del sistema"""
 
     # Expresiones regulares para validaciones
-    REGEX_CEDULA = r'^[0-9]{7,10}$'
-    REGEX_CELULAR = r'^[0-9]{10}$'
-    REGEX_TARJETA = r'^[a-zA-Z0-9]{1,15}$'
-    REGEX_NOMBRE = r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$'
-    REGEX_PLACA = r'^[A-Z0-9]{5,7}$'
+    REGEX_CEDULA = r"^[0-9]{7,10}$"
+    REGEX_CELULAR = r"^[0-9]{10}$"
+    REGEX_TARJETA = r"^[a-zA-Z0-9]{1,15}$"
+    REGEX_NOMBRE = r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"
+    REGEX_PLACA = r"^[A-Z0-9]{5,7}$"
 
     @staticmethod
     def validar_cedula(cedula: str) -> Tuple[bool, str]:
@@ -302,8 +303,4 @@ class ValidadorReglasNegocio:
 
 
 # Exportar clases principales
-__all__ = [
-    'ValidadorCampos',
-    'ValidadorPicoPlaca',
-    'ValidadorReglasNegocio'
-]
+__all__ = ["ValidadorCampos", "ValidadorPicoPlaca", "ValidadorReglasNegocio"]

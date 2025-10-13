@@ -3,13 +3,24 @@
 Modal para mostrar información detallada de un parqueadero
 """
 
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QGroupBox, QGridLayout, QScrollArea, QWidget, QFrame, QTableWidget,
-    QTableWidgetItem, QHeaderView, QTabWidget
-)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont, QBrush
+from PyQt5.QtGui import QBrush, QColor, QFont
+from PyQt5.QtWidgets import (
+    QDialog,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..database.manager import DatabaseManager
 from ..models.parqueadero import ParqueaderoModel
@@ -18,8 +29,7 @@ from ..models.parqueadero import ParqueaderoModel
 class DetalleParqueaderoModal(QDialog):
     """Modal para mostrar información detallada de un parqueadero"""
 
-    def __init__(self, parqueadero_id: int, numero_parqueadero: int,
-                 db_manager: DatabaseManager, parent=None):
+    def __init__(self, parqueadero_id: int, numero_parqueadero: int, db_manager: DatabaseManager, parent=None):
         super().__init__(parent)
 
         # Validaciones de inicialización
@@ -45,14 +55,16 @@ class DetalleParqueaderoModal(QDialog):
         self.setModal(True)
 
         # Aplicar estilo base para asegurar texto negro en todo el modal
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QDialog {
                 background-color: #f5f5f5;
             }
             QTableWidget::item {
                 color: #000000 !important;
             }
-        """)
+        """
+        )
 
         # Tamaño optimizado para pantalla sin scroll
         self.resize(900, 650)
@@ -154,10 +166,7 @@ class DetalleParqueaderoModal(QDialog):
         layout.addWidget(lbl_estado_label, 0, 2)
 
         self.lbl_estado = QLabel("Cargando...")
-        self.lbl_estado.setStyleSheet(
-            "font-size: 18px; font-weight: bold; "
-            "padding: 8px 12px; border-radius: 6px;"
-        )
+        self.lbl_estado.setStyleSheet("font-size: 18px; font-weight: bold; " "padding: 8px 12px; border-radius: 6px;")
         layout.addWidget(self.lbl_estado, 0, 3)
 
         # Sótano
@@ -179,8 +188,7 @@ class DetalleParqueaderoModal(QDialog):
 
         self.lbl_tipo_espacio = QLabel("Cargando...")
         self.lbl_tipo_espacio.setStyleSheet(
-            "font-size: 14px; padding: 6px; "
-            "background-color: #F5F5F5; border-radius: 4px;"
+            "font-size: 14px; padding: 6px; " "background-color: #F5F5F5; border-radius: 4px;"
         )
         layout.addWidget(self.lbl_tipo_espacio, 1, 3)
 
@@ -191,8 +199,7 @@ class DetalleParqueaderoModal(QDialog):
 
         self.lbl_ocupacion = QLabel("Cargando...")
         self.lbl_ocupacion.setStyleSheet(
-            "font-size: 16px; font-weight: bold; "
-            "padding: 6px 12px; border-radius: 4px;"
+            "font-size: 16px; font-weight: bold; " "padding: 6px 12px; border-radius: 4px;"
         )
         layout.addWidget(self.lbl_ocupacion, 2, 1, 1, 3)  # Expandir a lo largo de 3 columnas
 
@@ -259,16 +266,16 @@ class DetalleParqueaderoModal(QDialog):
         # Tabla de historial mejorada
         self.tabla_historial = QTableWidget()
         self.tabla_historial.setColumnCount(7)
-        self.tabla_historial.setHorizontalHeaderLabels([
-            "Fecha Inicio", "Fecha Fin", "Duración", "Funcionario", "Vehículo", "Placa", "Estado"
-        ])
+        self.tabla_historial.setHorizontalHeaderLabels(
+            ["Fecha Inicio", "Fecha Fin", "Duración", "Funcionario", "Vehículo", "Placa", "Estado"]
+        )
 
         # Configurar tabla con mejor apariencia
         header = self.tabla_historial.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Fecha Inicio
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Fecha Fin
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Duración
-        header.setSectionResizeMode(3, QHeaderView.Stretch)           # Funcionario
+        header.setSectionResizeMode(3, QHeaderView.Stretch)  # Funcionario
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Vehículo
         header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # Placa
         header.setSectionResizeMode(6, QHeaderView.ResizeToContents)  # Estado
@@ -311,16 +318,12 @@ class DetalleParqueaderoModal(QDialog):
         # Pie del historial con información adicional
         footer_layout = QHBoxLayout()
         self.lbl_total_registros = QLabel("Total de registros: 0")
-        self.lbl_total_registros.setStyleSheet(
-            "color: #666; font-style: italic; padding: 5px;"
-        )
+        self.lbl_total_registros.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
         footer_layout.addWidget(self.lbl_total_registros)
         footer_layout.addStretch()
 
         lbl_nota = QLabel("Nota: Se muestran los últimos 100 registros")
-        lbl_nota.setStyleSheet(
-            "color: #999; font-size: 11px; font-style: italic;"
-        )
+        lbl_nota.setStyleSheet("color: #999; font-size: 11px; font-style: italic;")
         footer_layout.addWidget(lbl_nota)
         layout.addLayout(footer_layout)
 
@@ -334,7 +337,8 @@ class DetalleParqueaderoModal(QDialog):
             try:
                 check_query = "SHOW COLUMNS FROM parqueaderos LIKE 'sotano'"
                 column_exists = self.db.fetch_one(check_query) is not None
-            except:
+            except Exception as e:
+                print(f"Advertencia al verificar columna 'sotano': {e}")
                 column_exists = False
 
             # Obtener información actual adaptable
@@ -390,54 +394,48 @@ class DetalleParqueaderoModal(QDialog):
 
     def actualizar_header(self, info):
         """Actualiza la información del header"""
-        estado_db = info['estado']
-        tipo_espacio = info['tipo_espacio']
-        sotano = info['sotano']
-        carros_asignados = info.get('carros_asignados', 0)
-        motos_asignadas = info.get('motos_asignadas', 0)
-        bicicletas_asignadas = info.get('bicicletas_asignadas', 0)
+        tipo_espacio = info["tipo_espacio"]
+        sotano = info["sotano"]
+        carros_asignados = info.get("carros_asignados", 0)
+        motos_asignadas = info.get("motos_asignadas", 0)
+        bicicletas_asignadas = info.get("bicicletas_asignadas", 0)
 
         # Actualizar sótano
         self.lbl_sotano.setText(sotano)
 
         # Actualizar tipo de espacio con ícono
-        iconos_tipo = {
-            'Carro': '🚗',
-            'Moto': '🏍️',
-            'Bicicleta': '🚲',
-            'Mixto': '🚗🏍️'
-        }
-        icono_tipo = iconos_tipo.get(tipo_espacio, '🚗')
+        iconos_tipo = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲", "Mixto": "🚗🏍️"}
+        icono_tipo = iconos_tipo.get(tipo_espacio, "🚗")
         self.lbl_tipo_espacio.setText(f"{icono_tipo} {tipo_espacio}")
 
         # CALCULAR ESTADO CORRECTO según tipo de vehículo y asignaciones
         total_asignaciones = carros_asignados + motos_asignadas + bicicletas_asignadas
 
-        if tipo_espacio == 'Moto':
+        if tipo_espacio == "Moto":
             # Motos: 0 asignaciones = Disponible, ≥1 = Completo
             if motos_asignadas == 0:
-                estado = 'Disponible'
+                estado = "Disponible"
             else:
-                estado = 'Completo'
-        elif tipo_espacio == 'Bicicleta':
+                estado = "Completo"
+        elif tipo_espacio == "Bicicleta":
             # Bicicletas: 0 asignaciones = Disponible, ≥1 = Completo
             if bicicletas_asignadas == 0:
-                estado = 'Disponible'
+                estado = "Disponible"
             else:
-                estado = 'Completo'
-        elif tipo_espacio == 'Carro':
+                estado = "Completo"
+        elif tipo_espacio == "Carro":
             # Carros: lógica normal (0=Disponible, 1=Parcial, 2=Completo)
             if carros_asignados == 0:
-                estado = 'Disponible'
+                estado = "Disponible"
             elif carros_asignados == 1:
-                estado = 'Parcialmente_Asignado'
+                estado = "Parcialmente_Asignado"
             else:
-                estado = 'Completo'
+                estado = "Completo"
         else:  # Mixto
             if total_asignaciones == 0:
-                estado = 'Disponible'
+                estado = "Disponible"
             else:
-                estado = 'Completo'
+                estado = "Completo"
 
         # Actualizar estado con color y fondo
         color_estado, bg_color = self.get_colors_estado(estado)
@@ -450,7 +448,7 @@ class DetalleParqueaderoModal(QDialog):
         )
 
         # Actualizar ocupación basada en el tipo de espacio
-        if tipo_espacio == 'Carro':
+        if tipo_espacio == "Carro":
             # Lógica original para carros
             porcentaje = (carros_asignados / 2) * 100
             if carros_asignados == 0:
@@ -467,14 +465,14 @@ class DetalleParqueaderoModal(QDialog):
                 icono = "🔴"
             texto_ocupacion = f"{icono} {carros_asignados}/2 carros ({porcentaje:.0f}%)"
 
-        elif tipo_espacio == 'Moto':
+        elif tipo_espacio == "Moto":
             # Para motos (capacidad ilimitada prácticamente)
             color_ocupacion = "#4CAF50" if motos_asignadas == 0 else "#2196F3"
             bg_ocupacion = "#E8F5E9" if motos_asignadas == 0 else "#E3F2FD"
             icono = "🟢" if motos_asignadas == 0 else "🔵"
             texto_ocupacion = f"{icono} {motos_asignadas} motos asignadas"
 
-        elif tipo_espacio == 'Bicicleta':
+        elif tipo_espacio == "Bicicleta":
             # Para bicicletas (capacidad ilimitada prácticamente)
             color_ocupacion = "#4CAF50" if bicicletas_asignadas == 0 else "#9C27B0"
             bg_ocupacion = "#E8F5E9" if bicicletas_asignadas == 0 else "#F3E5F5"
@@ -545,7 +543,7 @@ class DetalleParqueaderoModal(QDialog):
             self.layout_vehiculos.addWidget(lbl_sin_vehiculos)
         else:
             for i, vehiculo in enumerate(vehiculos):
-                widget_vehiculo = self.crear_widget_vehiculo(vehiculo, i+1)
+                widget_vehiculo = self.crear_widget_vehiculo(vehiculo, i + 1)
                 self.layout_vehiculos.addWidget(widget_vehiculo)
 
         # Agregar stretch al final para que los elementos se alineen arriba
@@ -572,12 +570,8 @@ class DetalleParqueaderoModal(QDialog):
 
         # Header del vehículo con ícono dinámico
         header_layout = QHBoxLayout()
-        iconos_vehiculo = {
-            'Carro': '🚗',
-            'Moto': '🏍️',
-            'Bicicleta': '🚲'
-        }
-        icono = iconos_vehiculo.get(vehiculo['tipo_vehiculo'], '🚗')
+        iconos_vehiculo = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}
+        icono = iconos_vehiculo.get(vehiculo["tipo_vehiculo"], "🚗")
         header = QLabel(f"{icono} {vehiculo['tipo_vehiculo']} {posicion}")
         header.setStyleSheet(
             "font-size: 18px; font-weight: bold; color: #1976D2; "
@@ -594,7 +588,7 @@ class DetalleParqueaderoModal(QDialog):
 
         # Placa destacada
         vehiculo_layout.addWidget(QLabel("Placa:"), 0, 0)
-        lbl_placa = QLabel(vehiculo['placa'])
+        lbl_placa = QLabel(vehiculo["placa"])
         lbl_placa.setStyleSheet(
             "font-size: 16px; font-weight: bold; color: #2E7D32; "
             "padding: 4px 8px; background-color: #E8F5E9; border-radius: 4px;"
@@ -603,13 +597,13 @@ class DetalleParqueaderoModal(QDialog):
 
         # Tipo de circulación destacado (solo para carros)
         vehiculo_layout.addWidget(QLabel("Circulación:"), 0, 2)
-        tipo_circulacion = vehiculo['tipo_circulacion'] or 'N/A'
+        tipo_circulacion = vehiculo["tipo_circulacion"] or "N/A"
 
         # Configurar colores según tipo de circulación
-        if tipo_circulacion == 'IMPAR':
+        if tipo_circulacion == "IMPAR":
             color_bg = "#FFEBEE"
             color_text = "#C62828"
-        elif tipo_circulacion == 'PAR':
+        elif tipo_circulacion == "PAR":
             color_bg = "#E8EAF6"
             color_text = "#3F51B5"
         else:  # N/A para motos y bicicletas
@@ -625,11 +619,13 @@ class DetalleParqueaderoModal(QDialog):
 
         # Último dígito
         vehiculo_layout.addWidget(QLabel("Último dígito:"), 1, 0)
-        vehiculo_layout.addWidget(QLabel(str(vehiculo['ultimo_digito']) if vehiculo['ultimo_digito'] else 'N/A'), 1, 1)
+        vehiculo_layout.addWidget(QLabel(str(vehiculo["ultimo_digito"]) if vehiculo["ultimo_digito"] else "N/A"), 1, 1)
 
         # Fecha de asignación
         vehiculo_layout.addWidget(QLabel("Fecha asignación:"), 1, 2)
-        fecha_asignacion = vehiculo['fecha_asignacion'].strftime('%d/%m/%Y %H:%M') if vehiculo['fecha_asignacion'] else 'No disponible'
+        fecha_asignacion = (
+            vehiculo["fecha_asignacion"].strftime("%d/%m/%Y %H:%M") if vehiculo["fecha_asignacion"] else "No disponible"
+        )
         vehiculo_layout.addWidget(QLabel(fecha_asignacion), 1, 3)
 
         vehiculo_group.setLayout(vehiculo_layout)
@@ -643,42 +639,37 @@ class DetalleParqueaderoModal(QDialog):
         # Nombre completo destacado
         funcionario_layout.addWidget(QLabel("Nombre:"), 0, 0)
         lbl_nombre = QLabel(f"{vehiculo['nombre']} {vehiculo['apellidos']}")
-        lbl_nombre.setStyleSheet(
-            "font-size: 15px; font-weight: bold; color: #1976D2;"
-        )
+        lbl_nombre.setStyleSheet("font-size: 15px; font-weight: bold; color: #1976D2;")
         funcionario_layout.addWidget(lbl_nombre, 0, 1, 1, 3)
 
         # Cédula
         funcionario_layout.addWidget(QLabel("Cédula:"), 1, 0)
-        funcionario_layout.addWidget(QLabel(vehiculo['cedula']), 1, 1)
+        funcionario_layout.addWidget(QLabel(vehiculo["cedula"]), 1, 1)
 
         # Cargo
         funcionario_layout.addWidget(QLabel("Cargo:"), 1, 2)
-        funcionario_layout.addWidget(QLabel(vehiculo['cargo'] or 'No especificado'), 1, 3)
+        funcionario_layout.addWidget(QLabel(vehiculo["cargo"] or "No especificado"), 1, 3)
 
         # Dirección/Grupo
         funcionario_layout.addWidget(QLabel("Dirección:"), 2, 0)
-        lbl_direccion = QLabel(vehiculo['direccion_grupo'] or 'No especificada')
+        lbl_direccion = QLabel(vehiculo["direccion_grupo"] or "No especificada")
         lbl_direccion.setWordWrap(True)
         funcionario_layout.addWidget(lbl_direccion, 2, 1, 1, 2)
 
         # Celular en fila separada para evitar solapamiento
         funcionario_layout.addWidget(QLabel("Celular:"), 3, 0)
-        funcionario_layout.addWidget(QLabel(vehiculo['celular'] or 'No registrado'), 3, 1)
+        funcionario_layout.addWidget(QLabel(vehiculo["celular"] or "No registrado"), 3, 1)
 
         funcionario_group.setLayout(funcionario_layout)
         main_layout.addWidget(funcionario_group)
 
         # Observaciones (si existen)
-        if vehiculo['observaciones']:
+        if vehiculo["observaciones"]:
             obs_group = QGroupBox("📝 Observaciones")
             obs_layout = QVBoxLayout()
-            lbl_obs = QLabel(vehiculo['observaciones'])
+            lbl_obs = QLabel(vehiculo["observaciones"])
             lbl_obs.setWordWrap(True)
-            lbl_obs.setStyleSheet(
-                "padding: 8px; background-color: #FFF3E0; "
-                "border-radius: 4px; color: #E65100;"
-            )
+            lbl_obs.setStyleSheet("padding: 8px; background-color: #FFF3E0; " "border-radius: 4px; color: #E65100;")
             obs_layout.addWidget(lbl_obs)
             obs_group.setLayout(obs_layout)
             main_layout.addWidget(obs_group)
@@ -716,28 +707,34 @@ class DetalleParqueaderoModal(QDialog):
 
         for row, registro in enumerate(historial):
             # Fecha inicio
-            fecha_inicio = registro['fecha_asignacion'].strftime('%d/%m/%Y\n%H:%M') if registro['fecha_asignacion'] else 'N/A'
+            fecha_inicio = (
+                registro["fecha_asignacion"].strftime("%d/%m/%Y\n%H:%M") if registro["fecha_asignacion"] else "N/A"
+            )
             item_inicio = QTableWidgetItem(fecha_inicio)
             item_inicio.setTextAlignment(Qt.AlignCenter)
             item_inicio.setForeground(QBrush(QColor(0, 0, 0)))
             self.tabla_historial.setItem(row, 0, item_inicio)
 
             # Fecha fin
-            fecha_fin = registro['fecha_fin_asignacion'].strftime('%d/%m/%Y\n%H:%M') if registro['fecha_fin_asignacion'] else 'Activo'
+            fecha_fin = (
+                registro["fecha_fin_asignacion"].strftime("%d/%m/%Y\n%H:%M")
+                if registro["fecha_fin_asignacion"]
+                else "Activo"
+            )
             item_fin = QTableWidgetItem(fecha_fin)
             item_fin.setTextAlignment(Qt.AlignCenter)
-            if fecha_fin == 'Activo':
-                item_fin.setBackground(QColor('#E8F5E9'))
+            if fecha_fin == "Activo":
+                item_fin.setBackground(QColor("#E8F5E9"))
                 item_fin.setForeground(QBrush(QColor(46, 125, 50)))
             else:
                 item_fin.setForeground(QBrush(QColor(0, 0, 0)))
             self.tabla_historial.setItem(row, 1, item_fin)
 
             # Duración
-            if registro['fecha_asignacion']:
-                fecha_fin_calc = registro['fecha_fin_asignacion'] if registro['fecha_fin_asignacion'] else None
+            if registro["fecha_asignacion"]:
+                fecha_fin_calc = registro["fecha_fin_asignacion"] if registro["fecha_fin_asignacion"] else None
                 if fecha_fin_calc:
-                    duracion = fecha_fin_calc - registro['fecha_asignacion']
+                    duracion = fecha_fin_calc - registro["fecha_asignacion"]
                     dias = duracion.days
                     horas = duracion.seconds // 3600
                     if dias > 0:
@@ -747,7 +744,8 @@ class DetalleParqueaderoModal(QDialog):
                 else:
                     # Calcular duración hasta ahora
                     from datetime import datetime
-                    duracion = datetime.now() - registro['fecha_asignacion']
+
+                    duracion = datetime.now() - registro["fecha_asignacion"]
                     dias = duracion.days
                     duracion_texto = f"{dias}d" if dias > 0 else "< 1d"
             else:
@@ -765,49 +763,49 @@ class DetalleParqueaderoModal(QDialog):
             self.tabla_historial.setItem(row, 3, item_funcionario)
 
             # Vehículo con ícono
-            iconos_vehiculo = {'Carro': '🚗', 'Moto': '🏍️', 'Bicicleta': '🚲'}
-            icono_veh = iconos_vehiculo.get(registro['tipo_vehiculo'], '')
+            iconos_vehiculo = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}
+            icono_veh = iconos_vehiculo.get(registro["tipo_vehiculo"], "")
             item_vehiculo = QTableWidgetItem(f"{icono_veh} {registro['tipo_vehiculo']}")
             item_vehiculo.setTextAlignment(Qt.AlignCenter)
             item_vehiculo.setForeground(QBrush(QColor(0, 0, 0)))
             # Color por tipo de vehículo
-            if registro['tipo_vehiculo'] == 'Carro':
-                item_vehiculo.setBackground(QColor('#E3F2FD'))
-            elif registro['tipo_vehiculo'] == 'Moto':
-                item_vehiculo.setBackground(QColor('#F3E5F5'))
-            elif registro['tipo_vehiculo'] == 'Bicicleta':
-                item_vehiculo.setBackground(QColor('#E8F5E9'))
+            if registro["tipo_vehiculo"] == "Carro":
+                item_vehiculo.setBackground(QColor("#E3F2FD"))
+            elif registro["tipo_vehiculo"] == "Moto":
+                item_vehiculo.setBackground(QColor("#F3E5F5"))
+            elif registro["tipo_vehiculo"] == "Bicicleta":
+                item_vehiculo.setBackground(QColor("#E8F5E9"))
             self.tabla_historial.setItem(row, 4, item_vehiculo)
 
             # Placa con tipo de circulación
-            tipo_circ = registro['tipo_circulacion'] or 'N/A'
+            tipo_circ = registro["tipo_circulacion"] or "N/A"
             placa_texto = f"{registro['placa']}\n({tipo_circ})"
             item_placa = QTableWidgetItem(placa_texto)
             item_placa.setTextAlignment(Qt.AlignCenter)
             item_placa.setForeground(QBrush(QColor(0, 0, 0)))
             # Color por tipo de circulación
-            if tipo_circ == 'IMPAR':
-                item_placa.setBackground(QColor('#FFEBEE'))
-            elif tipo_circ == 'PAR':
-                item_placa.setBackground(QColor('#E8EAF6'))
-            elif tipo_circ == 'N/A':
-                item_placa.setBackground(QColor('#F5F5F5'))
+            if tipo_circ == "IMPAR":
+                item_placa.setBackground(QColor("#FFEBEE"))
+            elif tipo_circ == "PAR":
+                item_placa.setBackground(QColor("#E8EAF6"))
+            elif tipo_circ == "N/A":
+                item_placa.setBackground(QColor("#F5F5F5"))
             self.tabla_historial.setItem(row, 5, item_placa)
 
             # Estado con color mejorado
-            item_estado = QTableWidgetItem(registro['estado'])
+            item_estado = QTableWidgetItem(registro["estado"])
             item_estado.setTextAlignment(Qt.AlignCenter)
-            if registro['estado'] == 'Activo':
-                item_estado.setBackground(QColor('#E8F5E9'))
+            if registro["estado"] == "Activo":
+                item_estado.setBackground(QColor("#E8F5E9"))
                 item_estado.setForeground(QBrush(QColor(46, 125, 50)))
-                item_estado.setFont(QFont('Arial', 10, QFont.Bold))
+                item_estado.setFont(QFont("Arial", 10, QFont.Bold))
             else:
-                item_estado.setBackground(QColor('#FFEBEE'))
+                item_estado.setBackground(QColor("#FFEBEE"))
                 item_estado.setForeground(QBrush(QColor(198, 40, 40)))
             self.tabla_historial.setItem(row, 6, item_estado)
 
             # Tooltip con observaciones si existen
-            if registro['observaciones']:
+            if registro["observaciones"]:
                 item_funcionario.setToolTip(f"Observaciones: {registro['observaciones']}")
 
         # Actualizar contador

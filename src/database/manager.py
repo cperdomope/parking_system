@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Manejador de base de datos MySQL optimizado"""
 
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
+
 import mysql.connector
 from mysql.connector import Error
+
 from ..config.settings import DatabaseConfig
 
 
@@ -18,7 +20,7 @@ class DatabaseManager:
         return cls._instance
 
     def __init__(self):
-        if not hasattr(self, 'initialized'):
+        if not hasattr(self, "initialized"):
             self.config = DatabaseConfig()
             self.connection = None
             self.cursor = None
@@ -32,7 +34,7 @@ class DatabaseManager:
                 user=self.config.user,
                 password=self.config.password,
                 database=self.config.database,
-                port=self.config.port
+                port=self.config.port,
             )
             self.cursor = self.connection.cursor(dictionary=True)
             print(f"Conectado a la base de datos: {self.config.database}")

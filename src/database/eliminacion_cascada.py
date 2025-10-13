@@ -5,6 +5,7 @@ Garantiza que al eliminar un funcionario se borren TODOS sus datos asociados
 """
 
 from typing import Dict, List, Tuple
+
 from .manager import DatabaseManager
 
 
@@ -42,15 +43,15 @@ class GestorEliminacionCascada:
 
             if not funcionario:
                 return {
-                    'existe': False,
-                    'funcionario': None,
-                    'vehiculos': [],
-                    'asignaciones': [],
-                    'historial_accesos': [],
-                    'parqueaderos_afectados': []
+                    "existe": False,
+                    "funcionario": None,
+                    "vehiculos": [],
+                    "asignaciones": [],
+                    "historial_accesos": [],
+                    "parqueaderos_afectados": [],
                 }
 
-            funcionario_id = funcionario['id']
+            funcionario_id = funcionario["id"]
 
             # Obtener vehículos del funcionario
             query_vehiculos = """
@@ -96,23 +97,23 @@ class GestorEliminacionCascada:
             parqueaderos_afectados = self.db.fetch_all(query_parqueaderos, (funcionario_id,))
 
             return {
-                'existe': True,
-                'funcionario': funcionario,
-                'vehiculos': vehiculos,
-                'asignaciones': asignaciones,
-                'historial_accesos': historial_accesos,
-                'parqueaderos_afectados': parqueaderos_afectados
+                "existe": True,
+                "funcionario": funcionario,
+                "vehiculos": vehiculos,
+                "asignaciones": asignaciones,
+                "historial_accesos": historial_accesos,
+                "parqueaderos_afectados": parqueaderos_afectados,
             }
 
         except Exception as e:
             return {
-                'existe': False,
-                'error': f"Error obteniendo datos del funcionario: {str(e)}",
-                'funcionario': None,
-                'vehiculos': [],
-                'asignaciones': [],
-                'historial_accesos': [],
-                'parqueaderos_afectados': []
+                "existe": False,
+                "error": f"Error obteniendo datos del funcionario: {str(e)}",
+                "funcionario": None,
+                "vehiculos": [],
+                "asignaciones": [],
+                "historial_accesos": [],
+                "parqueaderos_afectados": [],
             }
 
     def eliminar_funcionario_completo(self, identificador: str) -> Tuple[bool, str, Dict]:
@@ -129,25 +130,25 @@ class GestorEliminacionCascada:
             # Primero obtener todos los datos antes de eliminar
             datos_completos = self.obtener_datos_funcionario_completos(identificador)
 
-            if not datos_completos['existe']:
+            if not datos_completos["existe"]:
                 return False, f"Funcionario con identificador '{identificador}' no encontrado", {}
 
-            funcionario = datos_completos['funcionario']
-            funcionario_id = funcionario['id']
+            funcionario = datos_completos["funcionario"]
+            funcionario_id = funcionario["id"]
 
             # Iniciar transacción
             self.db.connection.autocommit = False
 
             detalles_eliminacion = {
-                'funcionario_eliminado': funcionario,
-                'vehiculos_eliminados': datos_completos['vehiculos'],
-                'asignaciones_liberadas': datos_completos['asignaciones'],
-                'historial_borrado': len(datos_completos['historial_accesos']),
-                'parqueaderos_liberados': datos_completos['parqueaderos_afectados']
+                "funcionario_eliminado": funcionario,
+                "vehiculos_eliminados": datos_completos["vehiculos"],
+                "asignaciones_liberadas": datos_completos["asignaciones"],
+                "historial_borrado": len(datos_completos["historial_accesos"]),
+                "parqueaderos_liberados": datos_completos["parqueaderos_afectados"],
             }
 
             # PASO 1: Eliminar historial de accesos
-            if datos_completos['historial_accesos']:
+            if datos_completos["historial_accesos"]:
                 query_historial = """
                     DELETE h FROM historial_accesos h
                     JOIN vehiculos v ON h.vehiculo_id = v.id
@@ -190,13 +191,13 @@ class GestorEliminacionCascada:
                 return False, f"Error eliminando funcionario: {error}", detalles_eliminacion
 
             # PASO 5: Actualizar estado de parqueaderos liberados
-            for parqueadero in datos_completos['parqueaderos_afectados']:
+            for parqueadero in datos_completos["parqueaderos_afectados"]:
                 query_actualizar_parqueadero = """
                     UPDATE parqueaderos
                     SET estado = 'Disponible'
                     WHERE id = %s
                 """
-                exito, error = self.db.execute_query(query_actualizar_parqueadero, (parqueadero['id'],))
+                exito, error = self.db.execute_query(query_actualizar_parqueadero, (parqueadero["id"],))
                 if not exito:
                     # No es crítico, solo advertencia
                     print(f"Advertencia: No se pudo actualizar parqueadero {parqueadero['numero_parqueadero']}")
@@ -207,7 +208,7 @@ class GestorEliminacionCascada:
             # Verificar eliminación
             verificacion = self.verificar_eliminacion_completa(funcionario_id)
 
-            if verificacion['eliminado_completamente']:
+            if verificacion["eliminado_completamente"]:
                 mensaje = f"""
 ELIMINACION COMPLETA EXITOSA
 
@@ -226,34 +227,34 @@ Verificacion: Todos los datos fueron eliminados exitosamente
                 return False, f"Eliminación parcial. Datos restantes: {verificacion}", detalles_eliminacion
 
         except Exception as e:
-            if hasattr(self.db, 'connection'):
+            if hasattr(self.db, "connection"):
                 self.db.connection.rollback()
             return False, f"Error crítico en eliminación: {str(e)}", {}
         finally:
             # Restaurar autocommit
-            if hasattr(self.db, 'connection'):
+            if hasattr(self.db, "connection"):
                 self.db.connection.autocommit = True
 
     def verificar_eliminacion_completa(self, funcionario_id: int) -> Dict:
         """Verifica que la eliminación haya sido completa"""
         verificacion = {
-            'funcionario_existe': 0,
-            'vehiculos_restantes': 0,
-            'asignaciones_restantes': 0,
-            'historial_restante': 0,
-            'eliminado_completamente': True
+            "funcionario_existe": 0,
+            "vehiculos_restantes": 0,
+            "asignaciones_restantes": 0,
+            "historial_restante": 0,
+            "eliminado_completamente": True,
         }
 
         try:
             # Verificar funcionario
             query = "SELECT COUNT(*) as total FROM funcionarios WHERE id = %s"
             resultado = self.db.fetch_one(query, (funcionario_id,))
-            verificacion['funcionario_existe'] = resultado['total'] if resultado else 0
+            verificacion["funcionario_existe"] = resultado["total"] if resultado else 0
 
             # Verificar vehículos
             query = "SELECT COUNT(*) as total FROM vehiculos WHERE funcionario_id = %s"
             resultado = self.db.fetch_one(query, (funcionario_id,))
-            verificacion['vehiculos_restantes'] = resultado['total'] if resultado else 0
+            verificacion["vehiculos_restantes"] = resultado["total"] if resultado else 0
 
             # Verificar asignaciones
             query = """
@@ -262,7 +263,7 @@ Verificacion: Todos los datos fueron eliminados exitosamente
                 WHERE v.funcionario_id = %s
             """
             resultado = self.db.fetch_one(query, (funcionario_id,))
-            verificacion['asignaciones_restantes'] = resultado['total'] if resultado else 0
+            verificacion["asignaciones_restantes"] = resultado["total"] if resultado else 0
 
             # Verificar historial
             query = """
@@ -271,19 +272,19 @@ Verificacion: Todos los datos fueron eliminados exitosamente
                 WHERE v.funcionario_id = %s
             """
             resultado = self.db.fetch_one(query, (funcionario_id,))
-            verificacion['historial_restante'] = resultado['total'] if resultado else 0
+            verificacion["historial_restante"] = resultado["total"] if resultado else 0
 
             # Determinar si fue completa
-            verificacion['eliminado_completamente'] = (
-                verificacion['funcionario_existe'] == 0 and
-                verificacion['vehiculos_restantes'] == 0 and
-                verificacion['asignaciones_restantes'] == 0 and
-                verificacion['historial_restante'] == 0
+            verificacion["eliminado_completamente"] = (
+                verificacion["funcionario_existe"] == 0
+                and verificacion["vehiculos_restantes"] == 0
+                and verificacion["asignaciones_restantes"] == 0
+                and verificacion["historial_restante"] == 0
             )
 
         except Exception as e:
-            verificacion['error'] = str(e)
-            verificacion['eliminado_completamente'] = False
+            verificacion["error"] = str(e)
+            verificacion["eliminado_completamente"] = False
 
         return verificacion
 
@@ -316,48 +317,49 @@ Verificacion: Todos los datos fueron eliminados exitosamente
         """Genera un reporte detallado antes de eliminar un funcionario"""
         datos = self.obtener_datos_funcionario_completos(identificador)
 
-        if not datos['existe']:
+        if not datos["existe"]:
             return f"ERROR Funcionario con identificador '{identificador}' no encontrado"
 
-        funcionario = datos['funcionario']
+        funcionario = datos["funcionario"]
         reporte = [
             "REPORTE DE ELIMINACION PREVISTA",
             "=" * 50,
             "",
-            f"FUNCIONARIO A ELIMINAR:",
+            "FUNCIONARIO A ELIMINAR:",
             f"   - Nombre: {funcionario['nombre']} {funcionario['apellidos']}",
             f"   - Cedula: {funcionario['cedula']}",
             f"   - Cargo: {funcionario['cargo']}",
             f"   - Registro: {funcionario['fecha_registro']}",
             "",
-            f"VEHICULOS A ELIMINAR ({len(datos['vehiculos'])}):"
+            f"VEHICULOS A ELIMINAR ({len(datos['vehiculos'])}):",
         ]
 
-        for vehiculo in datos['vehiculos']:
+        for vehiculo in datos["vehiculos"]:
             reporte.append(f"   - {vehiculo['tipo_vehiculo']} - {vehiculo['placa']} ({vehiculo['tipo_circulacion']})")
 
-        reporte.extend([
-            "",
-            f"ASIGNACIONES A LIBERAR ({len(datos['asignaciones'])}):"
-        ])
+        reporte.extend(["", f"ASIGNACIONES A LIBERAR ({len(datos['asignaciones'])}):"])
 
-        for asignacion in datos['asignaciones']:
+        for asignacion in datos["asignaciones"]:
             reporte.append(f"   - Parqueadero {asignacion['numero_parqueadero']} - {asignacion['placa']}")
 
-        reporte.extend([
-            "",
-            f"HISTORIAL A ELIMINAR: {len(datos['historial_accesos'])} registros",
-            "",
-            f"PARQUEADEROS A LIBERAR ({len(datos['parqueaderos_afectados'])}):"
-        ])
+        reporte.extend(
+            [
+                "",
+                f"HISTORIAL A ELIMINAR: {len(datos['historial_accesos'])} registros",
+                "",
+                f"PARQUEADEROS A LIBERAR ({len(datos['parqueaderos_afectados'])}):",
+            ]
+        )
 
-        for parqueadero in datos['parqueaderos_afectados']:
+        for parqueadero in datos["parqueaderos_afectados"]:
             reporte.append(f"   - Parqueadero {parqueadero['numero_parqueadero']} (estado: {parqueadero['estado']})")
 
-        reporte.extend([
-            "",
-            "ADVERTENCIA: Esta accion es IRREVERSIBLE",
-            "   Todos los datos asociados seran eliminados permanentemente."
-        ])
+        reporte.extend(
+            [
+                "",
+                "ADVERTENCIA: Esta accion es IRREVERSIBLE",
+                "   Todos los datos asociados seran eliminados permanentemente.",
+            ]
+        )
 
         return "\n".join(reporte)

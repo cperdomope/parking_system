@@ -4,11 +4,20 @@ Ventana de login futurista para el sistema de gestión de parqueadero
 """
 
 import sys
+
+from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QApplication, QMessageBox, QFrame, QGraphicsDropShadowEffect
+    QApplication,
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, pyqtSignal, QTimer
 
 from .auth_manager import AuthManager
 
@@ -252,7 +261,10 @@ class FuturisticLoginWindow(QWidget):
     def process_login(self, usuario, contraseña):
         """Procesa el login con el manejador de autenticación"""
         try:
-            if self.auth_manager.authenticate(usuario, contraseña):
+            # El nuevo authenticate() retorna (bool, str)
+            success, message = self.auth_manager.authenticate(usuario, contraseña)
+
+            if success:
                 self.show_success("¡Bienvenido al sistema!")
                 user_data = self.auth_manager.get_current_user()
 
@@ -262,7 +274,8 @@ class FuturisticLoginWindow(QWidget):
                 self.login_successful.emit(user_data)
                 QTimer.singleShot(1500, self.hide)  # Solo ocultar, no cerrar
             else:
-                self.show_error("Usuario o contraseña incorrectos")
+                # Mostrar mensaje específico de error
+                self.show_error(message)
         except Exception as e:
             self.show_error(f"Error de conexión: {str(e)}")
         finally:
@@ -299,8 +312,8 @@ class FuturisticLoginWindow(QWidget):
         """Cierra la aplicación completamente y limpia recursos"""
         try:
             # Solo cerrar la base de datos si no hay login exitoso pendiente
-            if not hasattr(self, '_login_success_pending'):
-                if hasattr(self.auth_manager, 'db') and self.auth_manager.db:
+            if not hasattr(self, "_login_success_pending"):
+                if hasattr(self.auth_manager, "db") and self.auth_manager.db:
                     self.auth_manager.db.disconnect()
                     print("Conexión a base de datos cerrada - Login cancelado")
 
@@ -318,7 +331,7 @@ class FuturisticLoginWindow(QWidget):
     def closeEvent(self, event):
         """Evento al cerrar la ventana (X del sistema o Alt+F4)"""
         # Solo cerrar aplicación si no es un login exitoso
-        if not hasattr(self, '_login_success_pending') or not self._login_success_pending:
+        if not hasattr(self, "_login_success_pending") or not self._login_success_pending:
             self.close_application()
         event.accept()
 
@@ -519,7 +532,7 @@ class FuturisticLoginWindow(QWidget):
 
     def mouseMoveEvent(self, event):
         """Maneja el arrastre de la ventana"""
-        if event.buttons() == Qt.LeftButton and hasattr(self, 'dragPosition'):
+        if event.buttons() == Qt.LeftButton and hasattr(self, "dragPosition"):
             self.move(event.globalPos() - self.dragPosition)
             event.accept()
 

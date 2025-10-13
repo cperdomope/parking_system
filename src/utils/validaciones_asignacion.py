@@ -3,17 +3,14 @@
 Validaciones para asignación de parqueaderos según reglas de negocio
 """
 
-from typing import Tuple, Dict, Optional
+from typing import Dict, Optional, Tuple
 
 
 class ValidadorAsignacion:
     """Validador para reglas de asignación de parqueaderos"""
 
     @staticmethod
-    def validar_permite_compartir(
-        funcionario_data: Dict,
-        asignaciones_existentes: int
-    ) -> Tuple[bool, str]:
+    def validar_permite_compartir(funcionario_data: Dict, asignaciones_existentes: int) -> Tuple[bool, str]:
         """
         Valida si un funcionario puede compartir parqueadero
 
@@ -26,7 +23,7 @@ class ValidadorAsignacion:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
         # Verificar si el funcionario NO permite compartir (Parqueadero Exclusivo)
-        if not funcionario_data.get('permite_compartir', True) and asignaciones_existentes > 0:
+        if not funcionario_data.get("permite_compartir", True) and asignaciones_existentes > 0:
             return False, (
                 f"🚫 Asignación bloqueada por política de parqueadero exclusivo\n\n"
                 f"👤 {funcionario_data.get('nombre', 'N/A')} {funcionario_data.get('apellidos', 'N/A')}\n"
@@ -36,7 +33,7 @@ class ValidadorAsignacion:
             )
 
         # Verificar si tiene Pico y Placa Solidario activo
-        if funcionario_data.get('pico_placa_solidario', False) and asignaciones_existentes > 0:
+        if funcionario_data.get("pico_placa_solidario", False) and asignaciones_existentes > 0:
             return False, (
                 f"🚫 Asignación bloqueada por Pico y Placa Solidario\n\n"
                 f"👤 {funcionario_data.get('nombre', 'N/A')} {funcionario_data.get('apellidos', 'N/A')}\n"
@@ -47,7 +44,7 @@ class ValidadorAsignacion:
             )
 
         # Verificar si tiene Discapacidad
-        if funcionario_data.get('discapacidad', False) and asignaciones_existentes > 0:
+        if funcionario_data.get("discapacidad", False) and asignaciones_existentes > 0:
             return False, (
                 f"🚫 Asignación bloqueada por condición de discapacidad\n\n"
                 f"👤 {funcionario_data.get('nombre', 'N/A')} {funcionario_data.get('apellidos', 'N/A')}\n"
@@ -72,7 +69,7 @@ class ValidadorAsignacion:
         """
         if ocupante_data:
             # Verificar si NO permite compartir (Parqueadero Exclusivo)
-            if not ocupante_data.get('permite_compartir', True):
+            if not ocupante_data.get("permite_compartir", True):
                 return False, (
                     f"🚫 Parqueadero ocupado por funcionario con política exclusiva\n\n"
                     f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
@@ -82,7 +79,7 @@ class ValidadorAsignacion:
                 )
 
             # Verificar si tiene Pico y Placa Solidario
-            if ocupante_data.get('pico_placa_solidario', False):
+            if ocupante_data.get("pico_placa_solidario", False):
                 return False, (
                     f"🚫 Parqueadero ocupado por funcionario con Pico y Placa Solidario\n\n"
                     f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
@@ -93,7 +90,7 @@ class ValidadorAsignacion:
                 )
 
             # Verificar si tiene Discapacidad
-            if ocupante_data.get('discapacidad', False):
+            if ocupante_data.get("discapacidad", False):
                 return False, (
                     f"🚫 Parqueadero ocupado por funcionario con discapacidad\n\n"
                     f"👤 Ocupante: {ocupante_data.get('nombre', 'N/A')} {ocupante_data.get('apellidos', 'N/A')}\n"
@@ -106,10 +103,7 @@ class ValidadorAsignacion:
         return True, ""
 
     @staticmethod
-    def validar_compatibilidad_cargos(
-        cargo_nuevo: str,
-        cargo_existente: Optional[str]
-    ) -> Tuple[bool, str]:
+    def validar_compatibilidad_cargos(cargo_nuevo: str, cargo_existente: Optional[str]) -> Tuple[bool, str]:
         """
         Valida si dos cargos pueden compartir parqueadero
 
@@ -147,20 +141,17 @@ class ValidadorAsignacion:
 
         if cargo_existente == "Coordinador" and cargo_nuevo != "Asesor":
             return False, (
-                f"🚫 Restricción de jerarquía\n\n"
-                f"⚠️ Este parqueadero tiene un Coordinador\n"
-                f"👤 Solo Asesores pueden compartir con Coordinadores\n"
-                f"💡 Seleccione otro parqueadero"
+                "🚫 Restricción de jerarquía\n\n"
+                "⚠️ Este parqueadero tiene un Coordinador\n"
+                "👤 Solo Asesores pueden compartir con Coordinadores\n"
+                "💡 Seleccione otro parqueadero"
             )
 
         return True, ""
 
     @staticmethod
     def validar_pico_placa(
-        vehiculo_tipo: str,
-        tipo_circulacion: str,
-        tiene_pico_placa_solidario: bool,
-        mismo_tipo_count: int
+        vehiculo_tipo: str, tipo_circulacion: str, tiene_pico_placa_solidario: bool, mismo_tipo_count: int
     ) -> Tuple[bool, str]:
         """
         Valida las reglas de pico y placa
@@ -175,7 +166,7 @@ class ValidadorAsignacion:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
         # Solo aplica para carros con tipo de circulación definido
-        if vehiculo_tipo != 'Carro' or tipo_circulacion == 'N/A':
+        if vehiculo_tipo != "Carro" or tipo_circulacion == "N/A":
             return True, ""
 
         # Si tiene pico_placa_solidario, permitir
@@ -196,8 +187,7 @@ class ValidadorAsignacion:
 
     @staticmethod
     def puede_acceder_parqueadero_exclusivo_discapacidad(
-        tiene_discapacidad: bool,
-        parqueadero_exclusivo: bool
+        tiene_discapacidad: bool, parqueadero_exclusivo: bool
     ) -> Tuple[bool, str]:
         """
         Valida si un funcionario puede acceder a un parqueadero exclusivo para discapacidad
@@ -231,16 +221,16 @@ class ValidadorAsignacion:
         """
         mensajes = []
 
-        if funcionario_data.get('pico_placa_solidario'):
+        if funcionario_data.get("pico_placa_solidario"):
             mensajes.append("🔄 Pico y placa solidario activo - Sin restricción PAR/IMPAR")
 
-        if funcionario_data.get('discapacidad'):
+        if funcionario_data.get("discapacidad"):
             mensajes.append("♿ Funcionario con discapacidad - Prioridad especial")
 
-        if not funcionario_data.get('permite_compartir', True):
+        if not funcionario_data.get("permite_compartir", True):
             mensajes.append("🚫 Parqueadero exclusivo - No se permitirán más asignaciones")
 
-        if funcionario_data.get('cargo') in ['Director', 'Coordinador']:
+        if funcionario_data.get("cargo") in ["Director", "Coordinador"]:
             mensajes.append(f"💼 {funcionario_data['cargo']} - Restricciones de jerarquía aplicadas")
 
         return mensajes
@@ -258,16 +248,16 @@ class ValidadorAsignacion:
         """
         indicadores = []
 
-        if not funcionario_data.get('permite_compartir', True):
-            indicadores.append('🚫EXCLUSIVO')
+        if not funcionario_data.get("permite_compartir", True):
+            indicadores.append("🚫EXCLUSIVO")
 
-        if funcionario_data.get('pico_placa_solidario'):
-            indicadores.append('🔄SOL')
+        if funcionario_data.get("pico_placa_solidario"):
+            indicadores.append("🔄SOL")
 
-        if funcionario_data.get('discapacidad'):
-            indicadores.append('♿DISC')
+        if funcionario_data.get("discapacidad"):
+            indicadores.append("♿DISC")
 
-        return ' '.join(f'[{ind}]' for ind in indicadores) if indicadores else ''
+        return " ".join(f"[{ind}]" for ind in indicadores) if indicadores else ""
 
     @staticmethod
     def obtener_indicadores_badges(funcionario_data: Dict) -> str:
@@ -282,23 +272,20 @@ class ValidadorAsignacion:
         """
         badges = []
 
-        if not funcionario_data.get('permite_compartir', True):
-            badges.append('🚫')
+        if not funcionario_data.get("permite_compartir", True):
+            badges.append("🚫")
 
-        if funcionario_data.get('pico_placa_solidario'):
-            badges.append('🔄')
+        if funcionario_data.get("pico_placa_solidario"):
+            badges.append("🔄")
 
-        if funcionario_data.get('discapacidad'):
-            badges.append('♿')
+        if funcionario_data.get("discapacidad"):
+            badges.append("♿")
 
-        return ' '.join(badges) if badges else ''
+        return " ".join(badges) if badges else ""
 
     @staticmethod
     def validar_cambio_permite_compartir(
-        funcionario_id: int,
-        permite_compartir_nuevo: bool,
-        permite_compartir_actual: bool,
-        db_manager
+        funcionario_id: int, permite_compartir_nuevo: bool, permite_compartir_actual: bool, db_manager
     ) -> Tuple[bool, str]:
         """
         Valida si se puede cambiar el campo permite_compartir de un funcionario
@@ -331,7 +318,7 @@ class ValidadorAsignacion:
         """
         resultado = db_manager.fetch_one(query, (funcionario_id,))
 
-        if resultado and resultado.get('parqueaderos_compartidos', 0) > 0:
+        if resultado and resultado.get("parqueaderos_compartidos", 0) > 0:
             return False, (
                 f"⚠️ No se puede deshabilitar 'Permite compartir'\n\n"
                 f"❌ El funcionario actualmente comparte {resultado['parqueaderos_compartidos']} parqueadero(s)\n"

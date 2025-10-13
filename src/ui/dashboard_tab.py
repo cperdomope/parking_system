@@ -4,14 +4,20 @@ Módulo de la pestaña Dashboard del sistema de gestión de parqueadero.
 Diseño renovado para mayor claridad y eficiencia.
 """
 
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QGridLayout, QProgressBar
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QProgressBar,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 
 from ..database.manager import DatabaseManager
 from ..models.parqueadero import ParqueaderoModel
+
 
 class DashboardWidget(QWidget):
     """
@@ -42,12 +48,14 @@ class DashboardWidget(QWidget):
 
         # Título del Dashboard
         title_label = QLabel("Dashboard de Ocupación")
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             font-size: 20px;
             font-weight: bold;
             color: #222222;
             margin-bottom: 5px;
-        """)
+        """
+        )
         main_layout.addWidget(title_label)
 
         # Grid para las tarjetas de KPIs principales
@@ -103,7 +111,8 @@ class DashboardWidget(QWidget):
     def _crear_kpi_card(self, title, value, icon, color):
         """Crea una tarjeta de indicador clave (KPI) con un diseño mejorado."""
         card = QFrame()
-        card.setStyleSheet(f"""
+        card.setStyleSheet(
+            f"""
             QFrame {{
                 background-color: #EFEFEF;
                 border-radius: 8px;
@@ -114,7 +123,8 @@ class DashboardWidget(QWidget):
             QFrame:hover {{
                 border: 1px solid {color};
             }}
-        """)
+        """
+        )
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(10, 8, 10, 8)
         card_layout.setSpacing(4)
@@ -147,24 +157,28 @@ class DashboardWidget(QWidget):
     def _crear_seccion_frame(self, title):
         """Crea un frame contenedor para una sección del dashboard."""
         section_frame = QFrame()
-        section_frame.setStyleSheet("""
+        section_frame.setStyleSheet(
+            """
             QFrame {
                 background-color: #EFEFEF;
                 border-radius: 12px;
                 border: 1px solid #E5E7EB;
             }
-        """)
+        """
+        )
         section_layout = QVBoxLayout(section_frame)
         section_layout.setContentsMargins(10, 6, 10, 6)
         section_layout.setSpacing(6)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             font-size: 14px;
             font-weight: bold;
             color: #374151;
             padding-bottom: 3px;
-        """)
+        """
+        )
         title_label.setAlignment(Qt.AlignCenter)
 
         section_layout.addWidget(title_label)
@@ -178,7 +192,8 @@ class DashboardWidget(QWidget):
     def _crear_detalle_card(self, title, value, total, color):
         """Crea una tarjeta de detalle profesional para sótanos o tipos de vehículo."""
         card = QFrame()
-        card.setStyleSheet("""
+        card.setStyleSheet(
+            """
             QFrame {
                 background-color: #FFFFFF;
                 border-radius: 10px;
@@ -190,7 +205,8 @@ class DashboardWidget(QWidget):
                 border: 1px solid #D1D5DB;
                 background-color: #F9FAFB;
             }
-        """)
+        """
+        )
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(14, 10, 14, 10)
         card_layout.setSpacing(8)
@@ -229,7 +245,8 @@ class DashboardWidget(QWidget):
         else:
             bar_color = "#10B981"  # Verde - OK
 
-        progress_bar.setStyleSheet(f"""
+        progress_bar.setStyleSheet(
+            f"""
             QProgressBar {{
                 border: none;
                 border-radius: 3px;
@@ -239,7 +256,8 @@ class DashboardWidget(QWidget):
                 background-color: {bar_color};
                 border-radius: 3px;
             }}
-        """)
+        """
+        )
 
         card_layout.addLayout(top_layout)
         card_layout.addWidget(progress_bar)
@@ -259,9 +277,9 @@ class DashboardWidget(QWidget):
         try:
             stats = self.parqueadero_model.obtener_estadisticas_generales()
 
-            total = stats.get('total_espacios', 0)
-            espacios_ocupados = stats.get('ocupados', 0)  # Parqueaderos ocupados
-            vehiculos_estacionados = stats.get('vehiculos_estacionados', 0)  # Vehículos totales
+            total = stats.get("total_espacios", 0)
+            espacios_ocupados = stats.get("ocupados", 0)  # Parqueaderos ocupados
+            vehiculos_estacionados = stats.get("vehiculos_estacionados", 0)  # Vehículos totales
             espacios_disponibles = total - espacios_ocupados
 
             tasa_ocupacion = (espacios_ocupados / total * 100) if total > 0 else 0
@@ -275,15 +293,15 @@ class DashboardWidget(QWidget):
             tipos_data = self.parqueadero_model.obtener_ocupacion_por_tipo_vehiculo()
 
             # Carros
-            carros_data = tipos_data.get('Carro', {'ocupados': 0, 'total': 0})
+            carros_data = tipos_data.get("Carro", {"ocupados": 0, "total": 0})
             self.carros_card.value_label.setText(f"{carros_data['ocupados']}/{carros_data['total']}")
 
             # Motos
-            motos_data = tipos_data.get('Moto', {'ocupados': 0, 'total': 0})
+            motos_data = tipos_data.get("Moto", {"ocupados": 0, "total": 0})
             self.motos_card.value_label.setText(f"{motos_data['ocupados']}/{motos_data['total']}")
 
             # Bicicletas
-            bicicletas_data = tipos_data.get('Bicicleta', {'ocupados': 0, 'total': 0})
+            bicicletas_data = tipos_data.get("Bicicleta", {"ocupados": 0, "total": 0})
             self.bicicletas_card.value_label.setText(f"{bicicletas_data['ocupados']}/{bicicletas_data['total']}")
 
         except Exception as e:
@@ -303,8 +321,8 @@ class DashboardWidget(QWidget):
 
             for sotano in sorted(sotanos_data.keys()):
                 data = sotanos_data[sotano]
-                total = data['total']
-                ocupados = data['ocupados']
+                total = data["total"]
+                ocupados = data["ocupados"]
                 color = "#EF4444" if ocupados / total > 0.9 else "#F59E0B" if ocupados / total > 0.6 else "#10B981"
 
                 card = self._crear_detalle_card(sotano, ocupados, total, color)
@@ -331,9 +349,9 @@ class DashboardWidget(QWidget):
             iconos = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}
 
             for tipo in ["Carro", "Moto", "Bicicleta"]:
-                data = tipos_data.get(tipo, {'ocupados': 0, 'total': 0})
-                ocupados = data['ocupados']
-                total = data['total']
+                data = tipos_data.get(tipo, {"ocupados": 0, "total": 0})
+                ocupados = data["ocupados"]
+                total = data["total"]
                 color = colores.get(tipo, "#6B7280")
                 icono = iconos.get(tipo, "")
 

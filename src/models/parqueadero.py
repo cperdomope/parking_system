@@ -3,8 +3,10 @@
 Modelo para operaciones con parqueaderos
 """
 
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
+
 from mysql.connector import Error
+
 from ..database.manager import DatabaseManager
 from ..utils.validaciones_asignacion import ValidadorAsignacion
 
@@ -29,7 +31,8 @@ class ParqueaderoModel:
             # Intentar consultar la estructura de la tabla
             check_query = "SHOW COLUMNS FROM parqueaderos LIKE 'sotano'"
             column_exists = self.db.fetch_one(check_query) is not None
-        except:
+        except Exception as e:
+            print(f"Advertencia al verificar columna 'sotano': {e}")
             column_exists = False
 
         # Query base adaptable según estructura de DB
@@ -155,30 +158,32 @@ class ParqueaderoModel:
         # y tipo de espacio (Motos y Bicicletas solo permiten 1 vehículo)
         if results:
             for park in results:
-                estado_display = park['estado']
-                total_asigs = park.get('total_asignaciones', 0)
-                permite_compartir = park.get('permite_compartir_ocupante')
-                pico_placa_solidario = park.get('pico_placa_solidario_ocupante')
-                discapacidad = park.get('discapacidad_ocupante')
-                tipo_espacio = park.get('tipo_espacio', 'Carro')
+                estado_display = park["estado"]
+                total_asigs = park.get("total_asignaciones", 0)
+                permite_compartir = park.get("permite_compartir_ocupante")
+                pico_placa_solidario = park.get("pico_placa_solidario_ocupante")
+                discapacidad = park.get("discapacidad_ocupante")
+                tipo_espacio = park.get("tipo_espacio", "Carro")
 
                 # REGLA 1: Motos y Bicicletas SIEMPRE se marcan como Completo con 1 asignación
-                if tipo_espacio in ['Moto', 'Bicicleta'] and total_asigs >= 1:
-                    estado_display = 'Completo'
+                if tipo_espacio in ["Moto", "Bicicleta"] and total_asigs >= 1:
+                    estado_display = "Completo"
 
                 # REGLA 2: Carros con condiciones especiales (1 asignación → Completo)
-                elif tipo_espacio == 'Carro' and total_asigs == 1:
-                    if (permite_compartir == 0 or  # NO permite compartir (Parqueadero Exclusivo)
-                        pico_placa_solidario == 1 or  # Tiene Pico y Placa Solidario
-                        discapacidad == 1):  # Tiene Discapacidad
-                        estado_display = 'Completo'
+                elif tipo_espacio == "Carro" and total_asigs == 1:
+                    if (
+                        permite_compartir == 0  # NO permite compartir (Parqueadero Exclusivo)
+                        or pico_placa_solidario == 1  # Tiene Pico y Placa Solidario
+                        or discapacidad == 1
+                    ):  # Tiene Discapacidad
+                        estado_display = "Completo"
 
                 # Agregar el estado calculado
-                park['estado_display'] = estado_display
+                park["estado_display"] = estado_display
 
             # Aplicar filtro de estado después del cálculo
             if estado:
-                results = [p for p in results if p['estado_display'] == estado]
+                results = [p for p in results if p["estado_display"] == estado]
 
         return results
 
@@ -262,12 +267,10 @@ class ParqueaderoModel:
                 WHERE parqueadero_id = %s AND activo = TRUE
             """
             count_result = self.db.fetch_one(query_count, (parqueadero_id,))
-            asignaciones_existentes = count_result.get('total', 0) if count_result else 0
+            asignaciones_existentes = count_result.get("total", 0) if count_result else 0
 
             # 4. VALIDACIÓN: Si el funcionario NO permite compartir y hay asignaciones
-            es_valido, mensaje = ValidadorAsignacion.validar_permite_compartir(
-                vehiculo_data, asignaciones_existentes
-            )
+            es_valido, mensaje = ValidadorAsignacion.validar_permite_compartir(vehiculo_data, asignaciones_existentes)
             if not es_valido:
                 return (False, mensaje)
 
@@ -290,7 +293,7 @@ class ParqueaderoModel:
 
             # 6. VALIDACIÓN: Pico y placa (solo si NO tiene pico_placa_solidario)
             mismo_tipo_count = 0
-            if vehiculo_data['tipo_vehiculo'] == 'Carro' and vehiculo_data['tipo_circulacion'] != 'N/A':
+            if vehiculo_data["tipo_vehiculo"] == "Carro" and vehiculo_data["tipo_circulacion"] != "N/A":
                 query_mismo_tipo = """
                     SELECT COUNT(*) as total
                     FROM asignaciones a
@@ -300,16 +303,15 @@ class ParqueaderoModel:
                     AND v.tipo_circulacion = %s
                 """
                 mismo_tipo_result = self.db.fetch_one(
-                    query_mismo_tipo,
-                    (parqueadero_id, vehiculo_data['tipo_circulacion'])
+                    query_mismo_tipo, (parqueadero_id, vehiculo_data["tipo_circulacion"])
                 )
-                mismo_tipo_count = mismo_tipo_result.get('total', 0) if mismo_tipo_result else 0
+                mismo_tipo_count = mismo_tipo_result.get("total", 0) if mismo_tipo_result else 0
 
             es_valido, mensaje = ValidadorAsignacion.validar_pico_placa(
-                vehiculo_data['tipo_vehiculo'],
-                vehiculo_data['tipo_circulacion'],
-                vehiculo_data.get('pico_placa_solidario', False),
-                mismo_tipo_count
+                vehiculo_data["tipo_vehiculo"],
+                vehiculo_data["tipo_circulacion"],
+                vehiculo_data.get("pico_placa_solidario", False),
+                mismo_tipo_count,
             )
             if not es_valido:
                 return (False, mensaje)
@@ -319,7 +321,7 @@ class ParqueaderoModel:
 
             # ==================== LLAMAR AL PROCEDIMIENTO ALMACENADO ====================
 
-            self.db.cursor.callproc('sp_asignar_vehiculo', (vehiculo_id, parqueadero_id))
+            self.db.cursor.callproc("sp_asignar_vehiculo", (vehiculo_id, parqueadero_id))
 
             # Si hay observaciones, actualizar el registro
             if observaciones.strip():
@@ -336,16 +338,18 @@ class ParqueaderoModel:
             msg_base = "Asignación realizada correctamente"
             for result in self.db.cursor.stored_results():
                 mensaje = result.fetchone()
-                msg_base = mensaje.get('mensaje', msg_base) if mensaje else msg_base
+                msg_base = mensaje.get("mensaje", msg_base) if mensaje else msg_base
 
             # Agregar información adicional
-            msg_final = f"✅ {msg_base}\n\n" \
-                       f"🚗 Vehículo: {vehiculo_data['placa']}\n" \
-                       f"👤 Funcionario: {vehiculo_data['nombre']} {vehiculo_data['apellidos']}\n" \
-                       f"📍 Parqueadero: P-{parqueadero_data['numero_parqueadero']:03d}"
+            msg_final = (
+                f"✅ {msg_base}\n\n"
+                f"🚗 Vehículo: {vehiculo_data['placa']}\n"
+                f"👤 Funcionario: {vehiculo_data['nombre']} {vehiculo_data['apellidos']}\n"
+                f"📍 Parqueadero: P-{parqueadero_data['numero_parqueadero']:03d}"
+            )
 
             if msg_info:
-                msg_final += f"\n\nℹ️ Información:\n" + "\n".join(f"   • {info}" for info in msg_info)
+                msg_final += "\n\nℹ️ Información:\n" + "\n".join(f"   • {info}" for info in msg_info)
 
             return (True, msg_final)
 
@@ -375,7 +379,7 @@ class ParqueaderoModel:
             if not resultado:
                 return False
 
-            parqueadero_id = resultado['parqueadero_id']
+            parqueadero_id = resultado["parqueadero_id"]
 
             # Liberar la asignación
             query_liberar = """
@@ -416,7 +420,8 @@ class ParqueaderoModel:
         try:
             check_query = "SHOW COLUMNS FROM parqueaderos LIKE 'sotano'"
             column_exists = self.db.fetch_one(check_query) is not None
-        except:
+        except Exception as e:
+            print(f"Advertencia al verificar columna 'sotano': {e}")
             column_exists = False
 
         if sotano and column_exists:
@@ -431,20 +436,20 @@ class ParqueaderoModel:
                 WHERE activo = TRUE AND COALESCE(sotano, 'Sótano-1') = %s
             """
             result = self.db.fetch_one(query, (sotano,))
-            return result if result else {
-                'total_parqueaderos': 0,
-                'disponibles': 0,
-                'parcialmente_asignados': 0,
-                'completos': 0
-            }
+            return (
+                result
+                if result
+                else {"total_parqueaderos": 0, "disponibles": 0, "parcialmente_asignados": 0, "completos": 0}
+            )
         else:
             # Estadísticas generales (compatible con versión anterior)
             try:
-                results = self.db.call_procedure('sp_obtener_estadisticas')
+                results = self.db.call_procedure("sp_obtener_estadisticas")
                 if results:
                     return results[0]
-            except:
+            except Exception as e:
                 # Fallback directo si el procedimiento no existe
+                print(f"Procedimiento sp_obtener_estadisticas no disponible: {e}")
                 query = """
                     SELECT
                         COUNT(*) as total_parqueaderos,
@@ -458,12 +463,7 @@ class ParqueaderoModel:
                 if result:
                     return result
 
-            return {
-                'total_parqueaderos': 0,
-                'disponibles': 0,
-                'parcialmente_asignados': 0,
-                'completos': 0
-            }
+            return {"total_parqueaderos": 0, "disponibles": 0, "parcialmente_asignados": 0, "completos": 0}
 
     def obtener_sotanos_disponibles(self) -> List[str]:
         """Obtiene la lista de sótanos disponibles que tienen espacios para carros"""
@@ -482,10 +482,10 @@ class ParqueaderoModel:
                     ORDER BY sotano
                 """
                 results = self.db.fetch_all(query)
-                sotanos_con_carros = [row['sotano'] for row in results] if results else []
+                sotanos_con_carros = [row["sotano"] for row in results] if results else []
 
                 # Garantizar que aparezcan los 3 sótanos principales
-                sotanos_principales = ['Sótano-1', 'Sótano-2', 'Sótano-3']
+                sotanos_principales = ["Sótano-1", "Sótano-2", "Sótano-3"]
 
                 # Si la base de datos tiene los sótanos, usar esos; si no, usar los principales
                 if len(sotanos_con_carros) >= 2:  # Al menos 2 sótanos con carros
@@ -494,10 +494,10 @@ class ParqueaderoModel:
                     return sotanos_principales
             else:
                 # Sin columna sotano, retornar solo el sótano por defecto
-                return ['Sótano-1']
+                return ["Sótano-1"]
         except Exception:
             # En caso de error, asegurar que aparezcan los 3 sótanos
-            return ['Sótano-1', 'Sótano-2', 'Sótano-3']
+            return ["Sótano-1", "Sótano-2", "Sótano-3"]
 
     def obtener_tipos_vehiculo_por_sotano(self, sotano: str = None) -> List[str]:
         """Obtiene los tipos de vehículo disponibles en un sótano específico"""
@@ -519,9 +519,10 @@ class ParqueaderoModel:
             query += " ORDER BY tipo_espacio"
 
             results = self.db.fetch_all(query, tuple(params) if params else None)
-            return [row['tipo_espacio'] for row in results] if results else ['Carro']
-        except:
-            return ['Carro']
+            return [row["tipo_espacio"] for row in results] if results else ["Carro"]
+        except Exception as e:
+            print(f"Error al obtener tipos de vehículo: {e}")
+            return ["Carro"]
 
     def obtener_estadisticas_generales(self) -> Dict:
         """Obtiene estadísticas generales de ocupación para espacios de carros únicamente."""
@@ -535,7 +536,7 @@ class ParqueaderoModel:
                 (SELECT COUNT(*) FROM asignaciones WHERE activo = TRUE) AS vehiculos_estacionados
         """
         result = self.db.fetch_one(query)
-        return result if result else {'total_espacios': 0, 'ocupados': 0, 'vehiculos_estacionados': 0}
+        return result if result else {"total_espacios": 0, "ocupados": 0, "vehiculos_estacionados": 0}
 
     def obtener_ocupacion_por_sotano(self) -> Dict:
         """Obtiene la ocupación detallada por cada sótano contando solo parqueaderos de carros."""
@@ -554,12 +555,12 @@ class ParqueaderoModel:
         sotanos_data = {}
         if results:
             for row in results:
-                sotanos_data[row['sotano']] = {'total': row['total'], 'ocupados': row['ocupados']}
+                sotanos_data[row["sotano"]] = {"total": row["total"], "ocupados": row["ocupados"]}
         return sotanos_data
 
     def obtener_ocupacion_por_tipo_vehiculo(self) -> Dict:
         """Obtiene la ocupación por tipo de vehículo de forma robusta."""
-        
+
         # Get occupied spots
         query_ocupados = """
             SELECT v.tipo_vehiculo, COUNT(*) as ocupados
@@ -569,8 +570,8 @@ class ParqueaderoModel:
             GROUP BY v.tipo_vehiculo;
         """
         ocupados_results = self.db.fetch_all(query_ocupados)
-        
-        ocupados_data = {row['tipo_vehiculo']: row['ocupados'] for row in ocupados_results} if ocupados_results else {}
+
+        ocupados_data = {row["tipo_vehiculo"]: row["ocupados"] for row in ocupados_results} if ocupados_results else {}
 
         # Get total spots by specific type
         query_total = """
@@ -580,27 +581,18 @@ class ParqueaderoModel:
             GROUP BY tipo_espacio;
         """
         total_results = self.db.fetch_all(query_total)
-        
-        total_data = {row['tipo_espacio']: row['total'] for row in total_results} if total_results else {}
-        
+
+        total_data = {row["tipo_espacio"]: row["total"] for row in total_results} if total_results else {}
+
         # Calculate total spots for each vehicle type, considering 'Mixto'
-        total_carros = total_data.get('Carro', 0) + total_data.get('Mixto', 0)
-        total_motos = total_data.get('Moto', 0) + total_data.get('Mixto', 0)
-        total_bicicletas = total_data.get('Bicicleta', 0)
+        total_carros = total_data.get("Carro", 0) + total_data.get("Mixto", 0)
+        total_motos = total_data.get("Moto", 0) + total_data.get("Mixto", 0)
+        total_bicicletas = total_data.get("Bicicleta", 0)
 
         tipos_data = {
-            "Carro": {
-                "ocupados": ocupados_data.get("Carro", 0),
-                "total": total_carros
-            },
-            "Moto": {
-                "ocupados": ocupados_data.get("Moto", 0),
-                "total": total_motos
-            },
-            "Bicicleta": {
-                "ocupados": ocupados_data.get("Bicicleta", 0),
-                "total": total_bicicletas
-            }
+            "Carro": {"ocupados": ocupados_data.get("Carro", 0), "total": total_carros},
+            "Moto": {"ocupados": ocupados_data.get("Moto", 0), "total": total_motos},
+            "Bicicleta": {"ocupados": ocupados_data.get("Bicicleta", 0), "total": total_bicicletas},
         }
-        
+
         return tipos_data

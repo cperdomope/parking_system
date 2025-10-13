@@ -6,9 +6,9 @@ Este archivo proporciona orientación a Claude Code (claude.ai/code) al trabajar
 
 Este es un **Sistema de Gestión de Parqueadero** para "Ssalud Plaza Claro" construido con Python y PyQt5. Gestiona 200 espacios de parqueo, empleados (funcionarios), sus vehículos y asignaciones de parqueadero con un sistema de circulación basado en "pico y placa" (días pares/impares).
 
-**Versión:** 1.0
+**Versión:** 1.1
 **Estado:** Producción-ready (con consideraciones de seguridad)
-**Última actualización:** 2025-01-05
+**Última actualización:** 2025-01-13
 
 ## Requisitos del Sistema
 
@@ -28,6 +28,13 @@ pip install -r requirements.txt
 **Dependencias principales:**
 - `PyQt5>=5.15.0` - Framework GUI
 - `mysql-connector-python>=8.0.0` - Conector MySQL
+
+**Dependencias opcionales (para funcionalidad extendida):**
+- `matplotlib>=3.10.0` - Gráficos estadísticos en pestaña Reportes
+- `openpyxl>=3.1.0` - Exportación de reportes a Excel
+- `reportlab>=3.6.0` - Exportación de reportes a PDF
+
+> **Nota:** El sistema funciona sin estas dependencias opcionales, pero con funcionalidad reducida en el módulo de Reportes (solo exportación CSV estará disponible).
 
 ## Ejecutar la Aplicación
 
@@ -116,6 +123,7 @@ parking_system/
     │   ├── vehiculos_tab.py    # Gestión de vehículos
     │   ├── asignaciones_tab.py # Asignación de parqueaderos
     │   ├── parqueaderos_tab.py # Vista de parqueaderos
+    │   ├── reportes_tab.py     # Módulo de reportes y estadísticas (NUEVO v1.1)
     │   ├── modal_detalle_parqueadero.py  # Modal de detalles
     │   └── modales_vehiculos.py          # Modales CRUD vehículos
     │
@@ -162,6 +170,15 @@ parking_system/
 - [src/utils/](src/utils/) contiene validadores reutilizables
 - Validaciones de campos, reglas de negocio y permisos
 - Mensajes de error consistentes en toda la aplicación
+
+**7. Módulo de Reportes y Estadísticas** (NUEVO en v1.1)
+- [src/ui/reportes_tab.py](src/ui/reportes_tab.py) contiene el sistema completo de reportes
+- 7 sub-pestañas especializadas con visualización tabular
+- Exportación a múltiples formatos (CSV, Excel, PDF)
+- Visualizaciones estadísticas con matplotlib (3 gráficos en tiempo real)
+- Filtros avanzados por tipo de vehículo, cargo y rango de fechas
+- Actualización automática mediante señales PyQt cuando cambian los datos
+- Degradación elegante: funciona sin dependencias opcionales
 
 ## Reglas de Negocio Críticas
 
@@ -210,6 +227,73 @@ Si ningún checkbox está marcado, el funcionario es regular y comparte normalme
 - La `cedula` del empleado debe ser **única** en todo el sistema
 - La `placa` del vehículo debe ser **única**
 - Un vehículo solo puede tener **una asignación activa** a la vez (forzado por clave única en `vehiculo_id, activo`)
+
+## Módulo de Reportes (NUEVO v1.1)
+
+El sistema incluye un módulo completo de reportes en [src/ui/reportes_tab.py](src/ui/reportes_tab.py) con 7 sub-pestañas:
+
+### Sub-pestañas de Reportes
+
+1. **📋 Reporte General** - Vista consolidada de funcionarios, vehículos y parqueaderos (11 columnas)
+2. **👥 Funcionarios** - Listado completo de empleados con contador de vehículos
+3. **🚗 Vehículos** - Registro de todos los vehículos con estado de asignación
+4. **🅿️ Parqueaderos** - Estado de 200 espacios en 3 sótanos con ocupación detallada
+5. **📍 Asignaciones** - Asignaciones activas con información completa
+6. **🔄 Excepciones Pico y Placa** - Funcionarios con permisos especiales (solidario, discapacidad, exclusivo)
+7. **📊 Estadísticas** - Visualización gráfica en tiempo real (requiere matplotlib)
+
+### Funcionalidades de Exportación
+
+Cada reporte puede exportarse a 3 formatos:
+
+- **CSV** - Siempre disponible, sin dependencias adicionales
+- **Excel (.xlsx)** - Requiere `openpyxl`. Headers estilizados, columnas auto-ajustadas
+- **PDF** - Requiere `reportlab`. Formato horizontal con estilos corporativos
+
+### Visualizaciones Estadísticas (Pestaña 7)
+
+Requiere matplotlib para funcionar. Si no está instalado, muestra mensaje informativo.
+
+**Gráficos disponibles:**
+1. **Ocupación de Parqueaderos** - Gráfico de pastel (Disponible/Parcial/Completo)
+2. **Distribución de Vehículos** - Gráfico de barras por tipo (Carro/Moto/Bicicleta)
+3. **Funcionarios por Cargo** - Gráfico horizontal con Top 10 cargos
+
+### Filtros Avanzados
+
+El módulo incluye filtros globales que afectan todos los reportes:
+- **Tipo de Vehículo:** Todos, Carro, Moto, Bicicleta
+- **Cargo:** Lista completa de cargos disponibles
+- **Rango de Fechas:** Fecha inicio y fecha fin con selector de calendario
+
+### Actualización Automática
+
+Los reportes se actualizan automáticamente cuando:
+- Se modifica un funcionario
+- Se crea/elimina un vehículo
+- Se asigna/libera un parqueadero
+- El usuario presiona el botón "🔄 Actualizar Todos los Reportes"
+
+Esto se logra mediante conexión de señales PyQt:
+```python
+# En main_modular.py
+self.tab_asignaciones.asignacion_actualizada.connect(
+    self.tab_reportes.actualizar_reportes
+)
+self.tab_parqueaderos.parqueaderos_actualizados.connect(
+    self.tab_reportes.actualizar_reportes
+)
+```
+
+### Manejo de Errores
+
+El módulo implementa degradación elegante:
+- Si falta matplotlib → estadísticas no disponibles, resto funciona
+- Si falta openpyxl → Excel no disponible, CSV y PDF funcionan
+- Si falta reportlab → PDF no disponible, CSV y Excel funcionan
+- Si un reporte individual falla → otros reportes continúan funcionando
+
+Ver [INTEGRACION_REPORTES.md](INTEGRACION_REPORTES.md) para documentación técnica completa.
 
 ## Flujos de Desarrollo Comunes
 
@@ -284,8 +368,9 @@ Configuración por defecto en [src/config/settings.py](src/config/settings.py):
 ### Archivos Principales
 - [main_with_auth.py](main_with_auth.py) - Punto de entrada con autenticación
 - [main_modular.py](main_modular.py) - Ventana principal de aplicación y conexiones de señales
-- [requirements.txt](requirements.txt) - Dependencias del proyecto (NUEVO - 2025-01-05)
-- [REPORTE_LIMPIEZA.md](REPORTE_LIMPIEZA.md) - Informe de limpieza del código (NUEVO - 2025-01-05)
+- [requirements.txt](requirements.txt) - Dependencias del proyecto
+- [REPORTE_LIMPIEZA.md](REPORTE_LIMPIEZA.md) - Informe de limpieza del código
+- [INTEGRACION_REPORTES.md](INTEGRACION_REPORTES.md) - Documentación del módulo de reportes (NUEVO v1.1)
 
 ### Base de Datos
 - [parking_database_schema.sql](parking_database_schema.sql) - Esquema completo de base de datos con triggers
@@ -352,6 +437,13 @@ bcrypt.checkpw(password.encode('utf-8'), stored_hash)
 - Archivos compilados (`__pycache__`, `*.pyc`) correctamente ignorados en `.gitignore`
 - Ver [REPORTE_LIMPIEZA.md](REPORTE_LIMPIEZA.md) para detalles completos
 
+### Estilo y Componentes UI
+- PyQt5 con tema "Fusion" personalizado
+- Estilos CSS centralizados en [src/widgets/styles.py](src/widgets/styles.py)
+- ComboBoxes con flechas CSS personalizadas (sin dependencias de imágenes)
+- Paleta de colores consistente: #2196F3 (azul primario), #27ae60 (verde éxito), #e74c3c (rojo error)
+- Todos los textos en español con codificación UTF-8
+
 ### Gestión de Archivos Temporales
 ```bash
 # Limpiar archivos compilados (se regeneran automáticamente)
@@ -361,16 +453,68 @@ find . -name "*.pyc" -delete
 
 ## Métricas del Proyecto
 
-- **Líneas de código:** ~9,657 (después de limpieza)
-- **Archivos Python:** 29
+- **Líneas de código:** ~10,600 (después de agregar módulo de reportes)
+- **Archivos Python:** 30
+- **Pestañas principales:** 6 (Dashboard, Funcionarios, Vehículos, Parqueaderos, Asignaciones, Reportes)
+- **Sub-pestañas de Reportes:** 7
 - **Arquitectura:** MVC Modular
-- **Cobertura:** Sin tests (pendiente para v2.0)
+- **Cobertura de tests:** Sin tests (pendiente para v2.0)
 
 ---
 
-**Última actualización:** 2025-01-05
-**Versión:** 1.0
+**Última actualización:** 2025-01-13
+**Versión:** 1.1
 **Estado:** Producción-ready con mejoras de seguridad recomendadas
 **Mantenedor:** Carlos Ivan Perdomo
+
+**Novedades v1.1:**
+- Módulo completo de Reportes con 7 sub-pestañas
+- Exportación a CSV, Excel y PDF
+- Visualizaciones estadísticas con matplotlib
+- Filtros avanzados por tipo de vehículo, cargo y fechas
+- Mejoras visuales en ComboBoxes (flechas CSS)
+- **Agente CodeGuardian** para análisis y refactorización automática
+
+## 🛡️ CodeGuardian - Agente de Calidad de Código
+
+El proyecto incluye **CodeGuardian**, un agente especializado para mantener la calidad del código:
+
+### Uso
+
+```bash
+# Opción 1: Comando slash en Claude Code
+/codeguardian
+
+# Opción 2: Script directo
+python .claude/codeguardian_analyzer.py
+```
+
+### Funcionalidades
+
+✅ **Análisis automático** de todo el repositorio
+✅ **Verificación Python 3.13.2** - Compatibilidad exacta
+✅ **Detección de funciones largas** (>100 líneas)
+✅ **Análisis de documentación** - Funciones/clases sin docstrings
+✅ **Métricas de código** - Líneas, funciones, clases, complejidad
+✅ **Reporte detallado** - Genera `code_health_report.md` con score 0-100
+✅ **Integración con herramientas** - ruff, flake8, black, isort, pylint
+
+### Reporte Generado
+
+El último análisis (2025-10-13) muestra:
+- **31 archivos Python** analizados
+- **11,348 líneas** de código
+- **279 funciones** y **33 clases**
+- **Score: 78/100** - Buen estado con mejoras pendientes
+- **21 funciones largas** identificadas (prioridad: refactorización)
+- **27 funciones sin docstring** (9.7%)
+
+### Archivos Prioritarios para Refactorización
+
+1. `src/ui/asignaciones_tab.py` - 1,714 líneas (función `setup_ui`: 484 líneas)
+2. `src/ui/reportes_tab.py` - 1,491 líneas
+3. `src/ui/funcionarios_tab.py` - 1,132 líneas
+
+Ver [.claude/README_CODEGUARDIAN.md](.claude/README_CODEGUARDIAN.md) para documentación completa.
 
 © 2025 - Sistema de Gestión de Parqueadero

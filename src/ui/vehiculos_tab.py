@@ -3,13 +3,22 @@
 Módulo de la pestaña Vehículos del sistema de gestión de parqueadero
 """
 
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QGroupBox, QGridLayout,
-    QMessageBox, QHeaderView, QAbstractItemView
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QColor, QBrush
 
 from ..database.manager import DatabaseManager
 from ..models.funcionario import FuncionarioModel
@@ -64,7 +73,9 @@ class VehiculosTab(QWidget):
 
         # Label de sugerencias de vehículos
         self.lbl_sugerencias = QLabel("")
-        self.lbl_sugerencias.setStyleSheet("font-size: 11px; color: #666; background-color: #f5f5f5; padding: 8px; border-radius: 4px;")
+        self.lbl_sugerencias.setStyleSheet(
+            "font-size: 11px; color: #666; background-color: #f5f5f5; padding: 8px; border-radius: 4px;"
+        )
         self.lbl_sugerencias.setWordWrap(True)
         form_layout.addWidget(self.lbl_sugerencias, 4, 0, 1, 4)
 
@@ -90,9 +101,9 @@ class VehiculosTab(QWidget):
 
         self.tabla_vehiculos = QTableWidget()
         self.tabla_vehiculos.setColumnCount(7)
-        self.tabla_vehiculos.setHorizontalHeaderLabels([
-            "Funcionario", "Tipo", "Placa", "Último Dígito", "Circulación", "Parqueadero", "Acciones"
-        ])
+        self.tabla_vehiculos.setHorizontalHeaderLabels(
+            ["Funcionario", "Tipo", "Placa", "Último Dígito", "Circulación", "Parqueadero", "Acciones"]
+        )
 
         # Configuración visual profesional
         self.tabla_vehiculos.setAlternatingRowColors(True)
@@ -113,7 +124,8 @@ class VehiculosTab(QWidget):
         self.tabla_vehiculos.verticalHeader().setDefaultSectionSize(58)
 
         # Estilo de encabezados
-        self.tabla_vehiculos.horizontalHeader().setStyleSheet("""
+        self.tabla_vehiculos.horizontalHeader().setStyleSheet(
+            """
             QHeaderView::section {
                 background-color: #2c3e50;
                 color: white;
@@ -123,10 +135,12 @@ class VehiculosTab(QWidget):
                 border-right: 1px solid #34495e;
                 text-align: center;
             }
-        """)
+        """
+        )
 
         # Estilo general de la tabla
-        self.tabla_vehiculos.setStyleSheet("""
+        self.tabla_vehiculos.setStyleSheet(
+            """
             QTableWidget {
                 background-color: white;
                 gridline-color: #bdc3c7;
@@ -149,7 +163,8 @@ class VehiculosTab(QWidget):
             QTableWidget::item:alternate {
                 background-color: #f8f9fa;
             }
-        """)
+        """
+        )
 
         tabla_layout.addWidget(self.tabla_vehiculos)
         tabla_group.setLayout(tabla_layout)
@@ -166,14 +181,17 @@ class VehiculosTab(QWidget):
 
         for func in funcionarios:
             texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
-            self.combo_funcionario.addItem(texto, func['id'])
+            self.combo_funcionario.addItem(texto, func["id"])
 
     def guardar_vehiculo(self):
         """Guarda un nuevo vehículo con validaciones de reglas de negocio"""
         if self.combo_funcionario.currentData() is None:
-            QMessageBox.warning(self, "🚗 Seleccionar Funcionario",
-                              "🚫 Debe seleccionar un funcionario del listado\n\n"
-                              "💡 Solución: Escoja un funcionario del combo desplegable")
+            QMessageBox.warning(
+                self,
+                "🚗 Seleccionar Funcionario",
+                "🚫 Debe seleccionar un funcionario del listado\n\n"
+                "💡 Solución: Escoja un funcionario del combo desplegable",
+            )
             return
 
         tipo_vehiculo = self.combo_tipo_vehiculo.currentText()
@@ -181,17 +199,18 @@ class VehiculosTab(QWidget):
 
         # Validación de placa para carros
         if tipo_vehiculo == "Carro" and not placa:
-            QMessageBox.warning(self, "🚗 Placa Requerida",
-                              "🚫 La placa es obligatoria para carros\n\n"
-                              "📝 Formato válido: ABC123, XYZ789\n"
-                              "💡 La placa determina el tipo de circulación (PAR/IMPAR)")
+            QMessageBox.warning(
+                self,
+                "🚗 Placa Requerida",
+                "🚫 La placa es obligatoria para carros\n\n"
+                "📝 Formato válido: ABC123, XYZ789\n"
+                "💡 La placa determina el tipo de circulación (PAR/IMPAR)",
+            )
             return
 
         # Intentar crear el vehículo con validaciones
         exito, mensaje = self.vehiculo_model.crear(
-            funcionario_id=self.combo_funcionario.currentData(),
-            tipo_vehiculo=tipo_vehiculo,
-            placa=placa
+            funcionario_id=self.combo_funcionario.currentData(), tipo_vehiculo=tipo_vehiculo, placa=placa
         )
 
         if exito:
@@ -217,7 +236,9 @@ class VehiculosTab(QWidget):
 
             if ultimo_digito.isdigit() or ultimo_digito == "0":
                 if ultimo_digito in "12345":
-                    self.lbl_info_pico.setText(f"ℹ️ Placa terminada en {ultimo_digito}: Circula días IMPARES (Tipo: IMPAR)")
+                    self.lbl_info_pico.setText(
+                        f"ℹ️ Placa terminada en {ultimo_digito}: Circula días IMPARES (Tipo: IMPAR)"
+                    )
                     self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #FF9800;")
                 else:
                     self.lbl_info_pico.setText(f"ℹ️ Placa terminada en {ultimo_digito}: Circula días PARES (Tipo: PAR)")
@@ -250,26 +271,26 @@ class VehiculosTab(QWidget):
 
         for i, vehiculo in enumerate(vehiculos):
             # Crear items con alineación centrada
-            funcionario_item = QTableWidgetItem(vehiculo.get('funcionario', ''))
+            funcionario_item = QTableWidgetItem(vehiculo.get("funcionario", ""))
             funcionario_item.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
             self.tabla_vehiculos.setItem(i, 0, funcionario_item)
 
-            tipo_item = QTableWidgetItem(vehiculo.get('tipo_vehiculo', ''))
+            tipo_item = QTableWidgetItem(vehiculo.get("tipo_vehiculo", ""))
             tipo_item.setTextAlignment(0x0004 | 0x0080)
             self.tabla_vehiculos.setItem(i, 1, tipo_item)
 
-            placa_item = QTableWidgetItem(vehiculo.get('placa', ''))
+            placa_item = QTableWidgetItem(vehiculo.get("placa", ""))
             placa_item.setTextAlignment(0x0004 | 0x0080)
             self.tabla_vehiculos.setItem(i, 2, placa_item)
 
-            digito_item = QTableWidgetItem(vehiculo.get('ultimo_digito', ''))
+            digito_item = QTableWidgetItem(vehiculo.get("ultimo_digito", ""))
             digito_item.setTextAlignment(0x0004 | 0x0080)
             self.tabla_vehiculos.setItem(i, 3, digito_item)
 
             # Formato de circulación con color
-            circulacion_item = QTableWidgetItem(vehiculo.get('tipo_circulacion', ''))
+            circulacion_item = QTableWidgetItem(vehiculo.get("tipo_circulacion", ""))
             circulacion_item.setTextAlignment(0x0004 | 0x0080)
-            if vehiculo.get('tipo_circulacion') == 'PAR':
+            if vehiculo.get("tipo_circulacion") == "PAR":
                 circulacion_item.setBackground(QBrush(QColor("#e8f5e8")))
                 circulacion_item.setForeground(QBrush(QColor("#2e7d32")))
             else:
@@ -278,8 +299,10 @@ class VehiculosTab(QWidget):
             self.tabla_vehiculos.setItem(i, 4, circulacion_item)
 
             # Información del parqueadero
-            parqueadero_info = str(vehiculo.get('numero_parqueadero', '')) if vehiculo.get('numero_parqueadero') else 'Sin asignar'
-            if vehiculo.get('numero_parqueadero'):
+            parqueadero_info = (
+                str(vehiculo.get("numero_parqueadero", "")) if vehiculo.get("numero_parqueadero") else "Sin asignar"
+            )
+            if vehiculo.get("numero_parqueadero"):
                 parqueadero_info = f"P-{vehiculo.get('numero_parqueadero'):03d}"
             parqueadero_item = QTableWidgetItem(parqueadero_info)
             parqueadero_item.setTextAlignment(0x0004 | 0x0080)
@@ -295,7 +318,8 @@ class VehiculosTab(QWidget):
             btn_editar = QPushButton("✏️")
             btn_editar.setFixedSize(40, 40)
             btn_editar.setToolTip("Editar vehículo")
-            btn_editar.setStyleSheet("""
+            btn_editar.setStyleSheet(
+                """
                 QPushButton {
                     background-color: #3498db;
                     color: white;
@@ -310,14 +334,16 @@ class VehiculosTab(QWidget):
                 QPushButton:pressed {
                     background-color: #21618c;
                 }
-            """)
-            btn_editar.clicked.connect(lambda checked, vid=vehiculo['id']: self.abrir_modal_editar(vid))
+            """
+            )
+            btn_editar.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_editar(vid))
 
             # Botón Ver
             btn_ver = QPushButton("👁️")
             btn_ver.setFixedSize(40, 40)
             btn_ver.setToolTip("Ver detalles del vehículo")
-            btn_ver.setStyleSheet("""
+            btn_ver.setStyleSheet(
+                """
                 QPushButton {
                     background-color: #27ae60;
                     color: white;
@@ -332,14 +358,16 @@ class VehiculosTab(QWidget):
                 QPushButton:pressed {
                     background-color: #1e8449;
                 }
-            """)
-            btn_ver.clicked.connect(lambda checked, vid=vehiculo['id']: self.abrir_modal_ver(vid))
+            """
+            )
+            btn_ver.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_ver(vid))
 
             # Botón Eliminar
             btn_eliminar = QPushButton("🗑️")
             btn_eliminar.setFixedSize(40, 40)
             btn_eliminar.setToolTip("Eliminar vehículo")
-            btn_eliminar.setStyleSheet("""
+            btn_eliminar.setStyleSheet(
+                """
                 QPushButton {
                     background-color: #e74c3c;
                     color: white;
@@ -354,8 +382,9 @@ class VehiculosTab(QWidget):
                 QPushButton:pressed {
                     background-color: #a93226;
                 }
-            """)
-            btn_eliminar.clicked.connect(lambda checked, vid=vehiculo['id']: self.abrir_modal_eliminar(vid))
+            """
+            )
+            btn_eliminar.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_eliminar(vid))
 
             btn_layout_acciones.addWidget(btn_editar)
             btn_layout_acciones.addWidget(btn_ver)
@@ -446,6 +475,7 @@ class VehiculosTab(QWidget):
         """
         try:
             from .modales_vehiculos import VerVehiculoModal
+
             modal = VerVehiculoModal(vehiculo_id, self.vehiculo_model, self.funcionario_model, self)
             modal.exec_()
 
@@ -486,6 +516,6 @@ class VehiculosTab(QWidget):
                 # Buscar el vehículo por placa para obtener su ID
                 vehiculos = self.vehiculo_model.obtener_todos()
                 for vehiculo in vehiculos:
-                    if vehiculo.get('placa') == placa:
-                        return vehiculo.get('id')
+                    if vehiculo.get("placa") == placa:
+                        return vehiculo.get("id")
         return None

@@ -3,9 +3,9 @@
 Widget personalizado para representar un espacio de parqueo
 """
 
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCursor
+from PyQt5.QtWidgets import QFrame, QLabel, QVBoxLayout
 
 
 class ParkingSpaceWidget(QFrame):
@@ -41,9 +41,7 @@ class ParkingSpaceWidget(QFrame):
         self.lbl_numero = QLabel(f"{icono} P-{self.numero:03d}")
         self.lbl_numero.setAlignment(Qt.AlignCenter)
         self.lbl_numero.setStyleSheet(
-            "font-size: 14px; font-weight: bold; "
-            "color: #1976D2; "
-            "padding: 5px; border-radius: 3px;"
+            "font-size: 14px; font-weight: bold; " "color: #1976D2; " "padding: 5px; border-radius: 3px;"
         )
         self.lbl_numero.setCursor(QCursor(Qt.PointingHandCursor))
         self.lbl_numero.mousePressEvent = self.on_numero_clicked

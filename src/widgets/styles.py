@@ -3,6 +3,7 @@
 Estilos CSS para la aplicación del sistema de gestión de parqueadero
 """
 
+
 class AppStyles:
     """Define los estilos CSS para la aplicación"""
 
@@ -111,12 +112,17 @@ class AppStyles:
     }
 
     QComboBox::down-arrow {
+        image: none;
         width: 0;
         height: 0;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 8px solid #333;
-        margin-right: 8px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 7px solid #555;
+        margin-right: 6px;
+    }
+
+    QComboBox::down-arrow:on {
+        border-top: 7px solid #2196F3;
     }
 
     /* ==============================

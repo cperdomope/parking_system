@@ -3,17 +3,30 @@
 Módulo de la pestaña Funcionarios del sistema de gestión de parqueadero
 """
 
+from PyQt5.QtCore import QRegExp, pyqtSignal
+from PyQt5.QtGui import QBrush, QColor, QRegExpValidator
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QGroupBox, QGridLayout,
-    QMessageBox, QDialog, QFormLayout, QDialogButtonBox, QCheckBox
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import pyqtSignal, QRegExp
-from PyQt5.QtGui import QRegExpValidator, QBrush, QColor
 
+from ..config.settings import CARGOS_DISPONIBLES, DIRECCIONES_DISPONIBLES
 from ..database.manager import DatabaseManager
 from ..models.funcionario import FuncionarioModel
-from ..config.settings import CARGOS_DISPONIBLES, DIRECCIONES_DISPONIBLES
 
 
 class FuncionariosTab(QWidget):
@@ -104,7 +117,8 @@ class FuncionariosTab(QWidget):
             "Permite al funcionario usar el parqueadero en días que normalmente no le corresponderían.\n"
             "Ignora restricciones de PAR/IMPAR."
         )
-        self.chk_pico_placa_solidario.setStyleSheet("""
+        self.chk_pico_placa_solidario.setStyleSheet(
+            """
             QCheckBox {
                 font-weight: bold;
                 color: #2980b9;
@@ -118,16 +132,17 @@ class FuncionariosTab(QWidget):
                 background-color: #3498db;
                 border: 2px solid #2980b9;
             }
-        """)
+        """
+        )
         self.chk_pico_placa_solidario.stateChanged.connect(self.on_pico_placa_changed_main)
 
         # Checkbox: Discapacidad
         self.chk_discapacidad = QCheckBox("♿ Funcionario con Discapacidad")
         self.chk_discapacidad.setToolTip(
-            "Marca al funcionario con condición de discapacidad.\n"
-            "Tiene prioridad para espacios especiales."
+            "Marca al funcionario con condición de discapacidad.\n" "Tiene prioridad para espacios especiales."
         )
-        self.chk_discapacidad.setStyleSheet("""
+        self.chk_discapacidad.setStyleSheet(
+            """
             QCheckBox {
                 font-weight: bold;
                 color: #27ae60;
@@ -141,16 +156,17 @@ class FuncionariosTab(QWidget):
                 background-color: #2ecc71;
                 border: 2px solid #27ae60;
             }
-        """)
+        """
+        )
         self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed_main)
 
         # Checkbox: Parqueadero Exclusivo (No compartir)
         self.chk_no_compartir = QCheckBox("🚫 Parqueadero Exclusivo (No compartido)")
         self.chk_no_compartir.setToolTip(
-            "El funcionario tendrá un parqueadero EXCLUSIVO.\n"
-            "Nadie más podrá usar ese espacio."
+            "El funcionario tendrá un parqueadero EXCLUSIVO.\n" "Nadie más podrá usar ese espacio."
         )
-        self.chk_no_compartir.setStyleSheet("""
+        self.chk_no_compartir.setStyleSheet(
+            """
             QCheckBox {
                 font-weight: bold;
                 color: #e74c3c;
@@ -164,7 +180,8 @@ class FuncionariosTab(QWidget):
                 background-color: #e74c3c;
                 border: 2px solid #c0392b;
             }
-        """)
+        """
+        )
         self.chk_no_compartir.stateChanged.connect(self.on_no_compartir_changed_main)
 
         # Agregar los tres checkboxes al layout horizontal
@@ -200,10 +217,22 @@ class FuncionariosTab(QWidget):
 
         self.tabla_funcionarios = QTableWidget()
         self.tabla_funcionarios.setColumnCount(12)
-        self.tabla_funcionarios.setHorizontalHeaderLabels([
-            "Cédula", "Nombre", "Apellidos", "Dirección", "Cargo", "Celular",
-            "Tarjeta Prox", "Vehículos", "Compartir", "Solidario", "Discap.", "Acciones"
-        ])
+        self.tabla_funcionarios.setHorizontalHeaderLabels(
+            [
+                "Cédula",
+                "Nombre",
+                "Apellidos",
+                "Dirección",
+                "Cargo",
+                "Celular",
+                "Tarjeta Prox",
+                "Vehículos",
+                "Compartir",
+                "Solidario",
+                "Discap.",
+                "Acciones",
+            ]
+        )
 
         # Configuración visual mejorada
         self.tabla_funcionarios.setAlternatingRowColors(True)
@@ -219,17 +248,18 @@ class FuncionariosTab(QWidget):
         self.tabla_funcionarios.setColumnWidth(4, 130)  # Cargo
         self.tabla_funcionarios.setColumnWidth(5, 100)  # Celular
         self.tabla_funcionarios.setColumnWidth(6, 100)  # Tarjeta Prox
-        self.tabla_funcionarios.setColumnWidth(7, 80)   # Vehículos
-        self.tabla_funcionarios.setColumnWidth(8, 80)   # Compartir
-        self.tabla_funcionarios.setColumnWidth(9, 80)   # Solidario
+        self.tabla_funcionarios.setColumnWidth(7, 80)  # Vehículos
+        self.tabla_funcionarios.setColumnWidth(8, 80)  # Compartir
+        self.tabla_funcionarios.setColumnWidth(9, 80)  # Solidario
         self.tabla_funcionarios.setColumnWidth(10, 70)  # Discapacidad
-        self.tabla_funcionarios.setColumnWidth(11, 240) # Acciones
+        self.tabla_funcionarios.setColumnWidth(11, 240)  # Acciones
 
         # Configurar altura de filas fija
         self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(60)
 
         # Estilo de encabezados
-        self.tabla_funcionarios.horizontalHeader().setStyleSheet("""
+        self.tabla_funcionarios.horizontalHeader().setStyleSheet(
+            """
             QHeaderView::section {
                 background-color: #3498db;
                 color: white;
@@ -238,10 +268,12 @@ class FuncionariosTab(QWidget):
                 border: none;
                 border-right: 1px solid #2980b9;
             }
-        """)
+        """
+        )
 
         # Estilo general de la tabla
-        self.tabla_funcionarios.setStyleSheet("""
+        self.tabla_funcionarios.setStyleSheet(
+            """
             QTableWidget {
                 background-color: white;
                 gridline-color: #bdc3c7;
@@ -259,7 +291,8 @@ class FuncionariosTab(QWidget):
             QTableWidget::item:hover {
                 background-color: #f5f5f5;
             }
-        """)
+        """
+        )
 
         tabla_layout.addWidget(self.tabla_funcionarios)
         tabla_group.setLayout(tabla_layout)
@@ -321,9 +354,11 @@ class FuncionariosTab(QWidget):
             return
 
         if len(cedula) < 7 or len(cedula) > 10:
-            QMessageBox.warning(self, "⚠️ Validación",
-                              f"La cédula debe tener entre 7 y 10 dígitos\n"
-                              f"Dígitos ingresados: {len(cedula)}")
+            QMessageBox.warning(
+                self,
+                "⚠️ Validación",
+                f"La cédula debe tener entre 7 y 10 dígitos\n" f"Dígitos ingresados: {len(cedula)}",
+            )
             return
 
         # Validación de nombre
@@ -346,9 +381,11 @@ class FuncionariosTab(QWidget):
 
         # Validación de celular
         if celular and len(celular) != 10:
-            QMessageBox.warning(self, "⚠️ Validación",
-                              f"El celular debe tener exactamente 10 dígitos\n"
-                              f"Dígitos ingresados: {len(celular)}")
+            QMessageBox.warning(
+                self,
+                "⚠️ Validación",
+                f"El celular debe tener exactamente 10 dígitos\n" f"Dígitos ingresados: {len(celular)}",
+            )
             return
 
         if celular and not celular.isdigit():
@@ -386,13 +423,15 @@ class FuncionariosTab(QWidget):
             cedula=self.txt_cedula.text(),
             nombre=self.txt_nombre.text(),
             apellidos=self.txt_apellidos.text(),
-            direccion_grupo=self.combo_direccion.currentText() if self.combo_direccion.currentText() != "-- Seleccione --" else "",
+            direccion_grupo=(
+                self.combo_direccion.currentText() if self.combo_direccion.currentText() != "-- Seleccione --" else ""
+            ),
             cargo=self.combo_cargo.currentText() if self.combo_cargo.currentText() != "-- Seleccione --" else "",
             celular=self.txt_celular.text(),
             tarjeta=self.txt_tarjeta.text(),
             permite_compartir=permite_compartir,
             pico_placa_solidario=pico_placa_solidario,
-            discapacidad=discapacidad
+            discapacidad=discapacidad,
         )
 
         if exito:
@@ -404,11 +443,17 @@ class FuncionariosTab(QWidget):
         else:
             # Los mensajes ya vienen formateados desde el modelo
             if "tabla 'funcionarios' no existe" in mensaje.lower():
-                QMessageBox.critical(self, "🚫 Error de Base de Datos",
-                                   f"{mensaje}\n\n🛠️ Solución: Ejecute el script 'parking_database_schema.sql'")
+                QMessageBox.critical(
+                    self,
+                    "🚫 Error de Base de Datos",
+                    f"{mensaje}\n\n🛠️ Solución: Ejecute el script 'parking_database_schema.sql'",
+                )
             elif "estructura de la tabla" in mensaje.lower():
-                QMessageBox.critical(self, "🚫 Error de Estructura",
-                                   f"{mensaje}\n\n🛠️ Solución: Verifique la estructura de la base de datos")
+                QMessageBox.critical(
+                    self,
+                    "🚫 Error de Estructura",
+                    f"{mensaje}\n\n🛠️ Solución: Verifique la estructura de la base de datos",
+                )
             else:
                 QMessageBox.critical(self, "🚫 Error", mensaje)
 
@@ -434,16 +479,16 @@ class FuncionariosTab(QWidget):
 
         for i, func in enumerate(funcionarios):
             # Ajustar índices ya que eliminamos la columna ID oculta
-            self.tabla_funcionarios.setItem(i, 0, QTableWidgetItem(func.get('cedula', '')))
-            self.tabla_funcionarios.setItem(i, 1, QTableWidgetItem(func.get('nombre', '')))
-            self.tabla_funcionarios.setItem(i, 2, QTableWidgetItem(func.get('apellidos', '')))
-            self.tabla_funcionarios.setItem(i, 3, QTableWidgetItem(func.get('direccion_grupo', '')))
-            self.tabla_funcionarios.setItem(i, 4, QTableWidgetItem(func.get('cargo', '')))
-            self.tabla_funcionarios.setItem(i, 5, QTableWidgetItem(func.get('celular', '')))
-            self.tabla_funcionarios.setItem(i, 6, QTableWidgetItem(func.get('no_tarjeta_proximidad', '') or ''))
+            self.tabla_funcionarios.setItem(i, 0, QTableWidgetItem(func.get("cedula", "")))
+            self.tabla_funcionarios.setItem(i, 1, QTableWidgetItem(func.get("nombre", "")))
+            self.tabla_funcionarios.setItem(i, 2, QTableWidgetItem(func.get("apellidos", "")))
+            self.tabla_funcionarios.setItem(i, 3, QTableWidgetItem(func.get("direccion_grupo", "")))
+            self.tabla_funcionarios.setItem(i, 4, QTableWidgetItem(func.get("cargo", "")))
+            self.tabla_funcionarios.setItem(i, 5, QTableWidgetItem(func.get("celular", "")))
+            self.tabla_funcionarios.setItem(i, 6, QTableWidgetItem(func.get("no_tarjeta_proximidad", "") or ""))
 
             # Formatear número de vehículos con mejor presentación
-            total_vehiculos = func.get('total_vehiculos', 0)
+            total_vehiculos = func.get("total_vehiculos", 0)
             vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/2")
             self.tabla_funcionarios.setItem(i, 7, vehiculos_item)
 
@@ -454,9 +499,9 @@ class FuncionariosTab(QWidget):
             # - NO permite_compartir (Parqueadero Exclusivo)
             # - pico_placa_solidario (Pico y Placa Solidario)
             # - discapacidad (Funcionario con Discapacidad)
-            permite_compartir = func.get('permite_compartir', True)
-            tiene_pico_placa = func.get('pico_placa_solidario', False)
-            tiene_discapacidad = func.get('discapacidad', False)
+            permite_compartir = func.get("permite_compartir", True)
+            tiene_pico_placa = func.get("pico_placa_solidario", False)
+            tiene_discapacidad = func.get("discapacidad", False)
 
             # Si tiene alguna de las tres opciones, NO comparte
             no_comparte = (not permite_compartir) or tiene_pico_placa or tiene_discapacidad
@@ -500,7 +545,8 @@ class FuncionariosTab(QWidget):
             btn_editar = QPushButton("✏️")
             btn_editar.setFixedSize(40, 40)
             btn_editar.setToolTip("Editar funcionario")
-            btn_editar.setStyleSheet("""
+            btn_editar.setStyleSheet(
+                """
                 QPushButton {
                     background-color: #3498db;
                     color: white;
@@ -515,14 +561,16 @@ class FuncionariosTab(QWidget):
                 QPushButton:pressed {
                     background-color: #21618c;
                 }
-            """)
-            btn_editar.clicked.connect(lambda _, fid=func.get('id'): self.editar_funcionario(fid))
+            """
+            )
+            btn_editar.clicked.connect(lambda _, fid=func.get("id"): self.editar_funcionario(fid))
 
             # Botón Ver
             btn_ver = QPushButton("👁️")
             btn_ver.setFixedSize(40, 40)
             btn_ver.setToolTip("Ver detalles del funcionario")
-            btn_ver.setStyleSheet("""
+            btn_ver.setStyleSheet(
+                """
                 QPushButton {
                     background-color: #27ae60;
                     color: white;
@@ -537,14 +585,16 @@ class FuncionariosTab(QWidget):
                 QPushButton:pressed {
                     background-color: #1e8449;
                 }
-            """)
-            btn_ver.clicked.connect(lambda _, fid=func.get('id'): self.ver_funcionario(fid))
+            """
+            )
+            btn_ver.clicked.connect(lambda _, fid=func.get("id"): self.ver_funcionario(fid))
 
             # Botón Eliminar
             btn_eliminar = QPushButton("🗑️")
             btn_eliminar.setFixedSize(40, 40)
             btn_eliminar.setToolTip("Eliminar funcionario")
-            btn_eliminar.setStyleSheet("""
+            btn_eliminar.setStyleSheet(
+                """
                 QPushButton {
                     background-color: #e74c3c;
                     color: white;
@@ -559,8 +609,9 @@ class FuncionariosTab(QWidget):
                 QPushButton:pressed {
                     background-color: #a93226;
                 }
-            """)
-            btn_eliminar.clicked.connect(lambda _, fid=func.get('id'): self.eliminar_funcionario(fid))
+            """
+            )
+            btn_eliminar.clicked.connect(lambda _, fid=func.get("id"): self.eliminar_funcionario(fid))
 
             btn_layout.addWidget(btn_editar)
             btn_layout.addWidget(btn_ver)
@@ -607,13 +658,17 @@ class FuncionariosTab(QWidget):
         nombre_completo = f"{funcionario_data['nombre']} {funcionario_data['apellidos']}"
         mensaje = f"¿Está seguro de que desea eliminar al funcionario '{nombre_completo}'?\n\n"
 
-        vehiculos = datos_relacionados['vehiculos']
-        parqueaderos = datos_relacionados['parqueaderos_afectados']
+        vehiculos = datos_relacionados["vehiculos"]
+        parqueaderos = datos_relacionados["parqueaderos_afectados"]
 
         if vehiculos:
             mensaje += "Se eliminarán los siguientes vehículos:\n"
             for vehiculo in vehiculos:
-                estado_asignacion = f" (Parqueadero P-{vehiculo['numero_parqueadero']:03d})" if vehiculo['tiene_asignacion'] else " (Sin asignar)"
+                estado_asignacion = (
+                    f" (Parqueadero P-{vehiculo['numero_parqueadero']:03d})"
+                    if vehiculo["tiene_asignacion"]
+                    else " (Sin asignar)"
+                )
                 mensaje += f"• {vehiculo['tipo_vehiculo']} - {vehiculo['placa']} - {vehiculo['tipo_circulacion']}{estado_asignacion}\n"
             mensaje += "\n"
 
@@ -637,7 +692,11 @@ class FuncionariosTab(QWidget):
         if msg_box.exec_() == QMessageBox.Yes:
             exito, error_msg = self.funcionario_model.eliminar(funcionario_id)
             if exito:
-                QMessageBox.information(self, "Éxito", "Funcionario y todos sus datos asociados eliminados correctamente.\n\nLos parqueaderos han quedado disponibles.")
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    "Funcionario y todos sus datos asociados eliminados correctamente.\n\nLos parqueaderos han quedado disponibles.",
+                )
                 self.cargar_funcionarios()
                 # Emitir señal específica para eliminación en cascada
                 self.funcionario_eliminado.emit()
@@ -672,17 +731,20 @@ class VerFuncionarioModal(QDialog):
         # Título
         titulo = QLabel("👤 Información del Funcionario")
         from PyQt5.QtGui import QFont
+
         font_titulo = QFont()
         font_titulo.setPointSize(14)
         font_titulo.setBold(True)
         titulo.setFont(font_titulo)
         from PyQt5.QtCore import Qt
+
         titulo.setAlignment(Qt.AlignCenter)
         titulo.setStyleSheet("color: #2c3e50; padding: 10px;")
         layout.addWidget(titulo)
 
         # Línea separadora
         from PyQt5.QtWidgets import QFrame
+
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
@@ -694,7 +756,9 @@ class VerFuncionarioModal(QDialog):
         form_personal.setSpacing(10)
 
         self.lbl_cedula = QLabel("")
-        self.lbl_cedula.setStyleSheet("font-size: 12px; padding: 5px; background-color: #ecf0f1; border-radius: 3px; font-weight: bold;")
+        self.lbl_cedula.setStyleSheet(
+            "font-size: 12px; padding: 5px; background-color: #ecf0f1; border-radius: 3px; font-weight: bold;"
+        )
         form_personal.addRow("Cédula:", self.lbl_cedula)
 
         self.lbl_nombre = QLabel("")
@@ -714,11 +778,15 @@ class VerFuncionarioModal(QDialog):
         form_laboral.setSpacing(10)
 
         self.lbl_cargo = QLabel("")
-        self.lbl_cargo.setStyleSheet("font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px; font-weight: bold;")
+        self.lbl_cargo.setStyleSheet(
+            "font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px; font-weight: bold;"
+        )
         form_laboral.addRow("Cargo:", self.lbl_cargo)
 
         self.lbl_direccion = QLabel("")
-        self.lbl_direccion.setStyleSheet("font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px;")
+        self.lbl_direccion.setStyleSheet(
+            "font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px;"
+        )
         form_laboral.addRow("Dirección/Grupo:", self.lbl_direccion)
 
         self.lbl_tarjeta = QLabel("")
@@ -754,7 +822,9 @@ class VerFuncionarioModal(QDialog):
 
         self.lbl_vehiculos = QLabel("")
         self.lbl_vehiculos.setWordWrap(True)
-        self.lbl_vehiculos.setStyleSheet("font-size: 11px; padding: 10px; background-color: #fff9e6; border-radius: 3px;")
+        self.lbl_vehiculos.setStyleSheet(
+            "font-size: 11px; padding: 10px; background-color: #fff9e6; border-radius: 3px;"
+        )
         vehiculos_layout.addWidget(self.lbl_vehiculos)
 
         grupo_vehiculos.setLayout(vehiculos_layout)
@@ -764,7 +834,9 @@ class VerFuncionarioModal(QDialog):
         btn_layout = QHBoxLayout()
         self.btn_cerrar = QPushButton("Cerrar")
         self.btn_cerrar.clicked.connect(self.accept)
-        self.btn_cerrar.setStyleSheet("QPushButton { background-color: #34495e; color: white; font-weight: bold; padding: 10px 30px; }")
+        self.btn_cerrar.setStyleSheet(
+            "QPushButton { background-color: #34495e; color: white; font-weight: bold; padding: 10px 30px; }"
+        )
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_cerrar)
         btn_layout.addStretch()
@@ -775,53 +847,67 @@ class VerFuncionarioModal(QDialog):
     def cargar_datos(self):
         """Carga los datos del funcionario en el modal"""
         # Información personal
-        self.lbl_cedula.setText(self.funcionario_data.get('cedula', 'N/A'))
+        self.lbl_cedula.setText(self.funcionario_data.get("cedula", "N/A"))
         nombre_completo = f"{self.funcionario_data.get('nombre', '')} {self.funcionario_data.get('apellidos', '')}"
         self.lbl_nombre.setText(nombre_completo)
-        self.lbl_celular.setText(self.funcionario_data.get('celular', 'N/A'))
+        self.lbl_celular.setText(self.funcionario_data.get("celular", "N/A"))
 
         # Información laboral
-        self.lbl_cargo.setText(self.funcionario_data.get('cargo', 'N/A'))
-        self.lbl_direccion.setText(self.funcionario_data.get('direccion_grupo', 'N/A'))
-        tarjeta = self.funcionario_data.get('no_tarjeta_proximidad', '')
-        self.lbl_tarjeta.setText(tarjeta if tarjeta else 'No registrada')
+        self.lbl_cargo.setText(self.funcionario_data.get("cargo", "N/A"))
+        self.lbl_direccion.setText(self.funcionario_data.get("direccion_grupo", "N/A"))
+        tarjeta = self.funcionario_data.get("no_tarjeta_proximidad", "")
+        self.lbl_tarjeta.setText(tarjeta if tarjeta else "No registrada")
 
         # Características especiales
-        permite_compartir = self.funcionario_data.get('permite_compartir', True)
+        permite_compartir = self.funcionario_data.get("permite_compartir", True)
         if permite_compartir:
             self.lbl_compartir.setText("✅ Sí")
-            self.lbl_compartir.setStyleSheet("font-size: 12px; padding: 5px; background-color: #d4edda; color: #155724; border-radius: 3px; font-weight: bold;")
+            self.lbl_compartir.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #d4edda; color: #155724; border-radius: 3px; font-weight: bold;"
+            )
         else:
             self.lbl_compartir.setText("🚫 No (Exclusivo)")
-            self.lbl_compartir.setStyleSheet("font-size: 12px; padding: 5px; background-color: #f8d7da; color: #721c24; border-radius: 3px; font-weight: bold;")
+            self.lbl_compartir.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #f8d7da; color: #721c24; border-radius: 3px; font-weight: bold;"
+            )
 
-        pico_placa = self.funcionario_data.get('pico_placa_solidario', False)
+        pico_placa = self.funcionario_data.get("pico_placa_solidario", False)
         if pico_placa:
             self.lbl_solidario.setText("🔄 Sí")
-            self.lbl_solidario.setStyleSheet("font-size: 12px; padding: 5px; background-color: #d1ecf1; color: #0c5460; border-radius: 3px; font-weight: bold;")
+            self.lbl_solidario.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #d1ecf1; color: #0c5460; border-radius: 3px; font-weight: bold;"
+            )
         else:
             self.lbl_solidario.setText("❌ No")
-            self.lbl_solidario.setStyleSheet("font-size: 12px; padding: 5px; background-color: #ecf0f1; color: #666; border-radius: 3px; font-weight: bold;")
+            self.lbl_solidario.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #ecf0f1; color: #666; border-radius: 3px; font-weight: bold;"
+            )
 
-        discapacidad = self.funcionario_data.get('discapacidad', False)
+        discapacidad = self.funcionario_data.get("discapacidad", False)
         if discapacidad:
             self.lbl_discapacidad.setText("♿ Sí")
-            self.lbl_discapacidad.setStyleSheet("font-size: 12px; padding: 5px; background-color: #d4edda; color: #155724; border-radius: 3px; font-weight: bold;")
+            self.lbl_discapacidad.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #d4edda; color: #155724; border-radius: 3px; font-weight: bold;"
+            )
         else:
             self.lbl_discapacidad.setText("❌ No")
-            self.lbl_discapacidad.setStyleSheet("font-size: 12px; padding: 5px; background-color: #ecf0f1; color: #666; border-radius: 3px; font-weight: bold;")
+            self.lbl_discapacidad.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #ecf0f1; color: #666; border-radius: 3px; font-weight: bold;"
+            )
 
         # Información de vehículos
-        vehiculos = self.datos_relacionados.get('vehiculos', [])
+        vehiculos = self.datos_relacionados.get("vehiculos", [])
         if vehiculos:
             texto_vehiculos = f"Total de vehículos: {len(vehiculos)}/2\n\n"
             for i, vehiculo in enumerate(vehiculos, 1):
-                tipo = vehiculo.get('tipo_vehiculo', 'N/A')
-                placa = vehiculo.get('placa', 'N/A')
-                circulacion = vehiculo.get('tipo_circulacion', 'N/A')
-                tiene_asignacion = vehiculo.get('tiene_asignacion', False)
+                tipo = vehiculo.get("tipo_vehiculo", "N/A")
+                placa = vehiculo.get("placa", "N/A")
+                circulacion = vehiculo.get("tipo_circulacion", "N/A")
+                tiene_asignacion = vehiculo.get("tiene_asignacion", False)
 
-                estado = f"Parqueadero P-{vehiculo.get('numero_parqueadero', 0):03d}" if tiene_asignacion else "Sin asignar"
+                estado = (
+                    f"Parqueadero P-{vehiculo.get('numero_parqueadero', 0):03d}" if tiene_asignacion else "Sin asignar"
+                )
                 texto_vehiculos += f"{i}. {tipo} - Placa: {placa} ({circulacion}) - {estado}\n"
 
             self.lbl_vehiculos.setText(texto_vehiculos.strip())
@@ -906,40 +992,42 @@ class EditarFuncionarioModal(QDialog):
         self.chk_pico_placa_solidario.setToolTip(
             "Permite al funcionario usar el parqueadero en días que normalmente no le corresponderían."
         )
-        self.chk_pico_placa_solidario.setStyleSheet("""
+        self.chk_pico_placa_solidario.setStyleSheet(
+            """
             QCheckBox {
                 font-weight: bold;
                 color: #2980b9;
             }
-        """)
+        """
+        )
         self.chk_pico_placa_solidario.stateChanged.connect(self.on_pico_placa_changed)
         form_layout.addRow("", self.chk_pico_placa_solidario)
 
         # Checkbox: Discapacidad
         self.chk_discapacidad = QCheckBox("♿ Funcionario con Discapacidad")
-        self.chk_discapacidad.setToolTip(
-            "Marca al funcionario con condición de discapacidad."
-        )
-        self.chk_discapacidad.setStyleSheet("""
+        self.chk_discapacidad.setToolTip("Marca al funcionario con condición de discapacidad.")
+        self.chk_discapacidad.setStyleSheet(
+            """
             QCheckBox {
                 font-weight: bold;
                 color: #27ae60;
             }
-        """)
+        """
+        )
         self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed)
         form_layout.addRow("", self.chk_discapacidad)
 
         # Checkbox: Parqueadero Exclusivo (No compartir)
         self.chk_no_compartir = QCheckBox("🚫 Parqueadero Exclusivo (No compartido)")
-        self.chk_no_compartir.setToolTip(
-            "El funcionario tendrá un parqueadero EXCLUSIVO que no se comparte con otros."
-        )
-        self.chk_no_compartir.setStyleSheet("""
+        self.chk_no_compartir.setToolTip("El funcionario tendrá un parqueadero EXCLUSIVO que no se comparte con otros.")
+        self.chk_no_compartir.setStyleSheet(
+            """
             QCheckBox {
                 font-weight: bold;
                 color: #e74c3c;
             }
-        """)
+        """
+        )
         self.chk_no_compartir.stateChanged.connect(self.on_no_compartir_changed)
         form_layout.addRow("", self.chk_no_compartir)
 
@@ -993,22 +1081,22 @@ class EditarFuncionarioModal(QDialog):
 
     def cargar_datos(self):
         """Carga los datos del funcionario en el formulario"""
-        self.txt_cedula.setText(self.funcionario_data.get('cedula', ''))
-        self.txt_nombre.setText(self.funcionario_data.get('nombre', ''))
-        self.txt_apellidos.setText(self.funcionario_data.get('apellidos', ''))
+        self.txt_cedula.setText(self.funcionario_data.get("cedula", ""))
+        self.txt_nombre.setText(self.funcionario_data.get("nombre", ""))
+        self.txt_apellidos.setText(self.funcionario_data.get("apellidos", ""))
 
-        direccion = self.funcionario_data.get('direccion_grupo', '')
+        direccion = self.funcionario_data.get("direccion_grupo", "")
         index = self.combo_direccion.findText(direccion)
         if index >= 0:
             self.combo_direccion.setCurrentIndex(index)
 
-        cargo = self.funcionario_data.get('cargo', '')
+        cargo = self.funcionario_data.get("cargo", "")
         index = self.combo_cargo.findText(cargo)
         if index >= 0:
             self.combo_cargo.setCurrentIndex(index)
 
-        self.txt_celular.setText(self.funcionario_data.get('celular', ''))
-        self.txt_tarjeta.setText(self.funcionario_data.get('no_tarjeta_proximidad', '') or '')
+        self.txt_celular.setText(self.funcionario_data.get("celular", ""))
+        self.txt_tarjeta.setText(self.funcionario_data.get("no_tarjeta_proximidad", "") or "")
 
         # Cargar valores de checkboxes (solo uno puede estar marcado)
         # Bloquear señales temporalmente para evitar conflictos
@@ -1022,11 +1110,11 @@ class EditarFuncionarioModal(QDialog):
         self.chk_no_compartir.setChecked(False)
 
         # Marcar solo el que corresponde
-        if self.funcionario_data.get('pico_placa_solidario', False):
+        if self.funcionario_data.get("pico_placa_solidario", False):
             self.chk_pico_placa_solidario.setChecked(True)
-        elif self.funcionario_data.get('discapacidad', False):
+        elif self.funcionario_data.get("discapacidad", False):
             self.chk_discapacidad.setChecked(True)
-        elif not self.funcionario_data.get('permite_compartir', True):
+        elif not self.funcionario_data.get("permite_compartir", True):
             # Si permite_compartir es False, significa parqueadero exclusivo
             self.chk_no_compartir.setChecked(True)
 
@@ -1055,9 +1143,11 @@ class EditarFuncionarioModal(QDialog):
             return
 
         if len(cedula) < 7 or len(cedula) > 10:
-            QMessageBox.warning(self, "⚠️ Validación",
-                              f"La cédula debe tener entre 7 y 10 dígitos\n"
-                              f"Dígitos ingresados: {len(cedula)}")
+            QMessageBox.warning(
+                self,
+                "⚠️ Validación",
+                f"La cédula debe tener entre 7 y 10 dígitos\n" f"Dígitos ingresados: {len(cedula)}",
+            )
             return
 
         # Validar nombre
@@ -1072,9 +1162,11 @@ class EditarFuncionarioModal(QDialog):
 
         # Validar celular
         if celular and len(celular) != 10:
-            QMessageBox.warning(self, "⚠️ Validación",
-                              f"El celular debe tener exactamente 10 dígitos\n"
-                              f"Dígitos ingresados: {len(celular)}")
+            QMessageBox.warning(
+                self,
+                "⚠️ Validación",
+                f"El celular debe tener exactamente 10 dígitos\n" f"Dígitos ingresados: {len(celular)}",
+            )
             return
 
         if celular and not celular.isdigit():
@@ -1109,17 +1201,19 @@ class EditarFuncionarioModal(QDialog):
             discapacidad = False
 
         exito, error_msg = self.funcionario_model.actualizar(
-            funcionario_id=self.funcionario_data['id'],
+            funcionario_id=self.funcionario_data["id"],
             cedula=self.txt_cedula.text(),
             nombre=self.txt_nombre.text(),
             apellidos=self.txt_apellidos.text(),
-            direccion_grupo=self.combo_direccion.currentText() if self.combo_direccion.currentText() != "-- Seleccione --" else "",
+            direccion_grupo=(
+                self.combo_direccion.currentText() if self.combo_direccion.currentText() != "-- Seleccione --" else ""
+            ),
             cargo=self.combo_cargo.currentText() if self.combo_cargo.currentText() != "-- Seleccione --" else "",
             celular=self.txt_celular.text(),
             tarjeta=self.txt_tarjeta.text(),
             permite_compartir=permite_compartir,
             pico_placa_solidario=pico_placa_solidario,
-            discapacidad=discapacidad
+            discapacidad=discapacidad,
         )
 
         if exito:
@@ -1127,6 +1221,8 @@ class EditarFuncionarioModal(QDialog):
             self.accept()
         else:
             if "Duplicate entry" in error_msg:
-                QMessageBox.critical(self, "Error", f"Ya existe un funcionario con esa cédula: {self.txt_cedula.text()}")
+                QMessageBox.critical(
+                    self, "Error", f"Ya existe un funcionario con esa cédula: {self.txt_cedula.text()}"
+                )
             else:
                 QMessageBox.critical(self, "Error", f"No se pudo actualizar el funcionario.\n\nError: {error_msg}")

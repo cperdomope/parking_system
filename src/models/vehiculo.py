@@ -3,10 +3,11 @@
 Modelo para operaciones CRUD de vehículos
 """
 
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
+
 from ..database.manager import DatabaseManager
-from ..utils.validaciones_vehiculos import ValidadorVehiculos
 from ..utils.validaciones import ValidadorCampos
+from ..utils.validaciones_vehiculos import ValidadorVehiculos
 
 
 class VehiculoModel:
@@ -40,10 +41,13 @@ class VehiculoModel:
 
         existing = self.db.fetch_one(query, params)
         if existing:
-            return False, f"🚫 Placa duplicada detectada\n\n" \
-                         f"❌ La placa '{placa.upper()}' ya está registrada en el sistema.\n" \
-                         f"🚗 Tipo de vehículo: {existing['tipo_vehiculo']}\n\n" \
-                         f"💡 Solución: Use una placa diferente o verifique si ya está registrada."
+            return (
+                False,
+                f"🚫 Placa duplicada detectada\n\n"
+                f"❌ La placa '{placa.upper()}' ya está registrada en el sistema.\n"
+                f"🚗 Tipo de vehículo: {existing['tipo_vehiculo']}\n\n"
+                f"💡 Solución: Use una placa diferente o verifique si ya está registrada.",
+            )
 
         return True, ""
 
@@ -86,12 +90,15 @@ class VehiculoModel:
             if placa_final:
                 mensaje_placa = f"🏷️ Placa: {placa_final}\n"
             else:
-                mensaje_placa = f"🏷️ Placa: Sin placa (Bicicleta)\n"
+                mensaje_placa = "🏷️ Placa: Sin placa (Bicicleta)\n"
 
-            return True, f"✅ Vehículo registrado exitosamente\n\n" \
-                        f"🚗 Tipo: {tipo_vehiculo}\n" \
-                        f"{mensaje_placa}" \
-                        f"👤 Funcionario ID: {funcionario_id}"
+            return (
+                True,
+                f"✅ Vehículo registrado exitosamente\n\n"
+                f"🚗 Tipo: {tipo_vehiculo}\n"
+                f"{mensaje_placa}"
+                f"👤 Funcionario ID: {funcionario_id}",
+            )
         else:
             # Manejo de errores específicos de BD
             if "Duplicate entry" in str(error):
@@ -160,7 +167,9 @@ class VehiculoModel:
         vehiculos_actuales = self.obtener_por_funcionario(funcionario_id)
         return self.validador.obtener_sugerencias_vehiculo(vehiculos_actuales)
 
-    def validar_vehiculo_antes_registro(self, funcionario_id: int, tipo_vehiculo: str, placa: str = "") -> Tuple[bool, str]:
+    def validar_vehiculo_antes_registro(
+        self, funcionario_id: int, tipo_vehiculo: str, placa: str = ""
+    ) -> Tuple[bool, str]:
         """Valida un vehículo antes del registro sin crearlo
 
         Args:
@@ -220,7 +229,7 @@ class VehiculoModel:
 
             # Obtener otros vehículos del funcionario (excluyendo el actual)
             vehiculos_funcionario = self.obtener_por_funcionario(funcionario_id)
-            otros_vehiculos = [v for v in vehiculos_funcionario if v['id'] != vehiculo_id]
+            otros_vehiculos = [v for v in vehiculos_funcionario if v["id"] != vehiculo_id]
 
             # Validación 2: Reglas de negocio del funcionario
             es_valido, mensaje_validacion = self.validador.validar_registro_vehiculo(
@@ -245,12 +254,15 @@ class VehiculoModel:
                 if placa_final:
                     mensaje_placa = f"🏷️ Placa: {placa_final}\n"
                 else:
-                    mensaje_placa = f"🏷️ Placa: Sin placa (Bicicleta)\n"
+                    mensaje_placa = "🏷️ Placa: Sin placa (Bicicleta)\n"
 
-                return True, f"✅ Vehículo actualizado exitosamente\n\n" \
-                            f"🚗 Tipo: {tipo_vehiculo}\n" \
-                            f"{mensaje_placa}" \
-                            f"👤 Funcionario ID: {funcionario_id}"
+                return (
+                    True,
+                    f"✅ Vehículo actualizado exitosamente\n\n"
+                    f"🚗 Tipo: {tipo_vehiculo}\n"
+                    f"{mensaje_placa}"
+                    f"👤 Funcionario ID: {funcionario_id}",
+                )
             else:
                 return False, f"🚫 Error al actualizar el vehículo: {error}"
 
@@ -270,9 +282,12 @@ class VehiculoModel:
             # Verificar que el vehículo existe
             vehiculo = self.obtener_por_id(vehiculo_id)
             if not vehiculo:
-                return False, f"🔍 Vehículo no encontrado\n\n" \
-                             f"❌ No existe un vehículo con ID: {vehiculo_id}\n" \
-                             f"💡 Verifique que el vehículo no haya sido eliminado previamente"
+                return (
+                    False,
+                    f"🔍 Vehículo no encontrado\n\n"
+                    f"❌ No existe un vehículo con ID: {vehiculo_id}\n"
+                    f"💡 Verifique que el vehículo no haya sido eliminado previamente",
+                )
 
             # Iniciar transacción
             self.db.connection.autocommit = False
@@ -302,18 +317,21 @@ class VehiculoModel:
             # Confirmar transacción
             self.db.connection.commit()
 
-            return True, f"✅ Vehículo eliminado exitosamente\n\n" \
-                        f"🚗 Placa: {vehiculo['placa']}\n" \
-                        f"👤 Propietario: {vehiculo['nombre']} {vehiculo['apellidos']}\n" \
-                        f"🌐 El espacio de parqueadero ha sido liberado automáticamente"
+            return (
+                True,
+                f"✅ Vehículo eliminado exitosamente\n\n"
+                f"🚗 Placa: {vehiculo['placa']}\n"
+                f"👤 Propietario: {vehiculo['nombre']} {vehiculo['apellidos']}\n"
+                f"🌐 El espacio de parqueadero ha sido liberado automáticamente",
+            )
 
         except Exception as e:
-            if hasattr(self.db, 'connection'):
+            if hasattr(self.db, "connection"):
                 self.db.connection.rollback()
             return False, f"🚫 Error inesperado: {str(e)}"
         finally:
             # Restaurar autocommit
-            if hasattr(self.db, 'connection'):
+            if hasattr(self.db, "connection"):
                 self.db.connection.autocommit = True
 
     def eliminar_fisico(self, vehiculo_id: int) -> Tuple[bool, str]:
@@ -358,10 +376,10 @@ class VehiculoModel:
             return True, f"Vehículo {vehiculo['placa']} eliminado permanentemente"
 
         except Exception as e:
-            if hasattr(self.db, 'connection'):
+            if hasattr(self.db, "connection"):
                 self.db.connection.rollback()
             return False, f"🚫 Error inesperado: {str(e)}"
         finally:
             # Restaurar autocommit
-            if hasattr(self.db, 'connection'):
+            if hasattr(self.db, "connection"):
                 self.db.connection.autocommit = True

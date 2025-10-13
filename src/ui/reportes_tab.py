@@ -3,33 +3,51 @@
 Módulo de la pestaña Reportes del sistema de gestión de parqueadero
 """
 
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTableWidget,
-    QTableWidgetItem, QPushButton, QLabel, QMessageBox, QHeaderView,
-    QFileDialog, QFrame, QGroupBox, QComboBox, QDateEdit
-)
-from PyQt5.QtCore import pyqtSignal, Qt, QDate
-from PyQt5.QtGui import QFont, QColor
-from datetime import datetime, timedelta
 import csv
-import os
+from datetime import datetime
+
+from PyQt5.QtCore import QDate, Qt, pyqtSignal
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDateEdit,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..database.manager import DatabaseManager
 
 # Imports opcionales para exportación
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter, A4, landscape
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
 
 try:
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.styles import Alignment, Font, PatternFill
+
     OPENPYXL_AVAILABLE = True
 except ImportError:
     OPENPYXL_AVAILABLE = False
@@ -37,10 +55,11 @@ except ImportError:
 # Imports para gráficos con matplotlib
 try:
     import matplotlib
-    matplotlib.use('Qt5Agg')
+
+    matplotlib.use("Qt5Agg")
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.figure import Figure
-    import matplotlib.pyplot as plt
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
@@ -57,12 +76,7 @@ class ReportesTab(QWidget):
         self.db = db_manager
 
         # Inicializar filtros
-        self.filtros_activos = {
-            'tipo_vehiculo': None,
-            'cargo': None,
-            'fecha_inicio': None,
-            'fecha_fin': None
-        }
+        self.filtros_activos = {"tipo_vehiculo": None, "cargo": None, "fecha_inicio": None, "fecha_fin": None}
 
         self.setup_ui()
         self.actualizar_reportes()
@@ -75,20 +89,23 @@ class ReportesTab(QWidget):
 
         # Título de la sección
         title_label = QLabel("📊 Sistema de Reportes")
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             font-size: 22px;
             font-weight: bold;
             color: #2c3e50;
             padding: 10px;
             background-color: #ecf0f1;
             border-radius: 5px;
-        """)
+        """
+        )
         title_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(title_label)
 
         # Sección de filtros
         filtros_group = QGroupBox("Filtros de Reporte")
-        filtros_group.setStyleSheet("""
+        filtros_group.setStyleSheet(
+            """
             QGroupBox {
                 font-weight: bold;
                 font-size: 14px;
@@ -103,7 +120,8 @@ class ReportesTab(QWidget):
                 left: 10px;
                 padding: 0 5px 0 5px;
             }
-        """)
+        """
+        )
 
         # Layout vertical principal para separar en dos filas
         filtros_main_layout = QVBoxLayout()
@@ -117,31 +135,45 @@ class ReportesTab(QWidget):
         fila1_layout.addWidget(QLabel("Tipo Vehículo:"))
         self.combo_tipo_vehiculo = QComboBox()
         self.combo_tipo_vehiculo.addItems(["Todos", "Carro", "Moto", "Bicicleta"])
-        self.combo_tipo_vehiculo.setStyleSheet("""
+        self.combo_tipo_vehiculo.setStyleSheet(
+            """
             QComboBox {
                 padding: 5px;
                 border: 1px solid #bdc3c7;
                 border-radius: 3px;
                 min-width: 120px;
             }
-        """)
+        """
+        )
         fila1_layout.addWidget(self.combo_tipo_vehiculo)
 
         # ComboBox: Cargo
         fila1_layout.addWidget(QLabel("Cargo:"))
         self.combo_cargo = QComboBox()
-        self.combo_cargo.addItems([
-            "Todos", "Director", "Coordinador", "Asesor", "Auxiliar",
-            "Conductor", "Jefe de Oficina", "Profesional", "Técnico", "Otro"
-        ])
-        self.combo_cargo.setStyleSheet("""
+        self.combo_cargo.addItems(
+            [
+                "Todos",
+                "Director",
+                "Coordinador",
+                "Asesor",
+                "Auxiliar",
+                "Conductor",
+                "Jefe de Oficina",
+                "Profesional",
+                "Técnico",
+                "Otro",
+            ]
+        )
+        self.combo_cargo.setStyleSheet(
+            """
             QComboBox {
                 padding: 5px;
                 border: 1px solid #bdc3c7;
                 border-radius: 3px;
                 min-width: 140px;
             }
-        """)
+        """
+        )
         fila1_layout.addWidget(self.combo_cargo)
         fila1_layout.addStretch()
 
@@ -155,14 +187,16 @@ class ReportesTab(QWidget):
         self.date_inicio.setCalendarPopup(True)
         self.date_inicio.setDate(QDate.currentDate().addMonths(-1))  # Hace 1 mes
         self.date_inicio.setDisplayFormat("dd/MM/yyyy")
-        self.date_inicio.setStyleSheet("""
+        self.date_inicio.setStyleSheet(
+            """
             QDateEdit {
                 padding: 5px;
                 border: 1px solid #bdc3c7;
                 border-radius: 3px;
                 min-width: 110px;
             }
-        """)
+        """
+        )
         fila2_layout.addWidget(self.date_inicio)
 
         # Fecha Final
@@ -171,19 +205,22 @@ class ReportesTab(QWidget):
         self.date_fin.setCalendarPopup(True)
         self.date_fin.setDate(QDate.currentDate())
         self.date_fin.setDisplayFormat("dd/MM/yyyy")
-        self.date_fin.setStyleSheet("""
+        self.date_fin.setStyleSheet(
+            """
             QDateEdit {
                 padding: 5px;
                 border: 1px solid #bdc3c7;
                 border-radius: 3px;
                 min-width: 110px;
             }
-        """)
+        """
+        )
         fila2_layout.addWidget(self.date_fin)
 
         # Botón Aplicar Filtros
         self.btn_aplicar_filtros = QPushButton("Aplicar Filtros")
-        self.btn_aplicar_filtros.setStyleSheet("""
+        self.btn_aplicar_filtros.setStyleSheet(
+            """
             QPushButton {
                 background-color: #27ae60;
                 color: white;
@@ -199,13 +236,15 @@ class ReportesTab(QWidget):
             QPushButton:pressed {
                 background-color: #1e8449;
             }
-        """)
+        """
+        )
         self.btn_aplicar_filtros.clicked.connect(self.aplicar_filtros)
         fila2_layout.addWidget(self.btn_aplicar_filtros)
 
         # Botón Limpiar Filtros
         self.btn_limpiar_filtros = QPushButton("Limpiar")
-        self.btn_limpiar_filtros.setStyleSheet("""
+        self.btn_limpiar_filtros.setStyleSheet(
+            """
             QPushButton {
                 background-color: #95a5a6;
                 color: white;
@@ -220,7 +259,8 @@ class ReportesTab(QWidget):
             QPushButton:pressed {
                 background-color: #5d6d7e;
             }
-        """)
+        """
+        )
         self.btn_limpiar_filtros.clicked.connect(self.limpiar_filtros)
         fila2_layout.addWidget(self.btn_limpiar_filtros)
 
@@ -236,7 +276,8 @@ class ReportesTab(QWidget):
         # Botón global de actualización
         btn_layout = QHBoxLayout()
         self.btn_actualizar_global = QPushButton("🔄 Actualizar Todos los Reportes")
-        self.btn_actualizar_global.setStyleSheet("""
+        self.btn_actualizar_global.setStyleSheet(
+            """
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -252,7 +293,8 @@ class ReportesTab(QWidget):
             QPushButton:pressed {
                 background-color: #21618c;
             }
-        """)
+        """
+        )
         self.btn_actualizar_global.clicked.connect(self.actualizar_reportes)
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_actualizar_global)
@@ -261,7 +303,8 @@ class ReportesTab(QWidget):
 
         # TabWidget para las subpestañas de reportes
         self.tab_widget = QTabWidget()
-        self.tab_widget.setStyleSheet("""
+        self.tab_widget.setStyleSheet(
+            """
             QTabWidget::pane {
                 border: 2px solid #bdc3c7;
                 border-radius: 5px;
@@ -284,7 +327,8 @@ class ReportesTab(QWidget):
                 background-color: #5dade2;
                 color: white;
             }
-        """)
+        """
+        )
         main_layout.addWidget(self.tab_widget)
 
         # Crear las 7 subpestañas
@@ -318,14 +362,25 @@ class ReportesTab(QWidget):
         # Tabla
         self.tabla_general = QTableWidget()
         self.tabla_general.setColumnCount(11)
-        self.tabla_general.setHorizontalHeaderLabels([
-            "Cédula", "Nombre Completo", "Cargo", "Dirección/Grupo",
-            "Celular", "Tipo Vehículo", "Placa", "Circulación",
-            "N° Parqueadero", "Estado Parq.", "Pico y Placa Solidario"
-        ])
+        self.tabla_general.setHorizontalHeaderLabels(
+            [
+                "Cédula",
+                "Nombre Completo",
+                "Cargo",
+                "Dirección/Grupo",
+                "Celular",
+                "Tipo Vehículo",
+                "Placa",
+                "Circulación",
+                "N° Parqueadero",
+                "Estado Parq.",
+                "Pico y Placa Solidario",
+            ]
+        )
         self.tabla_general.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla_general.setAlternatingRowColors(True)
-        self.tabla_general.setStyleSheet("""
+        self.tabla_general.setStyleSheet(
+            """
             QTableWidget {
                 gridline-color: #bdc3c7;
                 background-color: white;
@@ -338,7 +393,8 @@ class ReportesTab(QWidget):
                 padding: 8px;
                 border: 1px solid #2c3e50;
             }
-        """)
+        """
+        )
         layout.addWidget(self.tabla_general)
 
         # Botones de acción
@@ -361,13 +417,24 @@ class ReportesTab(QWidget):
         # Tabla
         self.tabla_funcionarios = QTableWidget()
         self.tabla_funcionarios.setColumnCount(10)
-        self.tabla_funcionarios.setHorizontalHeaderLabels([
-            "ID", "Cédula", "Nombre", "Apellidos", "Dirección/Grupo",
-            "Cargo", "Celular", "Tarjeta Prox.", "Vehículos", "Fecha Registro"
-        ])
+        self.tabla_funcionarios.setHorizontalHeaderLabels(
+            [
+                "ID",
+                "Cédula",
+                "Nombre",
+                "Apellidos",
+                "Dirección/Grupo",
+                "Cargo",
+                "Celular",
+                "Tarjeta Prox.",
+                "Vehículos",
+                "Fecha Registro",
+            ]
+        )
         self.tabla_funcionarios.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla_funcionarios.setAlternatingRowColors(True)
-        self.tabla_funcionarios.setStyleSheet("""
+        self.tabla_funcionarios.setStyleSheet(
+            """
             QTableWidget {
                 gridline-color: #bdc3c7;
                 background-color: white;
@@ -380,7 +447,8 @@ class ReportesTab(QWidget):
                 padding: 8px;
                 border: 1px solid #138d75;
             }
-        """)
+        """
+        )
         layout.addWidget(self.tabla_funcionarios)
 
         # Botones de acción
@@ -403,13 +471,23 @@ class ReportesTab(QWidget):
         # Tabla
         self.tabla_vehiculos = QTableWidget()
         self.tabla_vehiculos.setColumnCount(9)
-        self.tabla_vehiculos.setHorizontalHeaderLabels([
-            "ID", "Placa", "Tipo Vehículo", "Circulación", "Propietario",
-            "Cédula", "Estado Asignación", "N° Parqueadero", "Fecha Registro"
-        ])
+        self.tabla_vehiculos.setHorizontalHeaderLabels(
+            [
+                "ID",
+                "Placa",
+                "Tipo Vehículo",
+                "Circulación",
+                "Propietario",
+                "Cédula",
+                "Estado Asignación",
+                "N° Parqueadero",
+                "Fecha Registro",
+            ]
+        )
         self.tabla_vehiculos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla_vehiculos.setAlternatingRowColors(True)
-        self.tabla_vehiculos.setStyleSheet("""
+        self.tabla_vehiculos.setStyleSheet(
+            """
             QTableWidget {
                 gridline-color: #bdc3c7;
                 background-color: white;
@@ -422,7 +500,8 @@ class ReportesTab(QWidget):
                 padding: 8px;
                 border: 1px solid #7d3c98;
             }
-        """)
+        """
+        )
         layout.addWidget(self.tabla_vehiculos)
 
         # Botones de acción
@@ -445,13 +524,22 @@ class ReportesTab(QWidget):
         # Tabla
         self.tabla_parqueaderos = QTableWidget()
         self.tabla_parqueaderos.setColumnCount(8)
-        self.tabla_parqueaderos.setHorizontalHeaderLabels([
-            "N° Parqueadero", "Sótano", "Tipo Vehículo", "Estado",
-            "Vehículos Asignados", "Circulación PAR", "Circulación IMPAR", "Observaciones"
-        ])
+        self.tabla_parqueaderos.setHorizontalHeaderLabels(
+            [
+                "N° Parqueadero",
+                "Sótano",
+                "Tipo Vehículo",
+                "Estado",
+                "Vehículos Asignados",
+                "Circulación PAR",
+                "Circulación IMPAR",
+                "Observaciones",
+            ]
+        )
         self.tabla_parqueaderos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla_parqueaderos.setAlternatingRowColors(True)
-        self.tabla_parqueaderos.setStyleSheet("""
+        self.tabla_parqueaderos.setStyleSheet(
+            """
             QTableWidget {
                 gridline-color: #bdc3c7;
                 background-color: white;
@@ -464,7 +552,8 @@ class ReportesTab(QWidget):
                 padding: 8px;
                 border: 1px solid #d35400;
             }
-        """)
+        """
+        )
         layout.addWidget(self.tabla_parqueaderos)
 
         # Botones de acción
@@ -487,14 +576,24 @@ class ReportesTab(QWidget):
         # Tabla
         self.tabla_asignaciones = QTableWidget()
         self.tabla_asignaciones.setColumnCount(10)
-        self.tabla_asignaciones.setHorizontalHeaderLabels([
-            "ID Asignación", "N° Parqueadero", "Placa", "Tipo Vehículo",
-            "Propietario", "Cédula", "Circulación", "Fecha Asignación",
-            "Estado", "Observaciones"
-        ])
+        self.tabla_asignaciones.setHorizontalHeaderLabels(
+            [
+                "ID Asignación",
+                "N° Parqueadero",
+                "Placa",
+                "Tipo Vehículo",
+                "Propietario",
+                "Cédula",
+                "Circulación",
+                "Fecha Asignación",
+                "Estado",
+                "Observaciones",
+            ]
+        )
         self.tabla_asignaciones.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla_asignaciones.setAlternatingRowColors(True)
-        self.tabla_asignaciones.setStyleSheet("""
+        self.tabla_asignaciones.setStyleSheet(
+            """
             QTableWidget {
                 gridline-color: #bdc3c7;
                 background-color: white;
@@ -507,7 +606,8 @@ class ReportesTab(QWidget):
                 padding: 8px;
                 border: 1px solid #1f618d;
             }
-        """)
+        """
+        )
         layout.addWidget(self.tabla_asignaciones)
 
         # Botones de acción
@@ -523,20 +623,32 @@ class ReportesTab(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
 
         # Descripción
-        desc_label = QLabel("Funcionarios con excepciones especiales: Pico y Placa Solidario, Discapacidad y Parqueadero Exclusivo")
+        desc_label = QLabel(
+            "Funcionarios con excepciones especiales: Pico y Placa Solidario, Discapacidad y Parqueadero Exclusivo"
+        )
         desc_label.setStyleSheet("color: #7f8c8d; font-style: italic; padding: 5px;")
         layout.addWidget(desc_label)
 
         # Tabla
         self.tabla_excepciones = QTableWidget()
         self.tabla_excepciones.setColumnCount(9)
-        self.tabla_excepciones.setHorizontalHeaderLabels([
-            "Cédula", "Nombre Completo", "Cargo", "Pico y Placa Solidario",
-            "Discapacidad", "Parqueadero Exclusivo", "Placa", "N° Parqueadero", "Observaciones"
-        ])
+        self.tabla_excepciones.setHorizontalHeaderLabels(
+            [
+                "Cédula",
+                "Nombre Completo",
+                "Cargo",
+                "Pico y Placa Solidario",
+                "Discapacidad",
+                "Parqueadero Exclusivo",
+                "Placa",
+                "N° Parqueadero",
+                "Observaciones",
+            ]
+        )
         self.tabla_excepciones.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla_excepciones.setAlternatingRowColors(True)
-        self.tabla_excepciones.setStyleSheet("""
+        self.tabla_excepciones.setStyleSheet(
+            """
             QTableWidget {
                 gridline-color: #bdc3c7;
                 background-color: white;
@@ -549,7 +661,8 @@ class ReportesTab(QWidget):
                 padding: 8px;
                 border: 1px solid #a93226;
             }
-        """)
+        """
+        )
         layout.addWidget(self.tabla_excepciones)
 
         # Botones de acción
@@ -567,10 +680,10 @@ class ReportesTab(QWidget):
         if not MATPLOTLIB_AVAILABLE:
             # Mensaje si matplotlib no está disponible
             msg_label = QLabel(
-                "⚠️ La visualización de estadísticas requiere matplotlib.\n\n"
-                "Instalar con: pip install matplotlib"
+                "⚠️ La visualización de estadísticas requiere matplotlib.\n\n" "Instalar con: pip install matplotlib"
             )
-            msg_label.setStyleSheet("""
+            msg_label.setStyleSheet(
+                """
                 QLabel {
                     color: #e67e22;
                     font-size: 14px;
@@ -579,7 +692,8 @@ class ReportesTab(QWidget):
                     border: 2px solid #f39c12;
                     border-radius: 5px;
                 }
-            """)
+            """
+            )
             msg_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(msg_label)
             return widget
@@ -591,7 +705,8 @@ class ReportesTab(QWidget):
 
         # Botón de actualización
         btn_actualizar = QPushButton("🔄 Actualizar Gráficos")
-        btn_actualizar.setStyleSheet("""
+        btn_actualizar.setStyleSheet(
+            """
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -603,7 +718,8 @@ class ReportesTab(QWidget):
             QPushButton:hover {
                 background-color: #2980b9;
             }
-        """)
+        """
+        )
         btn_actualizar.clicked.connect(self.actualizar_estadisticas)
         layout.addWidget(btn_actualizar, alignment=Qt.AlignCenter)
 
@@ -626,7 +742,8 @@ class ReportesTab(QWidget):
 
         # Botón Exportar CSV
         btn_csv = QPushButton("📄 CSV")
-        btn_csv.setStyleSheet("""
+        btn_csv.setStyleSheet(
+            """
             QPushButton {
                 background-color: #27ae60;
                 color: white;
@@ -639,13 +756,15 @@ class ReportesTab(QWidget):
             QPushButton:hover {
                 background-color: #229954;
             }
-        """)
+        """
+        )
         btn_csv.clicked.connect(lambda: self.exportar_csv(tabla, nombre_base))
         btn_layout.addWidget(btn_csv)
 
         # Botón Exportar Excel
         btn_excel = QPushButton("📊 Excel")
-        btn_excel.setStyleSheet("""
+        btn_excel.setStyleSheet(
+            """
             QPushButton {
                 background-color: #16a085;
                 color: white;
@@ -658,13 +777,15 @@ class ReportesTab(QWidget):
             QPushButton:hover {
                 background-color: #138d75;
             }
-        """)
+        """
+        )
         btn_excel.clicked.connect(lambda: self.exportar_excel(tabla, nombre_base))
         btn_layout.addWidget(btn_excel)
 
         # Botón Exportar PDF
         btn_pdf = QPushButton("📕 PDF")
-        btn_pdf.setStyleSheet("""
+        btn_pdf.setStyleSheet(
+            """
             QPushButton {
                 background-color: #e74c3c;
                 color: white;
@@ -677,7 +798,8 @@ class ReportesTab(QWidget):
             QPushButton:hover {
                 background-color: #c0392b;
             }
-        """)
+        """
+        )
         btn_pdf.clicked.connect(lambda: self.exportar_pdf(tabla, nombre_base))
         btn_layout.addWidget(btn_pdf)
 
@@ -694,18 +816,14 @@ class ReportesTab(QWidget):
 
         # Validar rango de fechas
         if fecha_inicio > fecha_fin:
-            QMessageBox.warning(
-                self,
-                "Error en fechas",
-                "La fecha de inicio no puede ser posterior a la fecha de fin."
-            )
+            QMessageBox.warning(self, "Error en fechas", "La fecha de inicio no puede ser posterior a la fecha de fin.")
             return
 
         # Actualizar filtros activos
-        self.filtros_activos['tipo_vehiculo'] = None if tipo_vehiculo == "Todos" else tipo_vehiculo
-        self.filtros_activos['cargo'] = None if cargo == "Todos" else cargo
-        self.filtros_activos['fecha_inicio'] = fecha_inicio
-        self.filtros_activos['fecha_fin'] = fecha_fin
+        self.filtros_activos["tipo_vehiculo"] = None if tipo_vehiculo == "Todos" else tipo_vehiculo
+        self.filtros_activos["cargo"] = None if cargo == "Todos" else cargo
+        self.filtros_activos["fecha_inicio"] = fecha_inicio
+        self.filtros_activos["fecha_fin"] = fecha_fin
 
         # Actualizar reportes con filtros
         self.actualizar_reportes()
@@ -721,17 +839,12 @@ class ReportesTab(QWidget):
         self.date_fin.setDate(QDate.currentDate())
 
         # Limpiar filtros activos
-        self.filtros_activos = {
-            'tipo_vehiculo': None,
-            'cargo': None,
-            'fecha_inicio': None,
-            'fecha_fin': None
-        }
+        self.filtros_activos = {"tipo_vehiculo": None, "cargo": None, "fecha_inicio": None, "fecha_fin": None}
 
         # Actualizar reportes sin filtros
         self.actualizar_reportes()
 
-    def _construir_filtro_sql(self, tabla_alias=''):
+    def _construir_filtro_sql(self, tabla_alias=""):
         """Construye la cláusula WHERE para los filtros activos"""
         condiciones = []
         params = []
@@ -740,21 +853,21 @@ class ReportesTab(QWidget):
         prefix = f"{tabla_alias}." if tabla_alias else ""
 
         # Filtro por tipo de vehículo
-        if self.filtros_activos.get('tipo_vehiculo'):
+        if self.filtros_activos.get("tipo_vehiculo"):
             condiciones.append(f"{prefix}tipo_vehiculo = %s")
-            params.append(self.filtros_activos['tipo_vehiculo'])
+            params.append(self.filtros_activos["tipo_vehiculo"])
 
         # Filtro por cargo (solo si la tabla tiene cargo)
-        if self.filtros_activos.get('cargo') and 'funcionario' in tabla_alias.lower():
+        if self.filtros_activos.get("cargo") and "funcionario" in tabla_alias.lower():
             condiciones.append(f"{prefix}cargo = %s")
-            params.append(self.filtros_activos['cargo'])
+            params.append(self.filtros_activos["cargo"])
 
         # Filtro por rango de fechas
-        if self.filtros_activos.get('fecha_inicio') and self.filtros_activos.get('fecha_fin'):
-            if 'fecha_registro' in tabla_alias or 'fecha_creacion' in tabla_alias:
+        if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
+            if "fecha_registro" in tabla_alias or "fecha_creacion" in tabla_alias:
                 condiciones.append(f"{prefix}fecha_registro BETWEEN %s AND %s")
-                params.append(self.filtros_activos['fecha_inicio'])
-                params.append(self.filtros_activos['fecha_fin'])
+                params.append(self.filtros_activos["fecha_inicio"])
+                params.append(self.filtros_activos["fecha_fin"])
 
         return (" AND " + " AND ".join(condiciones), params) if condiciones else ("", [])
 
@@ -806,9 +919,7 @@ class ReportesTab(QWidget):
         # Mostrar resultado
         if errores:
             QMessageBox.warning(
-                self,
-                "Actualización parcial",
-                f"Algunos reportes no se pudieron actualizar:\n\n" + "\n".join(errores)
+                self, "Actualización parcial", "Algunos reportes no se pudieron actualizar:\n\n" + "\n".join(errores)
             )
         else:
             # Solo mostrar mensaje de éxito si se llamó desde el botón global
@@ -862,14 +973,14 @@ class ReportesTab(QWidget):
 
         # Aplicar filtros
         params = []
-        if self.filtros_activos.get('cargo'):
+        if self.filtros_activos.get("cargo"):
             query += " AND f.cargo = %s"
-            params.append(self.filtros_activos['cargo'])
+            params.append(self.filtros_activos["cargo"])
 
-        if self.filtros_activos.get('fecha_inicio') and self.filtros_activos.get('fecha_fin'):
+        if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
             query += " AND f.fecha_registro BETWEEN %s AND %s"
-            params.append(self.filtros_activos['fecha_inicio'])
-            params.append(self.filtros_activos['fecha_fin'])
+            params.append(self.filtros_activos["fecha_inicio"])
+            params.append(self.filtros_activos["fecha_fin"])
 
         query += """
             GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.direccion_grupo,
@@ -905,18 +1016,18 @@ class ReportesTab(QWidget):
 
         # Aplicar filtros
         params = []
-        if self.filtros_activos.get('tipo_vehiculo'):
+        if self.filtros_activos.get("tipo_vehiculo"):
             query += " AND v.tipo_vehiculo = %s"
-            params.append(self.filtros_activos['tipo_vehiculo'])
+            params.append(self.filtros_activos["tipo_vehiculo"])
 
-        if self.filtros_activos.get('cargo'):
+        if self.filtros_activos.get("cargo"):
             query += " AND f.cargo = %s"
-            params.append(self.filtros_activos['cargo'])
+            params.append(self.filtros_activos["cargo"])
 
-        if self.filtros_activos.get('fecha_inicio') and self.filtros_activos.get('fecha_fin'):
+        if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
             query += " AND v.fecha_registro BETWEEN %s AND %s"
-            params.append(self.filtros_activos['fecha_inicio'])
-            params.append(self.filtros_activos['fecha_fin'])
+            params.append(self.filtros_activos["fecha_inicio"])
+            params.append(self.filtros_activos["fecha_fin"])
 
         query += " ORDER BY v.placa"
 
@@ -929,7 +1040,8 @@ class ReportesTab(QWidget):
         try:
             check_query = "SHOW COLUMNS FROM parqueaderos LIKE 'sotano'"
             column_exists = self.db.fetch_one(check_query) is not None
-        except:
+        except Exception as e:
+            print(f"Advertencia al verificar columna 'sotano': {e}")
             column_exists = False
 
         if column_exists:
@@ -1085,42 +1197,38 @@ class ReportesTab(QWidget):
             datos = self.db.fetch_all(query)
 
             if not datos:
-                ax.text(0.5, 0.5, 'Sin datos', ha='center', va='center')
+                ax.text(0.5, 0.5, "Sin datos", ha="center", va="center")
                 return
 
-            estados = [d['estado'] for d in datos]
-            cantidades = [d['cantidad'] for d in datos]
+            estados = [d["estado"] for d in datos]
+            cantidades = [d["cantidad"] for d in datos]
 
             # Colores personalizados
             colores_map = {
-                'Disponible': '#2ecc71',        # Verde
-                'Parcialmente_Asignado': '#f39c12',  # Naranja
-                'Completo': '#e74c3c'            # Rojo
+                "Disponible": "#2ecc71",  # Verde
+                "Parcialmente_Asignado": "#f39c12",  # Naranja
+                "Completo": "#e74c3c",  # Rojo
             }
-            colores = [colores_map.get(e, '#95a5a6') for e in estados]
+            colores = [colores_map.get(e, "#95a5a6") for e in estados]
 
             # Etiquetas más legibles
-            labels_map = {
-                'Disponible': 'Disponible',
-                'Parcialmente_Asignado': 'Parcial',
-                'Completo': 'Completo'
-            }
+            labels_map = {"Disponible": "Disponible", "Parcialmente_Asignado": "Parcial", "Completo": "Completo"}
             labels = [labels_map.get(e, e) for e in estados]
 
             # Crear gráfico de pastel
             wedges, texts, autotexts = ax.pie(
                 cantidades,
                 labels=labels,
-                autopct='%1.1f%%',
+                autopct="%1.1f%%",
                 colors=colores,
                 startangle=90,
-                textprops={'fontsize': 9, 'weight': 'bold'}
+                textprops={"fontsize": 9, "weight": "bold"},
             )
 
-            ax.set_title('Ocupación de Parqueaderos', fontsize=12, weight='bold', pad=10)
+            ax.set_title("Ocupación de Parqueaderos", fontsize=12, weight="bold", pad=10)
 
         except Exception as e:
-            ax.text(0.5, 0.5, f'Error: {str(e)}', ha='center', va='center', fontsize=8)
+            ax.text(0.5, 0.5, f"Error: {str(e)}", ha="center", va="center", fontsize=8)
 
     def _grafico_distribucion_vehiculos(self, ax):
         """Genera gráfico de barras para distribución de tipos de vehículo"""
@@ -1136,18 +1244,18 @@ class ReportesTab(QWidget):
 
             # Aplicar filtros
             params = []
-            if self.filtros_activos.get('tipo_vehiculo'):
+            if self.filtros_activos.get("tipo_vehiculo"):
                 query += " AND v.tipo_vehiculo = %s"
-                params.append(self.filtros_activos['tipo_vehiculo'])
+                params.append(self.filtros_activos["tipo_vehiculo"])
 
-            if self.filtros_activos.get('cargo'):
+            if self.filtros_activos.get("cargo"):
                 query += " AND f.cargo = %s"
-                params.append(self.filtros_activos['cargo'])
+                params.append(self.filtros_activos["cargo"])
 
-            if self.filtros_activos.get('fecha_inicio') and self.filtros_activos.get('fecha_fin'):
+            if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
                 query += " AND v.fecha_registro BETWEEN %s AND %s"
-                params.append(self.filtros_activos['fecha_inicio'])
-                params.append(self.filtros_activos['fecha_fin'])
+                params.append(self.filtros_activos["fecha_inicio"])
+                params.append(self.filtros_activos["fecha_fin"])
 
             query += """
                 GROUP BY v.tipo_vehiculo
@@ -1157,37 +1265,43 @@ class ReportesTab(QWidget):
             datos = self.db.fetch_all(query, tuple(params) if params else None)
 
             if not datos:
-                ax.text(0.5, 0.5, 'Sin datos', ha='center', va='center', transform=ax.transAxes)
+                ax.text(0.5, 0.5, "Sin datos", ha="center", va="center", transform=ax.transAxes)
                 return
 
-            tipos = [d['tipo_vehiculo'] for d in datos]
-            cantidades = [d['cantidad'] for d in datos]
+            tipos = [d["tipo_vehiculo"] for d in datos]
+            cantidades = [d["cantidad"] for d in datos]
 
             # Colores personalizados
             colores_map = {
-                'Carro': '#3498db',      # Azul
-                'Moto': '#9b59b6',       # Morado
-                'Bicicleta': '#1abc9c'   # Verde azulado
+                "Carro": "#3498db",  # Azul
+                "Moto": "#9b59b6",  # Morado
+                "Bicicleta": "#1abc9c",  # Verde azulado
             }
-            colores = [colores_map.get(t, '#95a5a6') for t in tipos]
+            colores = [colores_map.get(t, "#95a5a6") for t in tipos]
 
             # Crear gráfico de barras
-            bars = ax.bar(tipos, cantidades, color=colores, edgecolor='black', linewidth=1.5)
+            bars = ax.bar(tipos, cantidades, color=colores, edgecolor="black", linewidth=1.5)
 
             # Agregar valores encima de las barras
             for bar in bars:
                 height = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{int(height)}',
-                       ha='center', va='bottom', fontsize=10, weight='bold')
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2.0,
+                    height,
+                    f"{int(height)}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=10,
+                    weight="bold",
+                )
 
-            ax.set_title('Distribución de Vehículos', fontsize=12, weight='bold', pad=10)
-            ax.set_xlabel('Tipo de Vehículo', fontsize=10)
-            ax.set_ylabel('Cantidad', fontsize=10)
-            ax.grid(axis='y', alpha=0.3, linestyle='--')
+            ax.set_title("Distribución de Vehículos", fontsize=12, weight="bold", pad=10)
+            ax.set_xlabel("Tipo de Vehículo", fontsize=10)
+            ax.set_ylabel("Cantidad", fontsize=10)
+            ax.grid(axis="y", alpha=0.3, linestyle="--")
 
         except Exception as e:
-            ax.text(0.5, 0.5, f'Error: {str(e)}', ha='center', va='center', transform=ax.transAxes, fontsize=8)
+            ax.text(0.5, 0.5, f"Error: {str(e)}", ha="center", va="center", transform=ax.transAxes, fontsize=8)
 
     def _grafico_funcionarios_por_cargo(self, ax):
         """Genera gráfico de barras horizontales para funcionarios por cargo"""
@@ -1202,14 +1316,14 @@ class ReportesTab(QWidget):
 
             # Aplicar filtros
             params = []
-            if self.filtros_activos.get('cargo'):
+            if self.filtros_activos.get("cargo"):
                 query += " AND cargo = %s"
-                params.append(self.filtros_activos['cargo'])
+                params.append(self.filtros_activos["cargo"])
 
-            if self.filtros_activos.get('fecha_inicio') and self.filtros_activos.get('fecha_fin'):
+            if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
                 query += " AND fecha_registro BETWEEN %s AND %s"
-                params.append(self.filtros_activos['fecha_inicio'])
-                params.append(self.filtros_activos['fecha_fin'])
+                params.append(self.filtros_activos["fecha_inicio"])
+                params.append(self.filtros_activos["fecha_fin"])
 
             query += """
                 GROUP BY cargo
@@ -1220,32 +1334,38 @@ class ReportesTab(QWidget):
             datos = self.db.fetch_all(query, tuple(params) if params else None)
 
             if not datos:
-                ax.text(0.5, 0.5, 'Sin datos', ha='center', va='center', transform=ax.transAxes)
+                ax.text(0.5, 0.5, "Sin datos", ha="center", va="center", transform=ax.transAxes)
                 return
 
-            cargos = [d['cargo'] if d['cargo'] else 'Sin cargo' for d in datos]
-            cantidades = [d['cantidad'] for d in datos]
+            cargos = [d["cargo"] if d["cargo"] else "Sin cargo" for d in datos]
+            cantidades = [d["cantidad"] for d in datos]
 
             # Crear gráfico de barras horizontales
-            bars = ax.barh(cargos, cantidades, color='#34495e', edgecolor='black', linewidth=1.5)
+            bars = ax.barh(cargos, cantidades, color="#34495e", edgecolor="black", linewidth=1.5)
 
             # Agregar valores al final de las barras
             for i, (bar, cantidad) in enumerate(zip(bars, cantidades)):
-                ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2,
-                       f'{int(cantidad)}',
-                       ha='left', va='center', fontsize=9, weight='bold')
+                ax.text(
+                    bar.get_width() + 0.1,
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{int(cantidad)}",
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                    weight="bold",
+                )
 
-            ax.set_title('Funcionarios por Cargo (Top 10)', fontsize=12, weight='bold', pad=10)
-            ax.set_xlabel('Cantidad de Funcionarios', fontsize=10)
-            ax.set_ylabel('Cargo', fontsize=10)
-            ax.grid(axis='x', alpha=0.3, linestyle='--')
+            ax.set_title("Funcionarios por Cargo (Top 10)", fontsize=12, weight="bold", pad=10)
+            ax.set_xlabel("Cantidad de Funcionarios", fontsize=10)
+            ax.set_ylabel("Cargo", fontsize=10)
+            ax.grid(axis="x", alpha=0.3, linestyle="--")
 
             # Ajustar límites del eje X para dar espacio a los números
             max_val = max(cantidades) if cantidades else 1
             ax.set_xlim(0, max_val * 1.15)
 
         except Exception as e:
-            ax.text(0.5, 0.5, f'Error: {str(e)}', ha='center', va='center', transform=ax.transAxes, fontsize=8)
+            ax.text(0.5, 0.5, f"Error: {str(e)}", ha="center", va="center", transform=ax.transAxes, fontsize=8)
 
     def _llenar_tabla(self, tabla, datos):
         """Llena una tabla con los datos proporcionados"""
@@ -1266,18 +1386,15 @@ class ReportesTab(QWidget):
     def exportar_csv(self, tabla, nombre_base):
         """Exporta los datos de la tabla a un archivo CSV"""
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename, _ = QFileDialog.getSaveFileName(
-                self,
-                "Guardar como CSV",
-                f"{nombre_base}_{timestamp}.csv",
-                "Archivos CSV (*.csv)"
+                self, "Guardar como CSV", f"{nombre_base}_{timestamp}.csv", "Archivos CSV (*.csv)"
             )
 
             if not filename:
                 return
 
-            with open(filename, 'w', newline='', encoding='utf-8') as file:
+            with open(filename, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
 
                 # Escribir encabezados
@@ -1306,17 +1423,14 @@ class ReportesTab(QWidget):
                 "Librería no disponible",
                 "La exportación a Excel requiere instalar la librería 'openpyxl'.\n\n"
                 "Instalar con: pip install openpyxl\n\n"
-                "Por ahora, use la exportación a CSV."
+                "Por ahora, use la exportación a CSV.",
             )
             return
 
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename, _ = QFileDialog.getSaveFileName(
-                self,
-                "Guardar como Excel",
-                f"{nombre_base}_{timestamp}.xlsx",
-                "Archivos Excel (*.xlsx)"
+                self, "Guardar como Excel", f"{nombre_base}_{timestamp}.xlsx", "Archivos Excel (*.xlsx)"
             )
 
             if not filename:
@@ -1369,17 +1483,14 @@ class ReportesTab(QWidget):
                 "Librería no disponible",
                 "La exportación a PDF requiere instalar la librería 'reportlab'.\n\n"
                 "Instalar con: pip install reportlab\n\n"
-                "Por ahora, use la exportación a CSV."
+                "Por ahora, use la exportación a CSV.",
             )
             return
 
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename, _ = QFileDialog.getSaveFileName(
-                self,
-                "Guardar como PDF",
-                f"{nombre_base}_{timestamp}.pdf",
-                "Archivos PDF (*.pdf)"
+                self, "Guardar como PDF", f"{nombre_base}_{timestamp}.pdf", "Archivos PDF (*.pdf)"
             )
 
             if not filename:
@@ -1387,12 +1498,7 @@ class ReportesTab(QWidget):
 
             # Crear documento PDF
             doc = SimpleDocTemplate(
-                filename,
-                pagesize=landscape(A4),
-                rightMargin=30,
-                leftMargin=30,
-                topMargin=30,
-                bottomMargin=30
+                filename, pagesize=landscape(A4), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30
             )
 
             # Contenedor de elementos
@@ -1401,24 +1507,24 @@ class ReportesTab(QWidget):
 
             # Título del reporte
             title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
+                "CustomTitle",
+                parent=styles["Heading1"],
                 fontSize=18,
-                textColor=colors.HexColor('#2c3e50'),
+                textColor=colors.HexColor("#2c3e50"),
                 spaceAfter=20,
-                alignment=1  # Centrado
+                alignment=1,  # Centrado
             )
             title = Paragraph(f"Reporte: {nombre_base.replace('_', ' ').title()}", title_style)
             elements.append(title)
 
             # Fecha y hora de generación
             date_style = ParagraphStyle(
-                'DateStyle',
-                parent=styles['Normal'],
+                "DateStyle",
+                parent=styles["Normal"],
                 fontSize=10,
-                textColor=colors.HexColor('#7f8c8d'),
+                textColor=colors.HexColor("#7f8c8d"),
                 spaceAfter=20,
-                alignment=1
+                alignment=1,
             )
             date_text = Paragraph(f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", date_style)
             elements.append(date_text)
@@ -1449,35 +1555,34 @@ class ReportesTab(QWidget):
             table = Table(data, colWidths=[col_width] * tabla.columnCount())
 
             # Estilo de la tabla
-            table.setStyle(TableStyle([
-                # Encabezados
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-
-                # Datos
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-            ]))
+            table.setStyle(
+                TableStyle(
+                    [
+                        # Encabezados
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#34495e")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                        # Datos
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                        ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
+                        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 1), (-1, -1), 8),
+                        ("ALIGN", (0, 1), (-1, -1), "LEFT"),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+                    ]
+                )
+            )
 
             elements.append(table)
 
             # Pie de página con información del sistema
             elements.append(Spacer(1, 0.3 * inch))
             footer_style = ParagraphStyle(
-                'FooterStyle',
-                parent=styles['Normal'],
-                fontSize=8,
-                textColor=colors.HexColor('#95a5a6'),
-                alignment=1
+                "FooterStyle", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#95a5a6"), alignment=1
             )
             footer = Paragraph("Sistema de Gestión de Parqueadero - Ssalud Plaza Claro © 2025", footer_style)
             elements.append(footer)

@@ -3,11 +3,12 @@
 Modelo para operaciones CRUD de funcionarios
 """
 
-from typing import List, Dict, Tuple
-from ..database.manager import DatabaseManager
+from typing import Dict, List, Tuple
+
 from ..database.eliminacion_cascada import GestorEliminacionCascada
-from ..utils.validaciones_asignacion import ValidadorAsignacion
+from ..database.manager import DatabaseManager
 from ..utils.validaciones import ValidadorCampos, ValidadorReglasNegocio
+from ..utils.validaciones_asignacion import ValidadorAsignacion
 
 
 class FuncionarioModel:
@@ -43,19 +44,29 @@ class FuncionarioModel:
 
         existing = self.db.fetch_one(query, params)
         if existing:
-            return False, f"🚫 Cédula duplicada detectada\n\n" \
-                         f"❌ La cédula '{cedula_clean}' ya está registrada.\n" \
-                         f"👤 Funcionario existente: {existing['nombre']} {existing['apellidos']}\n\n" \
-                         f"💡 Solución: Use una cédula diferente o verifique si ya está registrado."
+            return (
+                False,
+                f"🚫 Cédula duplicada detectada\n\n"
+                f"❌ La cédula '{cedula_clean}' ya está registrada.\n"
+                f"👤 Funcionario existente: {existing['nombre']} {existing['apellidos']}\n\n"
+                f"💡 Solución: Use una cédula diferente o verifique si ya está registrado.",
+            )
 
         return True, ""
 
-    def crear(self, cedula: str, nombre: str, apellidos: str,
-              direccion_grupo: str = "", cargo: str = "",
-              celular: str = "", tarjeta: str = "",
-              permite_compartir: bool = True,
-              pico_placa_solidario: bool = False,
-              discapacidad: bool = False) -> tuple:
+    def crear(
+        self,
+        cedula: str,
+        nombre: str,
+        apellidos: str,
+        direccion_grupo: str = "",
+        cargo: str = "",
+        celular: str = "",
+        tarjeta: str = "",
+        permite_compartir: bool = True,
+        pico_placa_solidario: bool = False,
+        discapacidad: bool = False,
+    ) -> tuple:
         """Crea un nuevo funcionario en la base de datos
 
         Args:
@@ -81,9 +92,7 @@ class FuncionarioModel:
             return False, mensaje
 
         # Validación 3: Lógica de permite_compartir según cargo
-        permite_compartir = ValidadorReglasNegocio.validar_cargo_permite_compartir(
-            cargo.strip(), permite_compartir
-        )
+        permite_compartir = ValidadorReglasNegocio.validar_cargo_permite_compartir(cargo.strip(), permite_compartir)
 
         query = """
             INSERT INTO funcionarios
@@ -91,9 +100,18 @@ class FuncionarioModel:
              permite_compartir, pico_placa_solidario, discapacidad)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        params = (cedula.strip(), nombre.strip(), apellidos.strip(),
-                 direccion_grupo.strip(), cargo.strip(), celular.strip(), tarjeta.strip(),
-                 permite_compartir, pico_placa_solidario, discapacidad)
+        params = (
+            cedula.strip(),
+            nombre.strip(),
+            apellidos.strip(),
+            direccion_grupo.strip(),
+            cargo.strip(),
+            celular.strip(),
+            tarjeta.strip(),
+            permite_compartir,
+            pico_placa_solidario,
+            discapacidad,
+        )
 
         exito, error = self.db.execute_query(query, params)
 
@@ -106,12 +124,15 @@ class FuncionarioModel:
             if discapacidad:
                 msg_extra.append("♿ Condición de discapacidad registrada")
 
-            return True, f"✅ Funcionario registrado exitosamente\n\n" \
-                        f"👤 Nombre: {nombre.strip()} {apellidos.strip()}\n" \
-                        f"🏷️ Cédula: {cedula.strip()}\n" \
-                        f"🏢 Dirección: {direccion_grupo.strip() or 'No especificada'}\n" \
-                        f"💼 Cargo: {cargo.strip() or 'No especificado'}" + \
-                        (f"\n\n{chr(10).join(msg_extra)}" if msg_extra else "")
+            return (
+                True,
+                f"✅ Funcionario registrado exitosamente\n\n"
+                f"👤 Nombre: {nombre.strip()} {apellidos.strip()}\n"
+                f"🏷️ Cédula: {cedula.strip()}\n"
+                f"🏢 Dirección: {direccion_grupo.strip() or 'No especificada'}\n"
+                f"💼 Cargo: {cargo.strip() or 'No especificado'}"
+                + (f"\n\n{chr(10).join(msg_extra)}" if msg_extra else ""),
+            )
         else:
             # Manejo de errores específicos de BD
             if "Duplicate entry" in str(error) and "cedula" in str(error):
@@ -163,10 +184,7 @@ class FuncionarioModel:
         """
         parqueaderos_afectados = self.db.fetch_all(query_parqueaderos, (funcionario_id,))
 
-        return {
-            'vehiculos': vehiculos,
-            'parqueaderos_afectados': parqueaderos_afectados
-        }
+        return {"vehiculos": vehiculos, "parqueaderos_afectados": parqueaderos_afectados}
 
     def buscar(self, termino: str) -> List[Dict]:
         """Busca funcionarios por cédula, nombre o apellido"""
@@ -182,11 +200,20 @@ class FuncionarioModel:
         termino_like = f"%{termino}%"
         return self.db.fetch_all(query, (termino_like, termino_like, termino_like))
 
-    def actualizar(self, funcionario_id: int, cedula: str, nombre: str, apellidos: str,
-                  direccion_grupo: str = "", cargo: str = "", celular: str = "", tarjeta: str = "",
-                  permite_compartir: bool = True,
-                  pico_placa_solidario: bool = False,
-                  discapacidad: bool = False) -> tuple:
+    def actualizar(
+        self,
+        funcionario_id: int,
+        cedula: str,
+        nombre: str,
+        apellidos: str,
+        direccion_grupo: str = "",
+        cargo: str = "",
+        celular: str = "",
+        tarjeta: str = "",
+        permite_compartir: bool = True,
+        pico_placa_solidario: bool = False,
+        discapacidad: bool = False,
+    ) -> tuple:
         """
         Actualiza los datos de un funcionario
 
@@ -201,9 +228,12 @@ class FuncionarioModel:
         # Validación 1: Funcionario existe
         funcionario_actual = self.obtener_por_id(funcionario_id)
         if not funcionario_actual:
-            return False, f"🔍 Funcionario no encontrado\n\n" \
-                         f"❌ No existe un funcionario con ID: {funcionario_id}\n" \
-                         f"💡 Verifique que el funcionario no haya sido eliminado"
+            return (
+                False,
+                f"🔍 Funcionario no encontrado\n\n"
+                f"❌ No existe un funcionario con ID: {funcionario_id}\n"
+                f"💡 Verifique que el funcionario no haya sido eliminado",
+            )
 
         # Validación 2: Cédula única (excluyendo el funcionario actual)
         es_unica, mensaje_cedula = self.validar_cedula_unica(cedula, funcionario_id)
@@ -221,10 +251,7 @@ class FuncionarioModel:
 
         # Validación 4: Si cambia a "no permite compartir", verificar asignaciones existentes
         es_valido, mensaje = ValidadorAsignacion.validar_cambio_permite_compartir(
-            funcionario_id,
-            permite_compartir,
-            funcionario_actual.get('permite_compartir', True),
-            self.db
+            funcionario_id, permite_compartir, funcionario_actual.get("permite_compartir", True), self.db
         )
         if not es_valido:
             return False, mensaje
@@ -236,9 +263,19 @@ class FuncionarioModel:
                 permite_compartir = %s, pico_placa_solidario = %s, discapacidad = %s
             WHERE id = %s
         """
-        params = (cedula.strip(), nombre.strip(), apellidos.strip(),
-                 direccion_grupo.strip(), cargo.strip(), celular.strip(), tarjeta.strip(),
-                 permite_compartir, pico_placa_solidario, discapacidad, funcionario_id)
+        params = (
+            cedula.strip(),
+            nombre.strip(),
+            apellidos.strip(),
+            direccion_grupo.strip(),
+            cargo.strip(),
+            celular.strip(),
+            tarjeta.strip(),
+            permite_compartir,
+            pico_placa_solidario,
+            discapacidad,
+            funcionario_id,
+        )
 
         exito, error = self.db.execute_query(query, params)
 
@@ -251,12 +288,15 @@ class FuncionarioModel:
             if discapacidad:
                 msg_extra.append("♿ Condición de discapacidad registrada")
 
-            return True, f"✅ Funcionario actualizado exitosamente\n\n" \
-                        f"👤 Nombre: {nombre.strip()} {apellidos.strip()}\n" \
-                        f"🏷️ Cédula: {cedula.strip()}\n" \
-                        f"🏢 Dirección: {direccion_grupo.strip() or 'No especificada'}\n" \
-                        f"💼 Cargo: {cargo.strip() or 'No especificado'}" + \
-                        (f"\n\n{chr(10).join(msg_extra)}" if msg_extra else "")
+            return (
+                True,
+                f"✅ Funcionario actualizado exitosamente\n\n"
+                f"👤 Nombre: {nombre.strip()} {apellidos.strip()}\n"
+                f"🏷️ Cédula: {cedula.strip()}\n"
+                f"🏢 Dirección: {direccion_grupo.strip() or 'No especificada'}\n"
+                f"💼 Cargo: {cargo.strip() or 'No especificado'}"
+                + (f"\n\n{chr(10).join(msg_extra)}" if msg_extra else ""),
+            )
         else:
             return False, f"🚫 Error al actualizar el funcionario: {error}"
 
@@ -274,24 +314,30 @@ class FuncionarioModel:
         # Verificar que el funcionario existe antes de intentar eliminar
         funcionario = self.obtener_por_id(funcionario_id)
         if not funcionario:
-            return False, f"🔍 Funcionario no encontrado\n\n" \
-                         f"❌ No existe un funcionario con ID: {funcionario_id}\n" \
-                         f"💡 Verifique que el funcionario no haya sido eliminado previamente"
+            return (
+                False,
+                f"🔍 Funcionario no encontrado\n\n"
+                f"❌ No existe un funcionario con ID: {funcionario_id}\n"
+                f"💡 Verifique que el funcionario no haya sido eliminado previamente",
+            )
 
         # Obtener datos relacionados para mostrar resumen
         datos_relacionados = self.obtener_datos_relacionados(funcionario_id)
-        vehiculos_count = len(datos_relacionados.get('vehiculos', []))
-        parqueaderos_count = len(datos_relacionados.get('parqueaderos_afectados', []))
+        vehiculos_count = len(datos_relacionados.get("vehiculos", []))
+        parqueaderos_count = len(datos_relacionados.get("parqueaderos_afectados", []))
 
         exito, mensaje, detalles = self.gestor_eliminacion.eliminar_funcionario_completo(str(funcionario_id))
 
         if exito:
-            return True, f"✅ Funcionario eliminado exitosamente\n\n" \
-                        f"👤 Funcionario: {funcionario['nombre']} {funcionario['apellidos']}\n" \
-                        f"🏷️ Cédula: {funcionario['cedula']}\n" \
-                        f"🚗 Vehículos eliminados: {vehiculos_count}\n" \
-                        f"🌐 Espacios liberados: {parqueaderos_count}\n\n" \
-                        f"📝 Eliminación en cascada completada"
+            return (
+                True,
+                f"✅ Funcionario eliminado exitosamente\n\n"
+                f"👤 Funcionario: {funcionario['nombre']} {funcionario['apellidos']}\n"
+                f"🏷️ Cédula: {funcionario['cedula']}\n"
+                f"🚗 Vehículos eliminados: {vehiculos_count}\n"
+                f"🌐 Espacios liberados: {parqueaderos_count}\n\n"
+                f"📝 Eliminación en cascada completada",
+            )
         else:
             return False, f"🚫 Error en eliminación: {mensaje}"
 

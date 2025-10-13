@@ -4,13 +4,22 @@ Modales para CRUD de vehículos
 Incluye modales para editar y eliminar vehículos
 """
 
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox,
-    QPushButton, QFormLayout, QMessageBox, QTextEdit, QGridLayout,
-    QFrame, QGroupBox
-)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 from ..models.funcionario import FuncionarioModel
 from ..models.vehiculo import VehiculoModel
@@ -21,7 +30,9 @@ class EditarVehiculoModal(QDialog):
 
     vehiculo_actualizado = pyqtSignal()
 
-    def __init__(self, vehiculo_id: int, vehiculo_model: VehiculoModel, funcionario_model: FuncionarioModel, parent=None):
+    def __init__(
+        self, vehiculo_id: int, vehiculo_model: VehiculoModel, funcionario_model: FuncionarioModel, parent=None
+    ):
         super().__init__(parent)
         self.vehiculo_id = vehiculo_id
         self.vehiculo_model = vehiculo_model
@@ -62,7 +73,9 @@ class EditarVehiculoModal(QDialog):
 
         self.lbl_info_actual = QLabel("")
         self.lbl_info_actual.setWordWrap(True)
-        self.lbl_info_actual.setStyleSheet("color: #666; font-size: 11px; padding: 8px; background-color: #f5f5f5; border-radius: 4px;")
+        self.lbl_info_actual.setStyleSheet(
+            "color: #666; font-size: 11px; padding: 8px; background-color: #f5f5f5; border-radius: 4px;"
+        )
         info_layout.addWidget(self.lbl_info_actual, 0, 0, 1, 2)
 
         self.grupo_info.setLayout(info_layout)
@@ -97,7 +110,9 @@ class EditarVehiculoModal(QDialog):
 
         # Label de validación
         self.lbl_validacion = QLabel("")
-        self.lbl_validacion.setStyleSheet("font-size: 11px; color: #666; background-color: #f0f8ff; padding: 8px; border-radius: 4px;")
+        self.lbl_validacion.setStyleSheet(
+            "font-size: 11px; color: #666; background-color: #f0f8ff; padding: 8px; border-radius: 4px;"
+        )
         self.lbl_validacion.setWordWrap(True)
         form_layout.addWidget(self.lbl_validacion, 4, 0, 1, 2)
 
@@ -112,7 +127,9 @@ class EditarVehiculoModal(QDialog):
 
         self.btn_guardar = QPushButton("Guardar Cambios")
         self.btn_guardar.clicked.connect(self.guardar_cambios)
-        self.btn_guardar.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; }")
+        self.btn_guardar.setStyleSheet(
+            "QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; }"
+        )
 
         btn_layout.addWidget(self.btn_cancelar)
         btn_layout.addStretch()
@@ -141,8 +158,8 @@ class EditarVehiculoModal(QDialog):
         self.lbl_info_actual.setText(info_text.strip())
 
         # Precargar formulario con datos actuales
-        self.combo_tipo_vehiculo.setCurrentText(self.vehiculo_actual['tipo_vehiculo'])
-        self.txt_placa.setText(self.vehiculo_actual['placa'])
+        self.combo_tipo_vehiculo.setCurrentText(self.vehiculo_actual["tipo_vehiculo"])
+        self.txt_placa.setText(self.vehiculo_actual["placa"])
 
     def cargar_funcionarios(self):
         """Carga el combo de funcionarios"""
@@ -152,10 +169,10 @@ class EditarVehiculoModal(QDialog):
 
         for func in funcionarios:
             texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
-            self.combo_funcionario.addItem(texto, func['id'])
+            self.combo_funcionario.addItem(texto, func["id"])
 
             # Seleccionar el funcionario actual
-            if func['id'] == self.vehiculo_actual['funcionario_id']:
+            if func["id"] == self.vehiculo_actual["funcionario_id"]:
                 self.combo_funcionario.setCurrentText(texto)
 
     def conectar_eventos(self):
@@ -174,7 +191,9 @@ class EditarVehiculoModal(QDialog):
 
             if ultimo_digito.isdigit() or ultimo_digito == "0":
                 if ultimo_digito in "12345":
-                    self.lbl_info_pico.setText(f"Placa terminada en {ultimo_digito}: Circula días IMPARES (Tipo: IMPAR)")
+                    self.lbl_info_pico.setText(
+                        f"Placa terminada en {ultimo_digito}: Circula días IMPARES (Tipo: IMPAR)"
+                    )
                     self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #FF9800;")
                 else:
                     self.lbl_info_pico.setText(f"Placa terminada en {ultimo_digito}: Circula días PARES (Tipo: PAR)")
@@ -200,9 +219,9 @@ class EditarVehiculoModal(QDialog):
 
         # Validar si hay cambios
         hay_cambios = (
-            funcionario_id != self.vehiculo_actual['funcionario_id'] or
-            tipo_vehiculo != self.vehiculo_actual['tipo_vehiculo'] or
-            placa.upper() != self.vehiculo_actual['placa']
+            funcionario_id != self.vehiculo_actual["funcionario_id"]
+            or tipo_vehiculo != self.vehiculo_actual["tipo_vehiculo"]
+            or placa.upper() != self.vehiculo_actual["placa"]
         )
 
         if not hay_cambios:
@@ -214,26 +233,33 @@ class EditarVehiculoModal(QDialog):
         es_unica, mensaje_placa = self.vehiculo_model.validar_placa_unica(placa, self.vehiculo_id)
         if not es_unica:
             self.lbl_validacion.setText(f"❌ {mensaje_placa}")
-            self.lbl_validacion.setStyleSheet("font-size: 11px; color: #f44336; background-color: #ffebee; padding: 8px; border-radius: 4px;")
+            self.lbl_validacion.setStyleSheet(
+                "font-size: 11px; color: #f44336; background-color: #ffebee; padding: 8px; border-radius: 4px;"
+            )
             self.btn_guardar.setEnabled(False)
             return
 
         # Obtener otros vehículos del funcionario (excluyendo el actual)
         vehiculos_funcionario = self.vehiculo_model.obtener_por_funcionario(funcionario_id)
-        otros_vehiculos = [v for v in vehiculos_funcionario if v['id'] != self.vehiculo_id]
+        otros_vehiculos = [v for v in vehiculos_funcionario if v["id"] != self.vehiculo_id]
 
         # Validar reglas de negocio (excluyendo el vehículo actual)
         from ..utils.validaciones_vehiculos import ValidadorVehiculos
+
         validador = ValidadorVehiculos()
         es_valido, mensaje = validador.validar_registro_vehiculo(otros_vehiculos, tipo_vehiculo, placa)
 
         if es_valido:
             self.lbl_validacion.setText("✅ Validación exitosa - Listo para guardar")
-            self.lbl_validacion.setStyleSheet("font-size: 11px; color: #4CAF50; background-color: #e8f5e8; padding: 8px; border-radius: 4px;")
+            self.lbl_validacion.setStyleSheet(
+                "font-size: 11px; color: #4CAF50; background-color: #e8f5e8; padding: 8px; border-radius: 4px;"
+            )
             self.btn_guardar.setEnabled(True)
         else:
             self.lbl_validacion.setText(f"❌ {mensaje}")
-            self.lbl_validacion.setStyleSheet("font-size: 11px; color: #f44336; background-color: #ffebee; padding: 8px; border-radius: 4px;")
+            self.lbl_validacion.setStyleSheet(
+                "font-size: 11px; color: #f44336; background-color: #ffebee; padding: 8px; border-radius: 4px;"
+            )
             self.btn_guardar.setEnabled(False)
 
     def guardar_cambios(self):
@@ -243,17 +269,18 @@ class EditarVehiculoModal(QDialog):
         placa = self.txt_placa.text().strip()
 
         if not funcionario_id or not placa:
-            QMessageBox.warning(self, "📝 Campos Requeridos",
-                              "🚫 Por favor complete todos los campos obligatorios\n\n"
-                              f"👤 Funcionario: {'✅' if funcionario_id else '❌'}\n"
-                              f"🏷️ Placa: {'✅' if placa else '❌'}\n\n"
-                              "💡 Todos los campos son necesarios para actualizar el vehículo")
+            QMessageBox.warning(
+                self,
+                "📝 Campos Requeridos",
+                "🚫 Por favor complete todos los campos obligatorios\n\n"
+                f"👤 Funcionario: {'✅' if funcionario_id else '❌'}\n"
+                f"🏷️ Placa: {'✅' if placa else '❌'}\n\n"
+                "💡 Todos los campos son necesarios para actualizar el vehículo",
+            )
             return
 
         # Intentar actualizar
-        exito, mensaje = self.vehiculo_model.actualizar(
-            self.vehiculo_id, funcionario_id, tipo_vehiculo, placa
-        )
+        exito, mensaje = self.vehiculo_model.actualizar(self.vehiculo_id, funcionario_id, tipo_vehiculo, placa)
 
         if exito:
             QMessageBox.information(self, "✅ Vehículo Actualizado", mensaje)
@@ -307,7 +334,9 @@ class EliminarVehiculoModal(QDialog):
 
         self.lbl_info_vehiculo = QLabel("")
         self.lbl_info_vehiculo.setWordWrap(True)
-        self.lbl_info_vehiculo.setStyleSheet("font-size: 12px; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;")
+        self.lbl_info_vehiculo.setStyleSheet(
+            "font-size: 12px; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;"
+        )
         info_layout.addWidget(self.lbl_info_vehiculo)
 
         self.grupo_info.setLayout(info_layout)
@@ -315,7 +344,9 @@ class EliminarVehiculoModal(QDialog):
 
         # Advertencia
         advertencia = QLabel("ADVERTENCIA: Esta accion NO se puede deshacer")
-        advertencia.setStyleSheet("color: #d32f2f; font-weight: bold; font-size: 12px; padding: 8px; background-color: #ffebee; border-radius: 4px;")
+        advertencia.setStyleSheet(
+            "color: #d32f2f; font-weight: bold; font-size: 12px; padding: 8px; background-color: #ffebee; border-radius: 4px;"
+        )
         advertencia.setAlignment(Qt.AlignCenter)
         layout.addWidget(advertencia)
 
@@ -324,20 +355,26 @@ class EliminarVehiculoModal(QDialog):
         opciones_layout = QVBoxLayout()
 
         # Información sobre los tipos
-        info_tipos = QLabel("""
+        info_tipos = QLabel(
+            """
 - Eliminacion Logica: El vehiculo se desactiva pero permanece en la base de datos para historial
 - Eliminacion Fisica: El vehiculo se borra completamente de la base de datos
-        """)
+        """
+        )
         info_tipos.setStyleSheet("font-size: 10px; color: #666; padding: 8px;")
         opciones_layout.addWidget(info_tipos)
 
         self.btn_eliminar_logico = QPushButton("Eliminacion Logica (Recomendado)")
         self.btn_eliminar_logico.clicked.connect(self.eliminar_logico)
-        self.btn_eliminar_logico.setStyleSheet("QPushButton { background-color: #ff9800; color: white; font-weight: bold; padding: 8px; }")
+        self.btn_eliminar_logico.setStyleSheet(
+            "QPushButton { background-color: #ff9800; color: white; font-weight: bold; padding: 8px; }"
+        )
 
         self.btn_eliminar_fisico = QPushButton("Eliminacion Fisica (Permanente)")
         self.btn_eliminar_fisico.clicked.connect(self.eliminar_fisico)
-        self.btn_eliminar_fisico.setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 8px; }")
+        self.btn_eliminar_fisico.setStyleSheet(
+            "QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 8px; }"
+        )
 
         opciones_layout.addWidget(self.btn_eliminar_logico)
         opciones_layout.addWidget(self.btn_eliminar_fisico)
@@ -387,7 +424,7 @@ Parqueadero: {self.vehiculo_actual.get('numero_parqueadero', 'Sin asignar')}
             f"Esta seguro de que desea eliminar el vehiculo {self.vehiculo_actual['placa']}?\n\n"
             "El vehiculo se desactivara pero permanecera en la base de datos.",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
 
         if respuesta == QMessageBox.Yes:
@@ -409,7 +446,7 @@ Parqueadero: {self.vehiculo_actual.get('numero_parqueadero', 'Sin asignar')}
             "ESTA ACCION NO SE PUEDE DESHACER\n"
             "El vehiculo se borrara completamente de la base de datos.",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
 
         if respuesta == QMessageBox.Yes:
@@ -421,7 +458,7 @@ Parqueadero: {self.vehiculo_actual.get('numero_parqueadero', 'Sin asignar')}
                 f"Realmente desea BORRAR PERMANENTEMENTE el vehiculo {self.vehiculo_actual['placa']}?\n\n"
                 "Esta completamente seguro?",
                 QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                QMessageBox.No,
             )
 
             if respuesta2 == QMessageBox.Yes:
@@ -438,7 +475,9 @@ Parqueadero: {self.vehiculo_actual.get('numero_parqueadero', 'Sin asignar')}
 class VerVehiculoModal(QDialog):
     """Modal para visualizar los detalles de un vehículo"""
 
-    def __init__(self, vehiculo_id: int, vehiculo_model: VehiculoModel, funcionario_model: FuncionarioModel, parent=None):
+    def __init__(
+        self, vehiculo_id: int, vehiculo_model: VehiculoModel, funcionario_model: FuncionarioModel, parent=None
+    ):
         super().__init__(parent)
         self.vehiculo_id = vehiculo_id
         self.vehiculo_model = vehiculo_model
@@ -498,11 +537,15 @@ class VerVehiculoModal(QDialog):
         form_vehiculo.addRow("Tipo de vehículo:", self.lbl_tipo)
 
         self.lbl_placa = QLabel("")
-        self.lbl_placa.setStyleSheet("font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px; font-weight: bold;")
+        self.lbl_placa.setStyleSheet(
+            "font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px; font-weight: bold;"
+        )
         form_vehiculo.addRow("Placa:", self.lbl_placa)
 
         self.lbl_ultimo_digito = QLabel("")
-        self.lbl_ultimo_digito.setStyleSheet("font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px;")
+        self.lbl_ultimo_digito.setStyleSheet(
+            "font-size: 12px; padding: 5px; background-color: #e8f5e8; border-radius: 3px;"
+        )
         form_vehiculo.addRow("Último dígito:", self.lbl_ultimo_digito)
 
         self.lbl_circulacion = QLabel("")
@@ -528,7 +571,9 @@ class VerVehiculoModal(QDialog):
         btn_layout = QHBoxLayout()
         self.btn_cerrar = QPushButton("Cerrar")
         self.btn_cerrar.clicked.connect(self.accept)
-        self.btn_cerrar.setStyleSheet("QPushButton { background-color: #34495e; color: white; font-weight: bold; padding: 10px 30px; }")
+        self.btn_cerrar.setStyleSheet(
+            "QPushButton { background-color: #34495e; color: white; font-weight: bold; padding: 10px 30px; }"
+        )
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn_cerrar)
         btn_layout.addStretch()
@@ -548,28 +593,38 @@ class VerVehiculoModal(QDialog):
         # Cargar información del funcionario
         nombre_completo = f"{self.vehiculo_actual['nombre']} {self.vehiculo_actual['apellidos']}"
         self.lbl_nombre.setText(nombre_completo)
-        self.lbl_cedula.setText(self.vehiculo_actual['cedula'])
+        self.lbl_cedula.setText(self.vehiculo_actual["cedula"])
 
         # Cargar información del vehículo
-        self.lbl_tipo.setText(self.vehiculo_actual['tipo_vehiculo'])
-        self.lbl_placa.setText(self.vehiculo_actual['placa'])
-        self.lbl_ultimo_digito.setText(str(self.vehiculo_actual.get('ultimo_digito', 'N/A')))
+        self.lbl_tipo.setText(self.vehiculo_actual["tipo_vehiculo"])
+        self.lbl_placa.setText(self.vehiculo_actual["placa"])
+        self.lbl_ultimo_digito.setText(str(self.vehiculo_actual.get("ultimo_digito", "N/A")))
 
         # Tipo de circulación con color
-        circulacion = self.vehiculo_actual.get('tipo_circulacion', 'N/A')
+        circulacion = self.vehiculo_actual.get("tipo_circulacion", "N/A")
         self.lbl_circulacion.setText(circulacion)
-        if circulacion == 'PAR':
-            self.lbl_circulacion.setStyleSheet("font-size: 12px; padding: 5px; background-color: #e8f5e8; color: #2e7d32; border-radius: 3px; font-weight: bold;")
-        elif circulacion == 'IMPAR':
-            self.lbl_circulacion.setStyleSheet("font-size: 12px; padding: 5px; background-color: #fff3e0; color: #f57c00; border-radius: 3px; font-weight: bold;")
+        if circulacion == "PAR":
+            self.lbl_circulacion.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #e8f5e8; color: #2e7d32; border-radius: 3px; font-weight: bold;"
+            )
+        elif circulacion == "IMPAR":
+            self.lbl_circulacion.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #fff3e0; color: #f57c00; border-radius: 3px; font-weight: bold;"
+            )
         else:
-            self.lbl_circulacion.setStyleSheet("font-size: 12px; padding: 5px; background-color: #ecf0f1; color: #666; border-radius: 3px; font-weight: bold;")
+            self.lbl_circulacion.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #ecf0f1; color: #666; border-radius: 3px; font-weight: bold;"
+            )
 
         # Información del parqueadero
-        parqueadero = self.vehiculo_actual.get('numero_parqueadero')
+        parqueadero = self.vehiculo_actual.get("numero_parqueadero")
         if parqueadero:
             self.lbl_parqueadero.setText(f"P-{parqueadero:03d}")
-            self.lbl_parqueadero.setStyleSheet("font-size: 12px; padding: 5px; background-color: #e3f2fd; color: #1976d2; border-radius: 3px; font-weight: bold;")
+            self.lbl_parqueadero.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #e3f2fd; color: #1976d2; border-radius: 3px; font-weight: bold;"
+            )
         else:
             self.lbl_parqueadero.setText("Sin asignar")
-            self.lbl_parqueadero.setStyleSheet("font-size: 12px; padding: 5px; background-color: #ffebee; color: #d32f2f; border-radius: 3px; font-weight: bold;")
+            self.lbl_parqueadero.setStyleSheet(
+                "font-size: 12px; padding: 5px; background-color: #ffebee; color: #d32f2f; border-radius: 3px; font-weight: bold;"
+            )
