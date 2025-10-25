@@ -480,12 +480,12 @@ find . -name "*.pyc" -delete
 
 - **Líneas de código:** ~11,090 (después de corrección v2.0.2 - reducción por eliminación de código obsoleto)
 - **Archivos Python:** 32 (activos, excluye compilados)
-- **Archivos totales:** ~46 (incluye scripts de pruebas SQL)
+- **Archivos totales:** ~44 (sin scripts de prueba temporales)
 - **Pestañas principales:** 6 (Dashboard, Funcionarios, Vehículos, Parqueaderos, Asignaciones, Reportes)
 - **Sub-pestañas de Reportes:** 7
 - **Arquitectura:** MVC Modular
-- **Tamaño del proyecto:** ~805 KB (sin `__pycache__`)
-- **Cobertura de tests:** Sin tests automatizados (scripts SQL manuales disponibles)
+- **Tamaño del proyecto:** ~795 KB (sin `__pycache__` ni archivos de prueba)
+- **Cobertura de tests:** Sin tests automatizados (validación manual completada)
 
 ---
 
@@ -881,12 +881,13 @@ query = """
 - **Cambio**: Reestructuración completa del query SQL de JOINs a subqueries
 - **Líneas modificadas**: ~90 líneas
 
-**2. `test_fix_parqueaderos_parciales.sql` (nuevo archivo de pruebas)**
-- Script SQL para validar la corrección
-- 3 queries de prueba:
+**2. `test_fix_parqueaderos_parciales.sql` (archivo temporal de pruebas - ya eliminado)**
+- Script SQL creado para validar la corrección (eliminado después de validación exitosa)
+- Contenía 3 queries de prueba:
   - Query 1: Ver parqueaderos con asignaciones actuales
   - Query 2: Simular `obtener_disponibles()` con tipo PAR
   - Query 3: Simular `obtener_disponibles()` con tipo IMPAR
+- **Estado:** Pruebas completadas ✅ Archivo eliminado en limpieza posterior
 
 ---
 
@@ -950,9 +951,10 @@ query = """
 - **Causa**: Query con JOINs filtraba prematuramente basándose en primer funcionario
 - **Solución**: Reestructuración completa del query con 6 subqueries independientes
 - **Archivos modificados**: 1 (parqueadero.py)
-- **Archivos nuevos**: 1 (test_fix_parqueaderos_parciales.sql)
+- **Archivos temporales creados**: 1 script de pruebas SQL (eliminado posteriormente)
 - **Líneas de código modificadas**: ~90
 - **Impacto**: **Crítico** - Restaura funcionalidad completa del sistema PAR/IMPAR
+- **Nota**: Corrección parcial - bug resuelto completamente en v2.0.2
 
 ---
 
@@ -1130,8 +1132,11 @@ Como parte de v2.0, se realizó una **depuración completa** del proyecto para m
   - Todos los archivos `*.pyc`
 
 **Archivos Conservados:**
-- Scripts SQL de migración históricos (`migracion_carro_hibrido.sql`, `test_validacion_completo.sql`)
-- Documentación activa (`CLAUDE.md`, `INSTRUCCIONES_CARRO_HIBRIDO.md`, `INTEGRACION_REPORTES.md`, `REPORTE_LIMPIEZA.md`)
+- Scripts SQL esenciales e históricos (`parking_database_schema.sql`, `users_table_schema.sql`, `migracion_carro_hibrido.sql`)
+- Documentación activa (`CLAUDE.md`, `INSTRUCCIONES_CARRO_HIBRIDO.md`, `INTEGRACION_REPORTES.md`)
+
+**Archivos Eliminados Posteriormente:**
+- Scripts de prueba temporales (`test_validacion_completo.sql`, `test_fix_parqueaderos_parciales.sql`) - Validación completada
 
 **Resultados:**
 - ✅ Reducción del **36%** en número de archivos (de ~70 a ~45)
@@ -1348,9 +1353,10 @@ elif tipo_espacio == "Carro" and total_asigs >= 2:
 - Sección de historial de versiones actualizada
 - Documentación detallada de problemas y soluciones
 
-**4. `test_validacion_completo.sql` (nuevo archivo de pruebas)**
-- Script SQL para validar la corrección
-- 4 queries de prueba para verificar el comportamiento correcto
+**4. `test_validacion_completo.sql` (archivo temporal de pruebas - ya eliminado)**
+- Script SQL creado para validar la corrección (eliminado después de validación exitosa)
+- Contenía 4 queries de prueba para verificar el comportamiento correcto
+- **Estado:** Pruebas completadas ✅ Archivo eliminado en limpieza posterior
 
 ---
 
@@ -1455,36 +1461,16 @@ El sistema ahora calcula correctamente el `estado_display` para cada parqueadero
 
 #### **Archivos de Prueba**
 
-**`test_validacion_completo.sql`** (Nuevo)
+**`test_validacion_completo.sql`** (Archivo temporal - Eliminado)
 
-Script SQL con 4 queries de validación:
+Script SQL con 4 queries de validación (creado para validar la corrección, eliminado después de completar las pruebas):
 
-```sql
--- Query 1: Ver parqueaderos con asignaciones
-SELECT p.id, p.numero_parqueadero, p.estado,
-       COUNT(a.id) as total_asignaciones,
-       GROUP_CONCAT(CONCAT(v.placa, '-', v.tipo_circulacion) SEPARATOR ' | ') as vehiculos
-FROM parqueaderos p
-LEFT JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
-LEFT JOIN vehiculos v ON a.vehiculo_id = v.id AND v.tipo_vehiculo = 'Carro'
-WHERE p.activo = TRUE
-GROUP BY p.id
-HAVING total_asignaciones > 0
-ORDER BY total_asignaciones DESC;
+- Query 1: Ver parqueaderos con asignaciones
+- Query 2: Verificar parqueaderos que deberían estar COMPLETOS (2 carros)
+- Query 3: Simular `obtener_disponibles()` para tipo PAR
+- Query 4: Contar parqueaderos por estado
 
--- Query 2: Verificar parqueaderos que deberían estar COMPLETOS
--- (deben tener 2 carros y NO aparecer en filtros)
-
--- Query 3: Simular obtener_disponibles() para tipo PAR
--- (NO debe devolver parqueaderos con 2 carros)
-
--- Query 4: Contar parqueaderos por estado
-```
-
-**Uso:**
-```bash
-mysql -u root -p parking_management < test_validacion_completo.sql
-```
+**Estado:** ✅ Pruebas completadas exitosamente - Archivo eliminado en limpieza posterior
 
 ---
 
@@ -1539,7 +1525,7 @@ mysql -u root -p parking_management < test_validacion_completo.sql
 - **Problema**: Parqueaderos mostraban colores incorrectos y aparecían en filtros cuando estaban completos
 - **Solución**: Corrección de lógica de cálculo de estados + validaciones en filtrado
 - **Archivos modificados**: 2 (parqueadero.py, asignaciones_tab.py)
-- **Archivos nuevos**: 1 (test_validacion_completo.sql)
+- **Archivos temporales creados**: 1 script de pruebas SQL (eliminado posteriormente)
 - **Líneas de código modificadas**: ~50
 - **Impacto**: Alto (corrige comportamiento visible para todos los usuarios)
 
