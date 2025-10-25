@@ -308,89 +308,96 @@ class EliminarVehiculoModal(QDialog):
         """Configura la interfaz del modal"""
         self.setWindowTitle("Eliminar Vehículo")
         self.setModal(True)
-        self.setFixedSize(450, 350)
+        self.setFixedSize(450, 280)
 
         layout = QVBoxLayout()
-
-        # Título
-        titulo = QLabel("Confirmar Eliminación")
-        font_titulo = QFont()
-        font_titulo.setPointSize(14)
-        font_titulo.setBold(True)
-        titulo.setFont(font_titulo)
-        titulo.setAlignment(Qt.AlignCenter)
-        titulo.setStyleSheet("color: #d32f2f;")
-        layout.addWidget(titulo)
-
-        # Línea separadora
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        layout.addWidget(line)
+        layout.setSpacing(20)
+        layout.setContentsMargins(20, 20, 20, 20)
 
         # Información del vehículo
         self.grupo_info = QGroupBox("Información del Vehículo a Eliminar")
+        self.grupo_info.setStyleSheet(
+            """
+            QGroupBox {
+                font-weight: bold;
+                font-size: 13px;
+                color: #d32f2f;
+                border: 2px solid #d32f2f;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 15px;
+                padding: 0 8px 0 8px;
+                background-color: white;
+            }
+        """
+        )
         info_layout = QVBoxLayout()
 
         self.lbl_info_vehiculo = QLabel("")
         self.lbl_info_vehiculo.setWordWrap(True)
         self.lbl_info_vehiculo.setStyleSheet(
-            "font-size: 12px; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;"
+            "font-size: 12px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; color: #333;"
         )
         info_layout.addWidget(self.lbl_info_vehiculo)
 
         self.grupo_info.setLayout(info_layout)
         layout.addWidget(self.grupo_info)
 
-        # Advertencia
-        advertencia = QLabel("ADVERTENCIA: Esta accion NO se puede deshacer")
-        advertencia.setStyleSheet(
-            "color: #d32f2f; font-weight: bold; font-size: 12px; padding: 8px; background-color: #ffebee; border-radius: 4px;"
-        )
-        advertencia.setAlignment(Qt.AlignCenter)
-        layout.addWidget(advertencia)
+        # Botones Sí / No
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(15)
 
-        # Opciones de eliminación
-        opciones_group = QGroupBox("Tipo de Eliminación")
-        opciones_layout = QVBoxLayout()
-
-        # Información sobre los tipos
-        info_tipos = QLabel(
+        self.btn_si = QPushButton("Sí")
+        self.btn_si.setFixedSize(120, 45)
+        self.btn_si.clicked.connect(self.confirmar_eliminacion)
+        self.btn_si.setStyleSheet(
             """
-- Eliminacion Logica: El vehiculo se desactiva pero permanece en la base de datos para historial
-- Eliminacion Fisica: El vehiculo se borra completamente de la base de datos
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+            QPushButton:pressed {
+                background-color: #a93226;
+            }
         """
         )
-        info_tipos.setStyleSheet("font-size: 10px; color: #666; padding: 8px;")
-        opciones_layout.addWidget(info_tipos)
 
-        self.btn_eliminar_logico = QPushButton("Eliminacion Logica (Recomendado)")
-        self.btn_eliminar_logico.clicked.connect(self.eliminar_logico)
-        self.btn_eliminar_logico.setStyleSheet(
-            "QPushButton { background-color: #ff9800; color: white; font-weight: bold; padding: 8px; }"
+        self.btn_no = QPushButton("No")
+        self.btn_no.setFixedSize(120, 45)
+        self.btn_no.clicked.connect(self.reject)
+        self.btn_no.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
+            }
+            QPushButton:pressed {
+                background-color: #6c7a89;
+            }
+        """
         )
-
-        self.btn_eliminar_fisico = QPushButton("Eliminacion Fisica (Permanente)")
-        self.btn_eliminar_fisico.clicked.connect(self.eliminar_fisico)
-        self.btn_eliminar_fisico.setStyleSheet(
-            "QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 8px; }"
-        )
-
-        opciones_layout.addWidget(self.btn_eliminar_logico)
-        opciones_layout.addWidget(self.btn_eliminar_fisico)
-
-        opciones_group.setLayout(opciones_layout)
-        layout.addWidget(opciones_group)
-
-        # Botón cancelar
-        btn_layout = QHBoxLayout()
-
-        self.btn_cancelar = QPushButton("Cancelar")
-        self.btn_cancelar.clicked.connect(self.reject)
-        self.btn_cancelar.setStyleSheet("QPushButton { background-color: #6c757d; color: white; padding: 8px; }")
 
         btn_layout.addStretch()
-        btn_layout.addWidget(self.btn_cancelar)
+        btn_layout.addWidget(self.btn_si)
+        btn_layout.addWidget(self.btn_no)
         btn_layout.addStretch()
 
         layout.addLayout(btn_layout)
@@ -416,60 +423,16 @@ Parqueadero: {self.vehiculo_actual.get('numero_parqueadero', 'Sin asignar')}
         """
         self.lbl_info_vehiculo.setText(info_text.strip())
 
-    def eliminar_logico(self):
-        """Ejecuta eliminación lógica del vehículo"""
-        respuesta = QMessageBox.question(
-            self,
-            "Confirmar Eliminacion Logica",
-            f"Esta seguro de que desea eliminar el vehiculo {self.vehiculo_actual['placa']}?\n\n"
-            "El vehiculo se desactivara pero permanecera en la base de datos.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
+    def confirmar_eliminacion(self):
+        """Ejecuta la eliminación lógica del vehículo"""
+        exito, mensaje = self.vehiculo_model.eliminar(self.vehiculo_id)
 
-        if respuesta == QMessageBox.Yes:
-            exito, mensaje = self.vehiculo_model.eliminar(self.vehiculo_id)
-
-            if exito:
-                QMessageBox.information(self, "✅ Vehículo Eliminado", mensaje)
-                self.vehiculo_eliminado.emit()
-                self.accept()
-            else:
-                QMessageBox.critical(self, "🚫 Error de Eliminación", mensaje)
-
-    def eliminar_fisico(self):
-        """Ejecuta eliminación física del vehículo"""
-        respuesta = QMessageBox.question(
-            self,
-            "Confirmar Eliminacion Fisica",
-            f"Esta ABSOLUTAMENTE seguro de que desea eliminar PERMANENTEMENTE el vehiculo {self.vehiculo_actual['placa']}?\n\n"
-            "ESTA ACCION NO SE PUEDE DESHACER\n"
-            "El vehiculo se borrara completamente de la base de datos.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-
-        if respuesta == QMessageBox.Yes:
-            # Doble confirmación para eliminación física
-            respuesta2 = QMessageBox.question(
-                self,
-                "ULTIMA CONFIRMACION",
-                f"ULTIMA OPORTUNIDAD:\n\n"
-                f"Realmente desea BORRAR PERMANENTEMENTE el vehiculo {self.vehiculo_actual['placa']}?\n\n"
-                "Esta completamente seguro?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
-            )
-
-            if respuesta2 == QMessageBox.Yes:
-                exito, mensaje = self.vehiculo_model.eliminar_fisico(self.vehiculo_id)
-
-                if exito:
-                    QMessageBox.information(self, "Exito", mensaje)
-                    self.vehiculo_eliminado.emit()
-                    self.accept()
-                else:
-                    QMessageBox.critical(self, "Error", mensaje)
+        if exito:
+            QMessageBox.information(self, "✅ Vehículo Eliminado", mensaje)
+            self.vehiculo_eliminado.emit()
+            self.accept()
+        else:
+            QMessageBox.critical(self, "🚫 Error de Eliminación", mensaje)
 
 
 class VerVehiculoModal(QDialog):

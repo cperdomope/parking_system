@@ -169,6 +169,11 @@ class ParqueaderosTab(QWidget):
                 estado=estado_mostrar,
                 asignados=park.get("asignados", "") or "",
                 tipo_espacio=park.get("tipo_espacio", "Carro"),
+                vehiculos_actuales=park.get("vehiculos_actuales", 0),
+                capacidad_total=park.get("capacidad_total", 2),
+                tipo_ocupacion=park.get("tipo_ocupacion", "Regular"),
+                vehiculos_detalle=park.get("vehiculos_detalle", []),
+                sotano=park.get("sotano", ""),
             )
 
             # Conectar señal de clic
@@ -394,6 +399,11 @@ class ParqueaderosTab(QWidget):
                     estado=estado_mostrar,
                     asignados=park.get("asignados", "") or "",
                     tipo_espacio=park.get("tipo_espacio", "Carro"),
+                    vehiculos_actuales=park.get("vehiculos_actuales", 0),
+                    capacidad_total=park.get("capacidad_total", 2),
+                    tipo_ocupacion=park.get("tipo_ocupacion", "Regular"),
+                    vehiculos_detalle=park.get("vehiculos_detalle", []),
+                    sotano=park.get("sotano", ""),
                 )
 
                 # Conectar señal de clic

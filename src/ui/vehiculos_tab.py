@@ -37,6 +37,7 @@ class VehiculosTab(QWidget):
         self.db = db_manager
         self.funcionario_model = FuncionarioModel(self.db)
         self.vehiculo_model = VehiculoModel(self.db)
+        self.vehiculos_completos = []  # Lista completa para filtrado
         self.setup_ui()
         self.cargar_vehiculos()
         self.cargar_combo_funcionarios()
@@ -66,10 +67,38 @@ class VehiculosTab(QWidget):
         self.txt_placa.setMaximumWidth(150)
         form_layout.addWidget(self.txt_placa, 2, 1)
 
+        # Fila vacía para espaciado (fila 3 se deja vacía)
+
+        # Botón Guardar (fila 4, columna 0 - debajo del label "Placa")
+        self.btn_guardar_vehiculo = QPushButton("Guardar")
+        self.btn_guardar_vehiculo.clicked.connect(self.guardar_vehiculo)
+        self.btn_guardar_vehiculo.setProperty("class", "success")
+        self.btn_guardar_vehiculo.setMinimumHeight(40)
+        self.btn_guardar_vehiculo.setMaximumWidth(150)
+        self.btn_guardar_vehiculo.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                font-weight: bold;
+                font-size: 13px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #229954;
+            }
+            QPushButton:pressed {
+                background-color: #1e8449;
+            }
+        """
+        )
+        form_layout.addWidget(self.btn_guardar_vehiculo, 4, 0, 1, 2)
+
         # Label informativo de pico y placa
         self.lbl_info_pico = QLabel("")
         self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #2196F3;")
-        form_layout.addWidget(self.lbl_info_pico, 3, 0, 1, 4)
+        form_layout.addWidget(self.lbl_info_pico, 5, 0, 1, 4)
 
         # Label de sugerencias de vehículos
         self.lbl_sugerencias = QLabel("")
@@ -77,7 +106,7 @@ class VehiculosTab(QWidget):
             "font-size: 11px; color: #666; background-color: #f5f5f5; padding: 8px; border-radius: 4px;"
         )
         self.lbl_sugerencias.setWordWrap(True)
-        form_layout.addWidget(self.lbl_sugerencias, 4, 0, 1, 4)
+        form_layout.addWidget(self.lbl_sugerencias, 5, 0, 1, 4)
 
         # Conectar eventos
         self.txt_placa.textChanged.connect(self.actualizar_info_pico_placa)
@@ -85,19 +114,70 @@ class VehiculosTab(QWidget):
         self.combo_funcionario.currentIndexChanged.connect(self.mostrar_sugerencias_vehiculo)
         self.combo_tipo_vehiculo.currentTextChanged.connect(self.validar_en_tiempo_real)
 
-        # Botón Guardar (columna derecha, alineado con la placa)
-        self.btn_guardar_vehiculo = QPushButton("Guardar")
-        self.btn_guardar_vehiculo.clicked.connect(self.guardar_vehiculo)
-        self.btn_guardar_vehiculo.setProperty("class", "success")
-        self.btn_guardar_vehiculo.setMinimumHeight(40)
-        form_layout.addWidget(self.btn_guardar_vehiculo, 2, 2, 1, 2)
-
         form_group.setLayout(form_layout)
         layout.addWidget(form_group)
 
         # Tabla de vehículos con diseño profesional
         tabla_group = QGroupBox("Lista de Vehículos")
         tabla_layout = QVBoxLayout()
+
+        # Buscador de placas
+        buscar_layout = QHBoxLayout()
+        buscar_layout.setSpacing(10)
+        buscar_layout.setContentsMargins(0, 0, 0, 10)
+
+        lbl_buscar = QLabel("🔍 Buscar por placa:")
+        lbl_buscar.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 12px;")
+        buscar_layout.addWidget(lbl_buscar)
+
+        self.txt_buscar_placa = QLineEdit()
+        self.txt_buscar_placa.setPlaceholderText("Ingrese placa para filtrar...")
+        self.txt_buscar_placa.setFixedWidth(200)
+        self.txt_buscar_placa.setFixedHeight(35)
+        self.txt_buscar_placa.setStyleSheet(
+            """
+            QLineEdit {
+                border: 2px solid #bdc3c7;
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-size: 12px;
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border-color: #3498db;
+                background-color: #ffffff;
+            }
+        """
+        )
+        self.txt_buscar_placa.textChanged.connect(self.filtrar_por_placa)
+        buscar_layout.addWidget(self.txt_buscar_placa)
+
+        btn_limpiar = QPushButton("🗑️ Limpiar")
+        btn_limpiar.setFixedHeight(35)
+        btn_limpiar.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
+            }
+            QPushButton:pressed {
+                background-color: #5d6d7e;
+            }
+        """
+        )
+        btn_limpiar.clicked.connect(self.limpiar_filtro)
+        buscar_layout.addWidget(btn_limpiar)
+
+        buscar_layout.addStretch()
+        tabla_layout.addLayout(buscar_layout)
 
         self.tabla_vehiculos = QTableWidget()
         self.tabla_vehiculos.setColumnCount(7)
@@ -267,6 +347,14 @@ class VehiculosTab(QWidget):
 
         vehiculos = self.db.fetch_all(query)
 
+        # Guardar lista completa para filtrado
+        self.vehiculos_completos = vehiculos
+
+        # Mostrar todos los vehículos
+        self.mostrar_vehiculos(vehiculos)
+
+    def mostrar_vehiculos(self, vehiculos):
+        """Muestra los vehículos en la tabla"""
         self.tabla_vehiculos.setRowCount(len(vehiculos))
 
         for i, vehiculo in enumerate(vehiculos):
@@ -308,86 +396,91 @@ class VehiculosTab(QWidget):
             parqueadero_item.setTextAlignment(0x0004 | 0x0080)
             self.tabla_vehiculos.setItem(i, 5, parqueadero_item)
 
-            # Botones de acción (Editar, Ver, Eliminar)
+            # Botones de acción (Editar, Ver, Eliminar) - Solo íconos
             btn_widget_acciones = QWidget()
             btn_layout_acciones = QHBoxLayout()
-            btn_layout_acciones.setSpacing(5)
-            btn_layout_acciones.setContentsMargins(5, 5, 5, 5)
+            btn_layout_acciones.setSpacing(3)
+            btn_layout_acciones.setContentsMargins(2, 2, 2, 2)
 
-            # Botón Editar
+            # Botón Editar (solo ícono sin fondo)
             btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(40, 40)
+            btn_editar.setFixedSize(28, 28)
             btn_editar.setToolTip("Editar vehículo")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #3498db;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 18px;
+                    padding: 0px;
+                    color: #3498db;
                 }
                 QPushButton:hover {
-                    background-color: #2980b9;
+                    background-color: rgba(52, 152, 219, 0.15);
+                    border-radius: 3px;
+                    color: #2980b9;
                 }
                 QPushButton:pressed {
-                    background-color: #21618c;
+                    background-color: rgba(52, 152, 219, 0.3);
+                    border-radius: 3px;
+                    color: #21618c;
                 }
             """
             )
             btn_editar.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_editar(vid))
 
-            # Botón Ver
+            # Botón Ver (solo ícono sin fondo)
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(40, 40)
+            btn_ver.setFixedSize(28, 28)
             btn_ver.setToolTip("Ver detalles del vehículo")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #27ae60;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 16px;
+                    padding: 0px;
                 }
                 QPushButton:hover {
-                    background-color: #229954;
+                    background-color: rgba(39, 174, 96, 0.1);
+                    border-radius: 3px;
                 }
                 QPushButton:pressed {
-                    background-color: #1e8449;
+                    background-color: rgba(39, 174, 96, 0.2);
+                    border-radius: 3px;
                 }
             """
             )
             btn_ver.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_ver(vid))
 
-            # Botón Eliminar
+            # Botón Eliminar (solo ícono sin fondo)
             btn_eliminar = QPushButton("🗑️")
-            btn_eliminar.setFixedSize(40, 40)
+            btn_eliminar.setFixedSize(28, 28)
             btn_eliminar.setToolTip("Eliminar vehículo")
             btn_eliminar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #e74c3c;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 16px;
+                    padding: 0px;
                 }
                 QPushButton:hover {
-                    background-color: #c0392b;
+                    background-color: rgba(231, 76, 60, 0.1);
+                    border-radius: 3px;
                 }
                 QPushButton:pressed {
-                    background-color: #a93226;
+                    background-color: rgba(231, 76, 60, 0.2);
+                    border-radius: 3px;
                 }
             """
             )
             btn_eliminar.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_eliminar(vid))
 
             btn_layout_acciones.addWidget(btn_editar)
+            btn_layout_acciones.addSpacing(2)
             btn_layout_acciones.addWidget(btn_ver)
+            btn_layout_acciones.addSpacing(2)
             btn_layout_acciones.addWidget(btn_eliminar)
             btn_layout_acciones.addStretch()
 
@@ -519,3 +612,26 @@ class VehiculosTab(QWidget):
                     if vehiculo.get("placa") == placa:
                         return vehiculo.get("id")
         return None
+
+    def filtrar_por_placa(self):
+        """Filtra los vehículos por placa en tiempo real"""
+        texto_busqueda = self.txt_buscar_placa.text().strip().upper()
+
+        if not texto_busqueda:
+            # Si no hay texto, mostrar todos los vehículos
+            self.mostrar_vehiculos(self.vehiculos_completos)
+            return
+
+        # Filtrar vehículos que contengan el texto en la placa
+        vehiculos_filtrados = [
+            vehiculo
+            for vehiculo in self.vehiculos_completos
+            if texto_busqueda in str(vehiculo.get("placa", "")).upper()
+        ]
+
+        self.mostrar_vehiculos(vehiculos_filtrados)
+
+    def limpiar_filtro(self):
+        """Limpia el filtro de búsqueda"""
+        self.txt_buscar_placa.clear()
+        self.mostrar_vehiculos(self.vehiculos_completos)

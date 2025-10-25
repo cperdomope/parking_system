@@ -108,7 +108,7 @@ class AuthManager:
             password_hash = result["password_hash"]
 
             # Verificar contraseña con bcrypt
-            if bcrypt.checkpw(contraseña.encode('utf-8'), password_hash):
+            if bcrypt.checkpw(contraseña.encode('utf-8'), bytes(password_hash)):
                 # Login exitoso
                 self.current_user = {
                     "id": result["id"],

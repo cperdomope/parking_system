@@ -15,13 +15,23 @@ class ValidadorVehiculos:
 
     IMPORTANTE: Solo los carros ocupan espacios de parqueadero.
     Motos y bicicletas no afectan los estados de parqueaderos.
+
+    REGLA ESPECIAL: Directivos (Director, Coordinador, Asesor) con parqueadero exclusivo
+    pueden registrar hasta 6 vehículos total:
+    - Hasta 4 carros (sin restricción PAR/IMPAR)
+    - Hasta 1 moto
+    - Hasta 1 bicicleta
     """
 
     # Cantidad máxima de vehículos por funcionario
     MAX_VEHICULOS_POR_FUNCIONARIO = 2
+    MAX_VEHICULOS_DIRECTIVO_EXCLUSIVO = 6  # 4 carros + 1 moto + 1 bicicleta
+    MAX_CARROS_DIRECTIVO_EXCLUSIVO = 4
+    MAX_MOTOS_DIRECTIVO_EXCLUSIVO = 1
+    MAX_BICICLETAS_DIRECTIVO_EXCLUSIVO = 1
 
-    def __init__(self):
-        pass
+    def __init__(self, db_manager=None):
+        self.db = db_manager
 
     def obtener_tipo_placa(self, placa: str) -> TipoCirculacion:
         """
@@ -55,37 +65,58 @@ class ValidadorVehiculos:
 
         return conteo
 
-    def validar_cantidad_maxima(self, vehiculos_actuales: List[Dict], nuevo_tipo: str) -> Tuple[bool, str]:
+    def validar_cantidad_maxima(self, vehiculos_actuales: List[Dict], nuevo_tipo: str, funcionario_id: int = None) -> Tuple[bool, str]:
         """
         Valida que no se exceda la cantidad máxima de vehículos
 
         Args:
             vehiculos_actuales (List[Dict]): Vehículos actuales del funcionario
             nuevo_tipo (str): Tipo del nuevo vehículo a registrar
+            funcionario_id (int): ID del funcionario para verificar si es directivo con exclusivo
 
         Returns:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
         total_actual = len(vehiculos_actuales)
 
-        if total_actual >= self.MAX_VEHICULOS_POR_FUNCIONARIO:
+        # Verificar si es directivo con parqueadero exclusivo
+        max_vehiculos = self.MAX_VEHICULOS_POR_FUNCIONARIO
+        if funcionario_id and self.db:
+            from ..config.settings import CARGOS_DIRECTIVOS
+            query = """
+                SELECT cargo, tiene_parqueadero_exclusivo
+                FROM funcionarios
+                WHERE id = %s AND activo = TRUE
+            """
+            funcionario_data = self.db.fetch_one(query, (funcionario_id,))
+            if funcionario_data:
+                cargo = funcionario_data.get("cargo", "")
+                tiene_exclusivo = funcionario_data.get("tiene_parqueadero_exclusivo", False)
+
+                if cargo in CARGOS_DIRECTIVOS and tiene_exclusivo:
+                    max_vehiculos = self.MAX_VEHICULOS_DIRECTIVO_EXCLUSIVO
+
+        if total_actual >= max_vehiculos:
             return (
                 False,
                 f"💔 No se puede registrar más vehículos.\n\n"
-                f"📊 Estado actual: {total_actual} de {self.MAX_VEHICULOS_POR_FUNCIONARIO} vehículos permitidos.\n"
+                f"📊 Estado actual: {total_actual} de {max_vehiculos} vehículos permitidos.\n"
                 f"💡 Para agregar un nuevo vehículo, primero debe eliminar uno existente.",
             )
 
         return True, ""
 
-    def validar_pico_y_placa_carros(self, vehiculos_actuales: List[Dict], nueva_placa: str) -> Tuple[bool, str]:
+    def validar_pico_y_placa_carros(self, vehiculos_actuales: List[Dict], nueva_placa: str, funcionario_id: int = None) -> Tuple[bool, str]:
         """
         Valida la regla de pico y placa para carros
         Si ya tiene un carro, el nuevo debe tener placa diferente (par/impar)
 
+        EXCEPCIÓN: Directivos con parqueadero exclusivo NO tienen restricción PAR/IMPAR
+
         Args:
             vehiculos_actuales (List[Dict]): Vehículos actuales del funcionario
             nueva_placa (str): Placa del nuevo carro
+            funcionario_id (int): ID del funcionario para verificar si es directivo con exclusivo
 
         Returns:
             Tuple[bool, str]: (es_válido, mensaje_error)
@@ -94,6 +125,23 @@ class ValidadorVehiculos:
         es_valida, mensaje = ValidadorCampos.validar_placa(nueva_placa, requerido=True)
         if not es_valida:
             return False, mensaje
+
+        # Verificar si es directivo con parqueadero exclusivo (exento de restricción PAR/IMPAR)
+        if funcionario_id and self.db:
+            from ..config.settings import CARGOS_DIRECTIVOS
+            query = """
+                SELECT cargo, tiene_parqueadero_exclusivo
+                FROM funcionarios
+                WHERE id = %s AND activo = TRUE
+            """
+            funcionario_data = self.db.fetch_one(query, (funcionario_id,))
+            if funcionario_data:
+                cargo = funcionario_data.get("cargo", "")
+                tiene_exclusivo = funcionario_data.get("tiene_parqueadero_exclusivo", False)
+
+                if cargo in CARGOS_DIRECTIVOS and tiene_exclusivo:
+                    # Directivo con exclusivo: NO validar PAR/IMPAR
+                    return True, ""
 
         carros_actuales = [v for v in vehiculos_actuales if v.get("tipo_vehiculo") == TipoVehiculo.CARRO.value]
 
@@ -124,41 +172,97 @@ class ValidadorVehiculos:
 
         return True, ""
 
-    def validar_combinaciones_permitidas(self, vehiculos_actuales: List[Dict], nuevo_tipo: str) -> Tuple[bool, str]:
+    def validar_combinaciones_permitidas(self, vehiculos_actuales: List[Dict], nuevo_tipo: str, funcionario_id: int = None) -> Tuple[bool, str]:
         """
         Valida las combinaciones permitidas de vehículos
 
-        Combinaciones válidas:
+        Combinaciones válidas (funcionarios regulares):
         - 1 carro + 1 moto
         - 1 carro + 1 bicicleta
         - 1 moto + 1 bicicleta
         - 2 carros (con placas par/impar diferentes)
 
+        Combinaciones válidas (directivos con parqueadero exclusivo):
+        - Hasta 4 carros sin restricción PAR/IMPAR
+
         Args:
             vehiculos_actuales (List[Dict]): Vehículos actuales del funcionario
             nuevo_tipo (str): Tipo del nuevo vehículo
+            funcionario_id (int): ID del funcionario para verificar si es directivo con exclusivo
 
         Returns:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
         conteo = self.contar_vehiculos_por_tipo(vehiculos_actuales)
-
-        # Si ya tiene 2 vehículos, no puede agregar más
         total_actual = sum(conteo.values())
-        if total_actual >= self.MAX_VEHICULOS_POR_FUNCIONARIO:
+
+        # Verificar si es directivo con parqueadero exclusivo
+        max_vehiculos = self.MAX_VEHICULOS_POR_FUNCIONARIO
+        es_directivo_exclusivo = False
+        if funcionario_id and self.db:
+            from ..config.settings import CARGOS_DIRECTIVOS
+            query = """
+                SELECT cargo, tiene_parqueadero_exclusivo
+                FROM funcionarios
+                WHERE id = %s AND activo = TRUE
+            """
+            funcionario_data = self.db.fetch_one(query, (funcionario_id,))
+            if funcionario_data:
+                cargo = funcionario_data.get("cargo", "")
+                tiene_exclusivo = funcionario_data.get("tiene_parqueadero_exclusivo", False)
+
+                if cargo in CARGOS_DIRECTIVOS and tiene_exclusivo:
+                    max_vehiculos = self.MAX_VEHICULOS_DIRECTIVO_EXCLUSIVO
+                    es_directivo_exclusivo = True
+
+        # Si ya tiene el máximo de vehículos, no puede agregar más
+        if total_actual >= max_vehiculos:
             vehiculos_str = ", ".join([f"{count} {tipo}" for tipo, count in conteo.items() if count > 0])
             return (
                 False,
                 f"🚫 Límite de vehículos alcanzado\n\n"
                 f"📊 Vehículos actuales: {vehiculos_str}\n"
-                f"🔒 Máximo permitido: {self.MAX_VEHICULOS_POR_FUNCIONARIO} vehículos por funcionario",
+                f"🔒 Máximo permitido: {max_vehiculos} vehículos por funcionario",
             )
 
         # Si es el primer vehículo, siempre es válido
         if total_actual == 0:
             return True, ""
 
-        # Si es el segundo vehículo, validar combinaciones
+        # Si es directivo con exclusivo, validar límites por tipo de vehículo
+        if es_directivo_exclusivo:
+            if nuevo_tipo == TipoVehiculo.CARRO.value:
+                if conteo[TipoVehiculo.CARRO.value] >= self.MAX_CARROS_DIRECTIVO_EXCLUSIVO:
+                    return (
+                        False,
+                        f"🚗 Límite de carros alcanzado para Directivo Exclusivo\n\n"
+                        f"📊 Carros actuales: {conteo[TipoVehiculo.CARRO.value]}\n"
+                        f"🔒 Máximo permitido: {self.MAX_CARROS_DIRECTIVO_EXCLUSIVO} carros\n\n"
+                        f"💡 Puede registrar hasta 1 moto y 1 bicicleta adicional."
+                    )
+                return True, ""
+            elif nuevo_tipo == TipoVehiculo.MOTO.value:
+                if conteo[TipoVehiculo.MOTO.value] >= self.MAX_MOTOS_DIRECTIVO_EXCLUSIVO:
+                    return (
+                        False,
+                        f"🏍️ Límite de motos alcanzado para Directivo Exclusivo\n\n"
+                        f"📊 Motos actuales: {conteo[TipoVehiculo.MOTO.value]}\n"
+                        f"🔒 Máximo permitido: {self.MAX_MOTOS_DIRECTIVO_EXCLUSIVO} moto\n\n"
+                        f"💡 Puede registrar carros (hasta {self.MAX_CARROS_DIRECTIVO_EXCLUSIVO}) o 1 bicicleta."
+                    )
+                return True, ""
+            elif nuevo_tipo == TipoVehiculo.BICICLETA.value:
+                if conteo[TipoVehiculo.BICICLETA.value] >= self.MAX_BICICLETAS_DIRECTIVO_EXCLUSIVO:
+                    return (
+                        False,
+                        f"🚲 Límite de bicicletas alcanzado para Directivo Exclusivo\n\n"
+                        f"📊 Bicicletas actuales: {conteo[TipoVehiculo.BICICLETA.value]}\n"
+                        f"🔒 Máximo permitido: {self.MAX_BICICLETAS_DIRECTIVO_EXCLUSIVO} bicicleta\n\n"
+                        f"💡 Puede registrar carros (hasta {self.MAX_CARROS_DIRECTIVO_EXCLUSIVO}) o 1 moto."
+                    )
+                return True, ""
+
+        # Validaciones para funcionarios regulares
         if nuevo_tipo == TipoVehiculo.CARRO.value:
             if conteo[TipoVehiculo.CARRO.value] >= 1:
                 # Ya tiene un carro, validar que sea diferente tipo de placa
@@ -197,7 +301,7 @@ class ValidadorVehiculos:
         return True, ""
 
     def validar_registro_vehiculo(
-        self, vehiculos_actuales: List[Dict], nuevo_tipo: str, nueva_placa: str = ""
+        self, vehiculos_actuales: List[Dict], nuevo_tipo: str, nueva_placa: str = "", funcionario_id: int = None
     ) -> Tuple[bool, str]:
         """
         Función principal que ejecuta todas las validaciones
@@ -206,23 +310,24 @@ class ValidadorVehiculos:
             vehiculos_actuales (List[Dict]): Lista de vehículos actuales del funcionario
             nuevo_tipo (str): Tipo del nuevo vehículo
             nueva_placa (str): Placa del nuevo vehículo (requerida solo para carros)
+            funcionario_id (int): ID del funcionario (para validar límites de directivos)
 
         Returns:
             Tuple[bool, str]: (es_válido, mensaje_error)
         """
         # Validación 1: Cantidad máxima
-        es_valido, mensaje = self.validar_cantidad_maxima(vehiculos_actuales, nuevo_tipo)
+        es_valido, mensaje = self.validar_cantidad_maxima(vehiculos_actuales, nuevo_tipo, funcionario_id)
         if not es_valido:
             return False, mensaje
 
         # Validación 2: Combinaciones permitidas
-        es_valido, mensaje = self.validar_combinaciones_permitidas(vehiculos_actuales, nuevo_tipo)
+        es_valido, mensaje = self.validar_combinaciones_permitidas(vehiculos_actuales, nuevo_tipo, funcionario_id)
         if not es_valido:
             return False, mensaje
 
         # Validación 3: Pico y placa para carros
         if nuevo_tipo == TipoVehiculo.CARRO.value:
-            es_valido, mensaje = self.validar_pico_y_placa_carros(vehiculos_actuales, nueva_placa)
+            es_valido, mensaje = self.validar_pico_y_placa_carros(vehiculos_actuales, nueva_placa, funcionario_id)
             if not es_valido:
                 return False, mensaje
 

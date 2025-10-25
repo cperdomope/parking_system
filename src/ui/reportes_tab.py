@@ -639,7 +639,7 @@ class ReportesTab(QWidget):
                 "Cargo",
                 "Pico y Placa Solidario",
                 "Discapacidad",
-                "Parqueadero Exclusivo",
+                "Exclusivo Directivo",
                 "Placa",
                 "N° Parqueadero",
                 "Observaciones",
@@ -1109,7 +1109,7 @@ class ReportesTab(QWidget):
                 CASE WHEN a.activo = 1 THEN 'Activa' ELSE 'Inactiva' END as estado,
                 CASE
                     WHEN f.pico_placa_solidario = 1 THEN 'Pico y Placa Solidario'
-                    WHEN f.permite_compartir = 0 THEN 'Exclusivo'
+                    WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Exclusivo Directivo'
                     ELSE 'Normal'
                 END as observaciones
             FROM asignaciones a
@@ -1131,13 +1131,13 @@ class ReportesTab(QWidget):
                 f.cargo,
                 CASE WHEN f.pico_placa_solidario = 1 THEN '✅ Sí' ELSE '❌ No' END as pico_placa_solidario,
                 CASE WHEN f.discapacidad = 1 THEN '✅ Sí' ELSE '❌ No' END as discapacidad,
-                CASE WHEN f.permite_compartir = 0 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
+                CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
                 COALESCE(v.placa, 'Sin vehículo') as placa,
                 COALESCE(p.numero_parqueadero, 'N/A') as numero_parqueadero,
                 CASE
                     WHEN f.pico_placa_solidario = 1 THEN 'Puede usar parqueadero cualquier día'
                     WHEN f.discapacidad = 1 THEN 'Prioridad para espacios especiales'
-                    WHEN f.permite_compartir = 0 THEN 'Parqueadero no compartido'
+                    WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Parqueadero exclusivo (hasta 4 vehículos)'
                     ELSE 'Sin excepciones'
                 END as observaciones
             FROM funcionarios f
@@ -1145,7 +1145,7 @@ class ReportesTab(QWidget):
             LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
             LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
             WHERE f.activo = TRUE
-                AND (f.pico_placa_solidario = 1 OR f.discapacidad = 1 OR f.permite_compartir = 0)
+                AND (f.pico_placa_solidario = 1 OR f.discapacidad = 1 OR f.tiene_parqueadero_exclusivo = 1)
             ORDER BY f.apellidos, f.nombre
         """
         datos = self.db.fetch_all(query)

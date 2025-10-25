@@ -17,6 +17,37 @@ class ParqueaderoModel:
     def __init__(self, db: DatabaseManager):
         self.db = db
 
+    def _obtener_vehiculos_detalle(self, parqueadero_id: int) -> List[Dict]:
+        """
+        Obtiene información detallada de todos los vehículos asignados a un parqueadero
+
+        Returns:
+            Lista de diccionarios con información de vehículos y funcionarios
+        """
+        query = """
+            SELECT
+                v.id as vehiculo_id,
+                v.placa,
+                v.tipo_vehiculo,
+                v.tipo_circulacion,
+                f.id as funcionario_id,
+                CONCAT(f.nombre, ' ', f.apellidos) as funcionario_nombre,
+                f.cargo,
+                f.permite_compartir,
+                f.pico_placa_solidario,
+                f.discapacidad,
+                f.tiene_parqueadero_exclusivo,
+                f.tiene_carro_hibrido
+            FROM asignaciones a
+            JOIN vehiculos v ON a.vehiculo_id = v.id
+            JOIN funcionarios f ON v.funcionario_id = f.id
+            WHERE a.parqueadero_id = %s
+            AND a.activo = TRUE
+            ORDER BY a.fecha_asignacion
+        """
+        results = self.db.fetch_all(query, (parqueadero_id,))
+        return results if results else []
+
     def obtener_todos(self, sotano: str = None, tipo_vehiculo: str = None, estado: str = None) -> List[Dict]:
         """Obtiene información de todos los parqueaderos con filtros opcionales
         Solo muestra carros asignados, ya que motos y bicicletas no ocupan espacios de parqueadero
@@ -156,6 +187,7 @@ class ParqueaderoModel:
 
         # Post-procesamiento: calcular estado "display" considerando permite_compartir, pico_placa_solidario, discapacidad
         # y tipo de espacio (Motos y Bicicletas solo permiten 1 vehículo)
+        # NUEVO: También agregamos información detallada de ocupación para tooltips y visualización mejorada
         if results:
             for park in results:
                 estado_display = park["estado"]
@@ -164,6 +196,41 @@ class ParqueaderoModel:
                 pico_placa_solidario = park.get("pico_placa_solidario_ocupante")
                 discapacidad = park.get("discapacidad_ocupante")
                 tipo_espacio = park.get("tipo_espacio", "Carro")
+
+                # Obtener información detallada de vehículos asignados
+                vehiculos_detalle = self._obtener_vehiculos_detalle(park["id"])
+
+                # Determinar capacidad total y tipo de ocupación
+                capacidad_total = 1  # Por defecto
+                tipo_ocupacion = "Regular"
+
+                if tipo_espacio in ["Moto", "Bicicleta"]:
+                    capacidad_total = 1
+                    tipo_ocupacion = "Individual"
+                elif tipo_espacio == "Carro":
+                    # Verificar si es directivo exclusivo
+                    if vehiculos_detalle and vehiculos_detalle[0].get("tiene_parqueadero_exclusivo"):
+                        capacidad_total = 4
+                        tipo_ocupacion = "Exclusivo Directivo"
+                    # Verificar si tiene carro híbrido
+                    elif vehiculos_detalle and vehiculos_detalle[0].get("tiene_carro_hibrido"):
+                        capacidad_total = 1
+                        tipo_ocupacion = "Híbrido Ecológico"
+                    # Verificar si no permite compartir
+                    elif permite_compartir == 0:
+                        capacidad_total = 1
+                        tipo_ocupacion = "Exclusivo"
+                    # Verificar pico y placa solidario
+                    elif pico_placa_solidario == 1:
+                        capacidad_total = 1
+                        tipo_ocupacion = "Pico y Placa Solidario"
+                    # Verificar discapacidad
+                    elif discapacidad == 1:
+                        capacidad_total = 1
+                        tipo_ocupacion = "Prioritario (Discapacidad)"
+                    else:
+                        capacidad_total = 2
+                        tipo_ocupacion = "Regular (PAR/IMPAR)"
 
                 # REGLA 1: Motos y Bicicletas SIEMPRE se marcan como Completo con 1 asignación
                 if tipo_espacio in ["Moto", "Bicicleta"] and total_asigs >= 1:
@@ -177,9 +244,20 @@ class ParqueaderoModel:
                         or discapacidad == 1
                     ):  # Tiene Discapacidad
                         estado_display = "Completo"
+                    else:
+                        # Funcionario regular con 1 carro → Parcialmente Asignado
+                        estado_display = "Parcialmente_Asignado"
 
-                # Agregar el estado calculado
+                # REGLA 3: Carros con 2 asignaciones (funcionarios regulares) → Completo
+                elif tipo_espacio == "Carro" and total_asigs >= 2:
+                    estado_display = "Completo"
+
+                # Agregar información adicional para visualización mejorada
                 park["estado_display"] = estado_display
+                park["vehiculos_actuales"] = total_asigs
+                park["capacidad_total"] = capacidad_total
+                park["tipo_ocupacion"] = tipo_ocupacion
+                park["vehiculos_detalle"] = vehiculos_detalle
 
             # Aplicar filtro de estado después del cálculo
             if estado:
@@ -196,16 +274,91 @@ class ParqueaderoModel:
         """
         if tipo_complemento:
             # Buscar parqueaderos parcialmente asignados que necesiten el complemento
-            # Solo considera carros existentes para el complemento
+            # VALIDACIÓN CRÍTICA: Solo devolver parqueaderos que:
+            # 1. Tengan EXACTAMENTE 1 carro asignado
+            # 2. El carro existente sea del tipo complementario (PAR vs IMPAR)
+            # 3. El funcionario del carro existente NO tenga condiciones especiales que impidan compartir
             query = """
-                SELECT DISTINCT p.*
+                SELECT DISTINCT p.id, p.numero_parqueadero, p.estado, p.tipo_espacio,
+                       COALESCE(p.sotano, 'Sótano-1') as sotano
                 FROM parqueaderos p
-                JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
-                JOIN vehiculos v ON a.vehiculo_id = v.id
                 WHERE p.estado = 'Parcialmente_Asignado'
-                AND v.tipo_vehiculo = 'Carro'
-                AND v.tipo_circulacion != %s
+                AND p.tipo_espacio = 'Carro'
                 AND p.activo = TRUE
+                AND (
+                    -- Verificar que tiene EXACTAMENTE 1 carro
+                    SELECT COUNT(*)
+                    FROM asignaciones a2
+                    JOIN vehiculos v2 ON a2.vehiculo_id = v2.id
+                    WHERE a2.parqueadero_id = p.id
+                    AND a2.activo = TRUE
+                    AND v2.tipo_vehiculo = 'Carro'
+                ) = 1
+                AND (
+                    -- Verificar que el carro existente tiene tipo de circulación complementario
+                    SELECT v.tipo_circulacion
+                    FROM asignaciones a
+                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                    WHERE a.parqueadero_id = p.id
+                    AND a.activo = TRUE
+                    AND v.tipo_vehiculo = 'Carro'
+                    LIMIT 1
+                ) != %s
+                AND (
+                    -- Verificar que el funcionario del carro existente permite compartir
+                    SELECT f.permite_compartir
+                    FROM asignaciones a
+                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                    JOIN funcionarios f ON v.funcionario_id = f.id
+                    WHERE a.parqueadero_id = p.id
+                    AND a.activo = TRUE
+                    AND v.tipo_vehiculo = 'Carro'
+                    LIMIT 1
+                ) = TRUE
+                AND (
+                    -- Verificar que NO tiene pico y placa solidario
+                    SELECT f.pico_placa_solidario
+                    FROM asignaciones a
+                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                    JOIN funcionarios f ON v.funcionario_id = f.id
+                    WHERE a.parqueadero_id = p.id
+                    AND a.activo = TRUE
+                    AND v.tipo_vehiculo = 'Carro'
+                    LIMIT 1
+                ) = FALSE
+                AND (
+                    -- Verificar que NO tiene discapacidad
+                    SELECT f.discapacidad
+                    FROM asignaciones a
+                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                    JOIN funcionarios f ON v.funcionario_id = f.id
+                    WHERE a.parqueadero_id = p.id
+                    AND a.activo = TRUE
+                    AND v.tipo_vehiculo = 'Carro'
+                    LIMIT 1
+                ) = FALSE
+                AND (
+                    -- Verificar que NO tiene parqueadero exclusivo
+                    SELECT f.tiene_parqueadero_exclusivo
+                    FROM asignaciones a
+                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                    JOIN funcionarios f ON v.funcionario_id = f.id
+                    WHERE a.parqueadero_id = p.id
+                    AND a.activo = TRUE
+                    AND v.tipo_vehiculo = 'Carro'
+                    LIMIT 1
+                ) = FALSE
+                AND (
+                    -- Verificar que NO tiene carro híbrido
+                    SELECT f.tiene_carro_hibrido
+                    FROM asignaciones a
+                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                    JOIN funcionarios f ON v.funcionario_id = f.id
+                    WHERE a.parqueadero_id = p.id
+                    AND a.activo = TRUE
+                    AND v.tipo_vehiculo = 'Carro'
+                    LIMIT 1
+                ) = FALSE
                 ORDER BY p.numero_parqueadero
             """
             return self.db.fetch_all(query, (tipo_complemento,))
@@ -239,7 +392,8 @@ class ParqueaderoModel:
                     v.id, v.tipo_vehiculo, v.placa, v.tipo_circulacion,
                     v.funcionario_id,
                     f.nombre, f.apellidos, f.cargo,
-                    f.permite_compartir, f.pico_placa_solidario, f.discapacidad
+                    f.permite_compartir, f.pico_placa_solidario, f.discapacidad,
+                    f.tiene_parqueadero_exclusivo
                 FROM vehiculos v
                 JOIN funcionarios f ON v.funcionario_id = f.id
                 WHERE v.id = %s AND v.activo = TRUE
@@ -269,29 +423,7 @@ class ParqueaderoModel:
             count_result = self.db.fetch_one(query_count, (parqueadero_id,))
             asignaciones_existentes = count_result.get("total", 0) if count_result else 0
 
-            # 4. VALIDACIÓN: Si el funcionario NO permite compartir y hay asignaciones
-            es_valido, mensaje = ValidadorAsignacion.validar_permite_compartir(vehiculo_data, asignaciones_existentes)
-            if not es_valido:
-                return (False, mensaje)
-
-            # 5. VALIDACIÓN: Si hay ocupantes, verificar si permiten compartir, pico_placa_solidario o discapacidad
-            ocupante_data = None
-            if asignaciones_existentes > 0:
-                query_ocupante = """
-                    SELECT f.nombre, f.apellidos, f.cargo, f.permite_compartir, f.pico_placa_solidario, f.discapacidad
-                    FROM asignaciones a
-                    JOIN vehiculos v ON a.vehiculo_id = v.id
-                    JOIN funcionarios f ON v.funcionario_id = f.id
-                    WHERE a.parqueadero_id = %s AND a.activo = TRUE
-                    LIMIT 1
-                """
-                ocupante_data = self.db.fetch_one(query_ocupante, (parqueadero_id,))
-
-            es_valido, mensaje = ValidadorAsignacion.validar_ocupante_permite_compartir(ocupante_data)
-            if not es_valido:
-                return (False, mensaje)
-
-            # 6. VALIDACIÓN: Pico y placa (solo si NO tiene pico_placa_solidario)
+            # 4. VALIDACIÓN: Pico y placa (solo si NO tiene pico_placa_solidario)
             mismo_tipo_count = 0
             if vehiculo_data["tipo_vehiculo"] == "Carro" and vehiculo_data["tipo_circulacion"] != "N/A":
                 query_mismo_tipo = """
@@ -312,6 +444,8 @@ class ParqueaderoModel:
                 vehiculo_data["tipo_circulacion"],
                 vehiculo_data.get("pico_placa_solidario", False),
                 mismo_tipo_count,
+                vehiculo_data.get("tiene_parqueadero_exclusivo", False),
+                vehiculo_data.get("cargo", ""),
             )
             if not es_valido:
                 return (False, mensaje)

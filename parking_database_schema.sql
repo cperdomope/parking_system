@@ -24,10 +24,13 @@ CREATE TABLE funcionarios (
     permite_compartir BOOLEAN DEFAULT TRUE,
     pico_placa_solidario BOOLEAN DEFAULT FALSE,
     discapacidad BOOLEAN DEFAULT FALSE,
+    tiene_parqueadero_exclusivo BOOLEAN DEFAULT FALSE COMMENT 'Permite hasta 4 vehículos sin restricción PAR/IMPAR (directivos)',
+    tiene_carro_hibrido BOOLEAN DEFAULT FALSE COMMENT 'Carro híbrido - uso diario, parqueadero exclusivo (incentivo ambiental)',
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     activo BOOLEAN DEFAULT TRUE,
     INDEX idx_cedula (cedula),
-    INDEX idx_nombre_completo (nombre, apellidos)
+    INDEX idx_nombre_completo (nombre, apellidos),
+    INDEX idx_cargo (cargo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================
@@ -272,11 +275,15 @@ BEGIN
     DECLARE v_permite_compartir BOOLEAN;
     DECLARE v_pico_placa_solidario BOOLEAN;
     DECLARE v_discapacidad BOOLEAN;
+    DECLARE v_tiene_parqueadero_exclusivo BOOLEAN;
     DECLARE v_cargo VARCHAR(50);
     DECLARE v_count_mismo_tipo INT;
     DECLARE v_count_asignaciones_existentes INT;
+    DECLARE v_count_vehiculos_funcionario INT;
     DECLARE v_ocupante_permite_compartir BOOLEAN;
+    DECLARE v_ocupante_tiene_exclusivo BOOLEAN;
     DECLARE v_mensaje VARCHAR(500);
+    DECLARE v_estado_calcular ENUM('Disponible','Parcialmente_Asignado','Completo');
 
     -- Obtener información del vehículo y funcionario
     SELECT
@@ -286,6 +293,7 @@ BEGIN
         f.permite_compartir,
         f.pico_placa_solidario,
         f.discapacidad,
+        f.tiene_parqueadero_exclusivo,
         f.cargo
     INTO
         v_tipo_circulacion,
@@ -294,6 +302,7 @@ BEGIN
         v_permite_compartir,
         v_pico_placa_solidario,
         v_discapacidad,
+        v_tiene_parqueadero_exclusivo,
         v_cargo
     FROM vehiculos v
     JOIN funcionarios f ON v.funcionario_id = f.id
@@ -305,45 +314,83 @@ BEGIN
     WHERE parqueadero_id = p_parqueadero_id
     AND activo = TRUE;
 
-    -- VALIDACIÓN 1: Si el funcionario NO permite compartir y ya hay vehículos en el parqueadero
-    IF v_permite_compartir = FALSE AND v_count_asignaciones_existentes > 0 THEN
-        SET v_mensaje = CONCAT('El funcionario ', v_cargo, ' no permite compartir parqueadero y este espacio ya está ocupado');
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
-    END IF;
-
-    -- VALIDACIÓN 2: Si ya hay vehículos, verificar si algún ocupante NO permite compartir
-    IF v_count_asignaciones_existentes > 0 THEN
-        SELECT f.permite_compartir INTO v_ocupante_permite_compartir
+    -- VALIDACIÓN ESPECIAL: Si tiene parqueadero exclusivo para directivos (hasta 4 vehículos)
+    IF v_tiene_parqueadero_exclusivo = TRUE AND v_cargo IN ('Director', 'Coordinador', 'Asesor') THEN
+        -- Contar cuántos vehículos ya tiene asignados este funcionario en este parqueadero
+        SELECT COUNT(*) INTO v_count_vehiculos_funcionario
         FROM asignaciones a
         JOIN vehiculos v ON a.vehiculo_id = v.id
-        JOIN funcionarios f ON v.funcionario_id = f.id
         WHERE a.parqueadero_id = p_parqueadero_id
         AND a.activo = TRUE
-        LIMIT 1;
+        AND v.funcionario_id = v_funcionario_id;
 
-        IF v_ocupante_permite_compartir = FALSE THEN
-            SET v_mensaje = 'Este parqueadero está ocupado por un funcionario que no permite compartir';
+        -- Verificar que no supere los 4 vehículos
+        IF v_count_vehiculos_funcionario >= 4 THEN
+            SET v_mensaje = 'El directivo ya tiene 4 vehículos asignados a este parqueadero exclusivo (límite máximo)';
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
         END IF;
-    END IF;
 
-    -- VALIDACIÓN 3: Para carros, verificar tipo de circulación (solo si NO tiene pico_placa_solidario)
-    IF v_tipo_vehiculo = 'Carro' AND v_tipo_circulacion != 'N/A' THEN
-        IF v_pico_placa_solidario = FALSE THEN
-            -- Aplicar restricción PAR/IMPAR normal
-            SELECT COUNT(*) INTO v_count_mismo_tipo
+        -- Verificar que no haya vehículos de otros funcionarios en este parqueadero
+        IF v_count_asignaciones_existentes > 0 THEN
+            SELECT COUNT(*) INTO v_count_vehiculos_funcionario
             FROM asignaciones a
             JOIN vehiculos v ON a.vehiculo_id = v.id
             WHERE a.parqueadero_id = p_parqueadero_id
             AND a.activo = TRUE
-            AND v.tipo_circulacion = v_tipo_circulacion;
+            AND v.funcionario_id != v_funcionario_id;
 
-            IF v_count_mismo_tipo > 0 THEN
-                SET v_mensaje = CONCAT('Ya existe un vehículo ', v_tipo_circulacion, ' en este parqueadero. Active "Pico y placa solidario" para compartir.');
+            IF v_count_vehiculos_funcionario > 0 THEN
+                SET v_mensaje = 'Este parqueadero tiene vehículos de otros funcionarios. El parqueadero exclusivo debe ser solo para el directivo.';
                 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
             END IF;
         END IF;
-        -- Si pico_placa_solidario = TRUE, se permite asignar sin verificar PAR/IMPAR
+
+        -- Si pasa las validaciones, permitir asignación sin restricción PAR/IMPAR
+        -- Continuar con la asignación normal (omite validaciones de pico y placa)
+    ELSE
+        -- VALIDACIONES NORMALES (para funcionarios sin parqueadero exclusivo)
+
+        -- VALIDACIÓN 1: Si el funcionario NO permite compartir y ya hay vehículos en el parqueadero
+        IF v_permite_compartir = FALSE AND v_count_asignaciones_existentes > 0 THEN
+            SET v_mensaje = CONCAT('El funcionario ', v_cargo, ' no permite compartir parqueadero y este espacio ya está ocupado');
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
+        END IF;
+
+        -- VALIDACIÓN 2: Si ya hay vehículos, verificar si algún ocupante NO permite compartir o tiene exclusivo
+        IF v_count_asignaciones_existentes > 0 THEN
+            SELECT f.permite_compartir, f.tiene_parqueadero_exclusivo
+            INTO v_ocupante_permite_compartir, v_ocupante_tiene_exclusivo
+            FROM asignaciones a
+            JOIN vehiculos v ON a.vehiculo_id = v.id
+            JOIN funcionarios f ON v.funcionario_id = f.id
+            WHERE a.parqueadero_id = p_parqueadero_id
+            AND a.activo = TRUE
+            LIMIT 1;
+
+            IF v_ocupante_permite_compartir = FALSE OR v_ocupante_tiene_exclusivo = TRUE THEN
+                SET v_mensaje = 'Este parqueadero está ocupado por un funcionario con parqueadero exclusivo';
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
+            END IF;
+        END IF;
+
+        -- VALIDACIÓN 3: Para carros, verificar tipo de circulación (solo si NO tiene pico_placa_solidario)
+        IF v_tipo_vehiculo = 'Carro' AND v_tipo_circulacion != 'N/A' THEN
+            IF v_pico_placa_solidario = FALSE THEN
+                -- Aplicar restricción PAR/IMPAR normal
+                SELECT COUNT(*) INTO v_count_mismo_tipo
+                FROM asignaciones a
+                JOIN vehiculos v ON a.vehiculo_id = v.id
+                WHERE a.parqueadero_id = p_parqueadero_id
+                AND a.activo = TRUE
+                AND v.tipo_circulacion = v_tipo_circulacion;
+
+                IF v_count_mismo_tipo > 0 THEN
+                    SET v_mensaje = CONCAT('Ya existe un vehículo ', v_tipo_circulacion, ' en este parqueadero. Active "Pico y placa solidario" para compartir.');
+                    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
+                END IF;
+            END IF;
+            -- Si pico_placa_solidario = TRUE, se permite asignar sin verificar PAR/IMPAR
+        END IF;
     END IF;
 
     -- Desactivar asignaciones previas del vehículo
@@ -351,9 +398,36 @@ BEGIN
     SET activo = FALSE, fecha_fin_asignacion = NOW()
     WHERE vehiculo_id = p_vehiculo_id AND activo = TRUE;
 
-    -- Crear nueva asignación
-    INSERT INTO asignaciones (parqueadero_id, vehiculo_id, activo)
-    VALUES (p_parqueadero_id, p_vehiculo_id, TRUE);
+    -- =====================================================
+    -- INSERCIÓN CON LÓGICA ESPECIAL PARA DIRECTIVOS
+    -- =====================================================
+
+    IF v_tiene_parqueadero_exclusivo = TRUE AND v_cargo IN ('Director', 'Coordinador', 'Asesor') THEN
+        -- CALCULAR EL ESTADO ANTES DE INSERTAR
+        -- Contar cuántos vehículos habrá DESPUÉS de insertar este
+        SELECT COUNT(*) + 1 INTO v_count_vehiculos_funcionario
+        FROM asignaciones a
+        JOIN vehiculos v ON a.vehiculo_id = v.id
+        WHERE a.parqueadero_id = p_parqueadero_id
+        AND a.activo = TRUE
+        AND v.funcionario_id = v_funcionario_id;
+
+        -- Determinar el estado según la cantidad DESPUÉS de insertar
+        IF v_count_vehiculos_funcionario < 4 THEN
+            SET v_estado_calcular = 'Parcialmente_Asignado';
+        ELSE
+            SET v_estado_calcular = 'Completo';
+        END IF;
+
+        -- INSERTAR CON estado_manual para que el trigger lo respete
+        INSERT INTO asignaciones (parqueadero_id, vehiculo_id, activo, estado_manual)
+        VALUES (p_parqueadero_id, p_vehiculo_id, TRUE, v_estado_calcular);
+
+    ELSE
+        -- Para funcionarios regulares, usar el comportamiento normal (triggers automáticos)
+        INSERT INTO asignaciones (parqueadero_id, vehiculo_id, activo)
+        VALUES (p_parqueadero_id, p_vehiculo_id, TRUE);
+    END IF;
 
     SELECT 'Asignación realizada correctamente' AS mensaje;
 END$$

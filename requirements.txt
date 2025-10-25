@@ -1,18 +1,21 @@
 # Requisitos del Sistema de Gestión de Parqueadero
 # Python 3.8+
 
+# ==================== DEPENDENCIAS CORE ====================
 # Framework GUI
 PyQt5>=5.15.0
 
 # Conector de Base de Datos MySQL
 mysql-connector-python>=8.0.0
 
-# Exportación de Reportes (Opcional pero recomendado)
+# ==================== DEPENDENCIAS OPCIONALES ====================
+# Exportación de Reportes (Degradación elegante si no están disponibles)
 openpyxl>=3.0.0          # Para exportar a Excel
 reportlab>=3.6.0         # Para exportar a PDF
 
 # Visualización de Estadísticas
 matplotlib>=3.5.0        # Para gráficos estadísticos embebidos
 
-# Opcional: Para gestión de variables de entorno (recomendado para producción)
-# python-dotenv>=0.19.0
+# ==================== RECOMENDADAS PARA PRODUCCIÓN ====================
+# Gestión de variables de entorno
+python-dotenv>=0.19.0

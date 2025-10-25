@@ -91,3 +91,7 @@ DIRECCIONES_DISPONIBLES = [
     "Subdirección de Defensa",
     "Vehículo Oficial",
 ]
+
+
+# Roles que tienen privilegios especiales (ej. parqueadero exclusivo opcional)
+CARGOS_DIRECTIVOS = ["Director", "Coordinador", "Asesor"]

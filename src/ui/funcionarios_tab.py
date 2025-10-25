@@ -43,6 +43,12 @@ class FuncionariosTab(QWidget):
         self.setup_ui()
         self.cargar_funcionarios()
 
+    def crear_label_obligatorio(self, texto):
+        """Crea un QLabel con asterisco rojo para campos obligatorios"""
+        label_html = f'<span style="color: #2c3e50;">{texto}</span> <span style="color: red; font-weight: bold;">*</span>'
+        label = QLabel(label_html)
+        return label
+
     def setup_ui(self):
         """Configura la interfaz de usuario"""
         layout = QVBoxLayout()
@@ -50,9 +56,10 @@ class FuncionariosTab(QWidget):
         # Formulario de registro
         form_group = QGroupBox("Registro de Funcionario")
         form_layout = QGridLayout()
+        form_layout.setSpacing(10)  # Espaciado uniforme
 
         # Campos del formulario
-        form_layout.addWidget(QLabel("Cédula:"), 0, 0)
+        form_layout.addWidget(self.crear_label_obligatorio("Cédula:"), 0, 0)
         self.txt_cedula = QLineEdit()
         # Validador para cédula: solo números, entre 7 y 10 dígitos
         cedula_validator = QRegExpValidator(QRegExp("^[0-9]{7,10}$"))
@@ -61,7 +68,7 @@ class FuncionariosTab(QWidget):
         self.txt_cedula.setMaxLength(10)
         form_layout.addWidget(self.txt_cedula, 0, 1)
 
-        form_layout.addWidget(QLabel("Nombre:"), 0, 2)
+        form_layout.addWidget(self.crear_label_obligatorio("Nombre:"), 0, 2)
         self.txt_nombre = QLineEdit()
         # Validador para nombre: solo letras, espacios y tildes
         nombre_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
@@ -69,43 +76,43 @@ class FuncionariosTab(QWidget):
         self.txt_nombre.setPlaceholderText("Solo letras y espacios")
         form_layout.addWidget(self.txt_nombre, 0, 3)
 
-        form_layout.addWidget(QLabel("Apellidos:"), 1, 0)
+        form_layout.addWidget(self.crear_label_obligatorio("Apellidos:"), 0, 4)
         self.txt_apellidos = QLineEdit()
         # Validador para apellidos: solo letras, espacios y tildes
         apellidos_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
         self.txt_apellidos.setValidator(apellidos_validator)
         self.txt_apellidos.setPlaceholderText("Solo letras y espacios")
-        form_layout.addWidget(self.txt_apellidos, 1, 1)
+        form_layout.addWidget(self.txt_apellidos, 0, 5)
 
-        form_layout.addWidget(QLabel("Dirección/Grupo:"), 1, 2)
+        form_layout.addWidget(self.crear_label_obligatorio("Dirección/Grupo:"), 1, 0)
         self.combo_direccion = QComboBox()
         self.combo_direccion.addItem("-- Seleccione --", "")
         self.combo_direccion.addItems(DIRECCIONES_DISPONIBLES)
-        form_layout.addWidget(self.combo_direccion, 1, 3)
+        form_layout.addWidget(self.combo_direccion, 1, 1)
 
-        form_layout.addWidget(QLabel("Cargo:"), 2, 0)
+        form_layout.addWidget(self.crear_label_obligatorio("Cargo:"), 1, 2)
         self.combo_cargo = QComboBox()
         self.combo_cargo.addItem("-- Seleccione --", "")
         self.combo_cargo.addItems(CARGOS_DISPONIBLES)
-        form_layout.addWidget(self.combo_cargo, 2, 1)
+        form_layout.addWidget(self.combo_cargo, 1, 3)
 
-        form_layout.addWidget(QLabel("Celular:"), 2, 2)
+        form_layout.addWidget(self.crear_label_obligatorio("Celular:"), 1, 4)
         self.txt_celular = QLineEdit()
         # Validador para celular: exactamente 10 números
         celular_validator = QRegExpValidator(QRegExp("^[0-9]{10}$"))
         self.txt_celular.setValidator(celular_validator)
         self.txt_celular.setPlaceholderText("10 dígitos numéricos (ej: 3001234567)")
         self.txt_celular.setMaxLength(10)
-        form_layout.addWidget(self.txt_celular, 2, 3)
+        form_layout.addWidget(self.txt_celular, 1, 5)
 
-        form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 3, 0)
+        form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 2, 0)
         self.txt_tarjeta = QLineEdit()
         # Validador para tarjeta: números y letras, máximo 15 caracteres
         tarjeta_validator = QRegExpValidator(QRegExp("^[a-zA-Z0-9]{1,15}$"))
         self.txt_tarjeta.setValidator(tarjeta_validator)
         self.txt_tarjeta.setPlaceholderText("Alfanumérico, máx 15 caracteres")
         self.txt_tarjeta.setMaxLength(15)
-        form_layout.addWidget(self.txt_tarjeta, 3, 1)
+        form_layout.addWidget(self.txt_tarjeta, 2, 1)
 
         # ===== NUEVOS CHECKBOXES - REGLAS DE NEGOCIO (Solo uno puede estar activo) =====
         # Contenedor horizontal para los tres checkboxes
@@ -160,16 +167,18 @@ class FuncionariosTab(QWidget):
         )
         self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed_main)
 
-        # Checkbox: Parqueadero Exclusivo (No compartir)
-        self.chk_no_compartir = QCheckBox("🚫 Parqueadero Exclusivo (No compartido)")
-        self.chk_no_compartir.setToolTip(
-            "El funcionario tendrá un parqueadero EXCLUSIVO.\n" "Nadie más podrá usar ese espacio."
+        # Checkbox: Exclusivo Directivo (hasta 4 carros)
+        self.chk_exclusivo_directivo = QCheckBox("🏢 Exclusivo Directivo (hasta 4 carros)")
+        self.chk_exclusivo_directivo.setToolTip(
+            "Solo para cargos: Director, Coordinador, Asesor.\n"
+            "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero.\n"
+            "Ignora restricciones PAR/IMPAR completamente."
         )
-        self.chk_no_compartir.setStyleSheet(
+        self.chk_exclusivo_directivo.setStyleSheet(
             """
             QCheckBox {
                 font-weight: bold;
-                color: #e74c3c;
+                color: #8e44ad;
                 padding: 5px;
             }
             QCheckBox::indicator {
@@ -177,36 +186,109 @@ class FuncionariosTab(QWidget):
                 height: 18px;
             }
             QCheckBox::indicator:checked {
-                background-color: #e74c3c;
-                border: 2px solid #c0392b;
+                background-color: #9b59b6;
+                border: 2px solid #8e44ad;
             }
         """
         )
-        self.chk_no_compartir.stateChanged.connect(self.on_no_compartir_changed_main)
+        self.chk_exclusivo_directivo.stateChanged.connect(self.on_exclusivo_directivo_changed_main)
 
-        # Agregar los tres checkboxes al layout horizontal
+        # Checkbox: Carro Híbrido (incentivo ambiental)
+        self.chk_carro_hibrido = QCheckBox("🌿 Carro Híbrido (Incentivo Ambiental)")
+        self.chk_carro_hibrido.setToolTip(
+            "Marca esta casilla si el funcionario tiene carro híbrido.\n"
+            "BENEFICIOS:\n"
+            "• Puede usar el parqueadero TODOS LOS DÍAS (ignora pico y placa)\n"
+            "• Parqueadero EXCLUSIVO (estado Completo inmediato - color rojo)\n"
+            "• Incentivo para la contribución al medio ambiente"
+        )
+        self.chk_carro_hibrido.setStyleSheet(
+            """
+            QCheckBox {
+                font-weight: bold;
+                color: #27ae60;
+                padding: 5px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #2ecc71;
+                border: 2px solid #27ae60;
+            }
+        """
+        )
+        self.chk_carro_hibrido.stateChanged.connect(self.on_carro_hibrido_changed_main)
+
+        # Agregar los cuatro checkboxes al layout horizontal
         checkboxes_layout.addWidget(self.chk_pico_placa_solidario)
         checkboxes_layout.addWidget(self.chk_discapacidad)
-        checkboxes_layout.addWidget(self.chk_no_compartir)
+        checkboxes_layout.addWidget(self.chk_exclusivo_directivo)
+        checkboxes_layout.addWidget(self.chk_carro_hibrido)
         checkboxes_layout.addStretch()
 
         # Agregar el layout horizontal completo al grid en una sola fila
-        form_layout.addLayout(checkboxes_layout, 4, 0, 1, 4)
+        form_layout.addLayout(checkboxes_layout, 3, 0, 1, 6)
 
-        # Botones
+        # ============= BOTONES (PRIMERA COLUMNA, DEBAJO DE CHECKBOXES) =============
         btn_layout = QHBoxLayout()
+
         self.btn_guardar_funcionario = QPushButton("Guardar")
         self.btn_guardar_funcionario.clicked.connect(self.guardar_funcionario)
         self.btn_guardar_funcionario.setProperty("class", "success")
+        self.btn_guardar_funcionario.setMinimumWidth(120)
+        self.btn_guardar_funcionario.setMinimumHeight(40)
+        self.btn_guardar_funcionario.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                border: none;
+                border-radius: 5px;
+                padding: 10px 20px;
+            }
+            QPushButton:hover {
+                background-color: #2ecc71;
+            }
+            QPushButton:pressed {
+                background-color: #229954;
+            }
+        """
+        )
 
         self.btn_limpiar_funcionario = QPushButton("Limpiar")
         self.btn_limpiar_funcionario.clicked.connect(self.limpiar_formulario)
+        self.btn_limpiar_funcionario.setMinimumWidth(120)
+        self.btn_limpiar_funcionario.setMinimumHeight(40)
+        self.btn_limpiar_funcionario.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #7f8c8d;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                border: none;
+                border-radius: 5px;
+                padding: 10px 20px;
+            }
+            QPushButton:hover {
+                background-color: #95a5a6;
+            }
+            QPushButton:pressed {
+                background-color: #5d6d7e;
+            }
+        """
+        )
 
         btn_layout.addWidget(self.btn_guardar_funcionario)
         btn_layout.addWidget(self.btn_limpiar_funcionario)
         btn_layout.addStretch()
 
-        form_layout.addLayout(btn_layout, 3, 2, 1, 2)
+        # Botones en fila 4, columna 0, ocupando 2 columnas
+        form_layout.addLayout(btn_layout, 4, 0, 1, 2)
 
         form_group.setLayout(form_layout)
         layout.addWidget(form_group)
@@ -304,31 +386,75 @@ class FuncionariosTab(QWidget):
         """Cuando se marca Pico y Placa en el formulario principal, desmarca las otras opciones"""
         if state == 2:  # Checked
             self.chk_discapacidad.blockSignals(True)
-            self.chk_no_compartir.blockSignals(True)
+            self.chk_exclusivo_directivo.blockSignals(True)
+            self.chk_carro_hibrido.blockSignals(True)
             self.chk_discapacidad.setChecked(False)
-            self.chk_no_compartir.setChecked(False)
+            self.chk_exclusivo_directivo.setChecked(False)
+            self.chk_carro_hibrido.setChecked(False)
             self.chk_discapacidad.blockSignals(False)
-            self.chk_no_compartir.blockSignals(False)
+            self.chk_exclusivo_directivo.blockSignals(False)
+            self.chk_carro_hibrido.blockSignals(False)
 
     def on_discapacidad_changed_main(self, state):
         """Cuando se marca Discapacidad en el formulario principal, desmarca las otras opciones"""
         if state == 2:  # Checked
             self.chk_pico_placa_solidario.blockSignals(True)
-            self.chk_no_compartir.blockSignals(True)
+            self.chk_exclusivo_directivo.blockSignals(True)
+            self.chk_carro_hibrido.blockSignals(True)
             self.chk_pico_placa_solidario.setChecked(False)
-            self.chk_no_compartir.setChecked(False)
+            self.chk_exclusivo_directivo.setChecked(False)
+            self.chk_carro_hibrido.setChecked(False)
             self.chk_pico_placa_solidario.blockSignals(False)
-            self.chk_no_compartir.blockSignals(False)
+            self.chk_exclusivo_directivo.blockSignals(False)
+            self.chk_carro_hibrido.blockSignals(False)
 
-    def on_no_compartir_changed_main(self, state):
-        """Cuando se marca Parqueadero Exclusivo en el formulario principal, desmarca las otras opciones"""
+    def on_exclusivo_directivo_changed_main(self, state):
+        """Cuando se marca Exclusivo Directivo, desmarca las otras opciones y valida el cargo"""
         if state == 2:  # Checked
+            # Validar cargo
+            from ..config.settings import CARGOS_DIRECTIVOS
+            cargo_actual = self.combo_cargo.currentText()
+
+            if cargo_actual not in CARGOS_DIRECTIVOS and cargo_actual != "-- Seleccione --":
+                # Bloquear el checkbox y mostrar advertencia
+                from PyQt5.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self,
+                    "⚠️ Cargo No Permitido",
+                    f"El parqueadero exclusivo directivo solo está disponible para:\n\n"
+                    f"✅ {', '.join(CARGOS_DIRECTIVOS)}\n\n"
+                    f"❌ Cargo actual: {cargo_actual}\n\n"
+                    f"Por favor, cambie el cargo antes de activar esta opción."
+                )
+                self.chk_exclusivo_directivo.blockSignals(True)
+                self.chk_exclusivo_directivo.setChecked(False)
+                self.chk_exclusivo_directivo.blockSignals(False)
+                return
+
+            # Desmarcar las otras opciones
             self.chk_pico_placa_solidario.blockSignals(True)
             self.chk_discapacidad.blockSignals(True)
+            self.chk_carro_hibrido.blockSignals(True)
             self.chk_pico_placa_solidario.setChecked(False)
             self.chk_discapacidad.setChecked(False)
+            self.chk_carro_hibrido.setChecked(False)
             self.chk_pico_placa_solidario.blockSignals(False)
             self.chk_discapacidad.blockSignals(False)
+            self.chk_carro_hibrido.blockSignals(False)
+
+    def on_carro_hibrido_changed_main(self, state):
+        """Cuando se marca Carro Híbrido, desmarca las otras opciones"""
+        if state == 2:  # Checked
+            # Desmarcar las otras opciones
+            self.chk_pico_placa_solidario.blockSignals(True)
+            self.chk_discapacidad.blockSignals(True)
+            self.chk_exclusivo_directivo.blockSignals(True)
+            self.chk_pico_placa_solidario.setChecked(False)
+            self.chk_discapacidad.setChecked(False)
+            self.chk_exclusivo_directivo.setChecked(False)
+            self.chk_pico_placa_solidario.blockSignals(False)
+            self.chk_discapacidad.blockSignals(False)
+            self.chk_exclusivo_directivo.blockSignals(False)
 
     def on_cargo_changed(self, cargo: str):
         """Validaciones o acciones cuando cambia el cargo (si es necesario en el futuro)"""
@@ -336,88 +462,128 @@ class FuncionariosTab(QWidget):
         pass
 
     def guardar_funcionario(self):
-        """Guarda un nuevo funcionario en la base de datos"""
-        # Validar cédula antes de enviar a la base de datos
+        """Guarda un nuevo funcionario en la base de datos con validaciones completas"""
+        # ========== OBTENER VALORES ==========
         cedula = self.txt_cedula.text().strip()
         nombre = self.txt_nombre.text().strip()
         apellidos = self.txt_apellidos.text().strip()
+        direccion = self.combo_direccion.currentText()
+        cargo = self.combo_cargo.currentText()
         celular = self.txt_celular.text().strip()
         tarjeta = self.txt_tarjeta.text().strip()
 
-        # Validación de cédula
+        # ========== VALIDACIONES DE CAMPOS OBLIGATORIOS ==========
+
+        # 1. CÉDULA (OBLIGATORIO)
         if not cedula:
-            QMessageBox.warning(self, "⚠️ Validación", "La cédula es obligatoria")
+            QMessageBox.warning(self, "⚠️ Campo Obligatorio", "La cédula es obligatoria")
+            self.txt_cedula.setFocus()
             return
 
         if not cedula.isdigit():
             QMessageBox.warning(self, "⚠️ Validación", "La cédula solo debe contener números")
+            self.txt_cedula.setFocus()
             return
 
         if len(cedula) < 7 or len(cedula) > 10:
-            QMessageBox.warning(
-                self,
-                "⚠️ Validación",
-                f"La cédula debe tener entre 7 y 10 dígitos\n" f"Dígitos ingresados: {len(cedula)}",
-            )
+            mensaje = f"La cédula debe tener entre 7 y 10 dígitos\nDígitos ingresados: {len(cedula)}"
+            QMessageBox.warning(self, "⚠️ Validación", mensaje)
+            self.txt_cedula.setFocus()
             return
 
-        # Validación de nombre
+        # 2. NOMBRE (OBLIGATORIO)
         if not nombre:
-            QMessageBox.warning(self, "⚠️ Validación", "El nombre es obligatorio")
+            QMessageBox.warning(self, "⚠️ Campo Obligatorio", "El nombre es obligatorio")
+            self.txt_nombre.setFocus()
             return
 
         if len(nombre) < 2:
             QMessageBox.warning(self, "⚠️ Validación", "El nombre debe tener al menos 2 caracteres")
+            self.txt_nombre.setFocus()
             return
 
-        # Validación de apellidos
+        # 3. APELLIDOS (OBLIGATORIO)
         if not apellidos:
-            QMessageBox.warning(self, "⚠️ Validación", "Los apellidos son obligatorios")
+            QMessageBox.warning(self, "⚠️ Campo Obligatorio", "Los apellidos son obligatorios")
+            self.txt_apellidos.setFocus()
             return
 
         if len(apellidos) < 2:
             QMessageBox.warning(self, "⚠️ Validación", "Los apellidos deben tener al menos 2 caracteres")
+            self.txt_apellidos.setFocus()
             return
 
-        # Validación de celular
-        if celular and len(celular) != 10:
-            QMessageBox.warning(
-                self,
-                "⚠️ Validación",
-                f"El celular debe tener exactamente 10 dígitos\n" f"Dígitos ingresados: {len(celular)}",
-            )
+        # 4. DIRECCIÓN/GRUPO (OBLIGATORIO)
+        if not direccion or direccion == "-- Seleccione --":
+            QMessageBox.warning(self, "⚠️ Campo Obligatorio", "Debe seleccionar una Dirección/Grupo")
+            self.combo_direccion.setFocus()
             return
 
-        if celular and not celular.isdigit():
+        # 5. CARGO (OBLIGATORIO)
+        if not cargo or cargo == "-- Seleccione --":
+            QMessageBox.warning(self, "⚠️ Campo Obligatorio", "Debe seleccionar un Cargo")
+            self.combo_cargo.setFocus()
+            return
+
+        # 6. CELULAR (OBLIGATORIO)
+        if not celular:
+            QMessageBox.warning(self, "⚠️ Campo Obligatorio", "El celular es obligatorio")
+            self.txt_celular.setFocus()
+            return
+
+        if len(celular) != 10:
+            mensaje = f"El celular debe tener exactamente 10 dígitos\nDígitos ingresados: {len(celular)}"
+            QMessageBox.warning(self, "⚠️ Validación", mensaje)
+            self.txt_celular.setFocus()
+            return
+
+        if not celular.isdigit():
             QMessageBox.warning(self, "⚠️ Validación", "El celular solo debe contener números")
+            self.txt_celular.setFocus()
             return
 
-        # Validación de tarjeta (opcional pero si se ingresa debe ser válida)
+        # 7. TARJETA PROX (OPCIONAL)
         if tarjeta and len(tarjeta) < 3:
-            QMessageBox.warning(self, "⚠️ Validación", "La tarjeta de proximidad debe tener al menos 3 caracteres")
+            QMessageBox.warning(self, "⚠️ Validación", "La tarjeta de proximidad debe tener al menos 3 caracteres\n(Este campo es opcional)")
+            self.txt_tarjeta.setFocus()
             return
 
         # Determinar los valores de los campos según el checkbox marcado
-        if self.chk_no_compartir.isChecked():
-            # Parqueadero exclusivo (no compartido)
+        if self.chk_carro_hibrido.isChecked():
+            # Carro híbrido (incentivo ambiental)
             permite_compartir = False
             pico_placa_solidario = False
             discapacidad = False
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = True
+        elif self.chk_exclusivo_directivo.isChecked():
+            # Exclusivo directivo (hasta 4 vehículos)
+            permite_compartir = False
+            pico_placa_solidario = False
+            discapacidad = False
+            tiene_parqueadero_exclusivo = True
+            tiene_carro_hibrido = False
         elif self.chk_pico_placa_solidario.isChecked():
             # Pico y placa solidario
             permite_compartir = True
             pico_placa_solidario = True
             discapacidad = False
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = False
         elif self.chk_discapacidad.isChecked():
             # Funcionario con discapacidad
             permite_compartir = True
             pico_placa_solidario = False
             discapacidad = True
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = False
         else:
             # Ninguno marcado (funcionario regular que comparte)
             permite_compartir = True
             pico_placa_solidario = False
             discapacidad = False
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = False
 
         exito, mensaje = self.funcionario_model.crear(
             cedula=self.txt_cedula.text(),
@@ -432,6 +598,8 @@ class FuncionariosTab(QWidget):
             permite_compartir=permite_compartir,
             pico_placa_solidario=pico_placa_solidario,
             discapacidad=discapacidad,
+            tiene_parqueadero_exclusivo=tiene_parqueadero_exclusivo,
+            tiene_carro_hibrido=tiene_carro_hibrido,
         )
 
         if exito:
@@ -469,7 +637,8 @@ class FuncionariosTab(QWidget):
         # Limpiar checkboxes (ninguno marcado por defecto)
         self.chk_pico_placa_solidario.setChecked(False)
         self.chk_discapacidad.setChecked(False)
-        self.chk_no_compartir.setChecked(False)
+        self.chk_exclusivo_directivo.setChecked(False)
+        self.chk_carro_hibrido.setChecked(False)
 
     def cargar_funcionarios(self):
         """Carga la lista de funcionarios en la tabla"""
@@ -538,83 +707,88 @@ class FuncionariosTab(QWidget):
             # Botones de acciones (Editar, Ver, Eliminar)
             btn_layout = QHBoxLayout()
             btn_widget = QWidget()
-            btn_layout.setSpacing(5)
-            btn_layout.setContentsMargins(5, 5, 5, 5)
+            btn_layout.setSpacing(3)
+            btn_layout.setContentsMargins(2, 2, 2, 2)
 
-            # Botón Editar
+            # Botón Editar (solo ícono sin fondo)
             btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(40, 40)
+            btn_editar.setFixedSize(28, 28)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #3498db;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 18px;
+                    padding: 0px;
+                    color: #3498db;
                 }
                 QPushButton:hover {
-                    background-color: #2980b9;
+                    background-color: rgba(52, 152, 219, 0.15);
+                    border-radius: 3px;
+                    color: #2980b9;
                 }
                 QPushButton:pressed {
-                    background-color: #21618c;
+                    background-color: rgba(52, 152, 219, 0.3);
+                    border-radius: 3px;
+                    color: #21618c;
                 }
             """
             )
             btn_editar.clicked.connect(lambda _, fid=func.get("id"): self.editar_funcionario(fid))
 
-            # Botón Ver
+            # Botón Ver (solo ícono sin fondo)
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(40, 40)
+            btn_ver.setFixedSize(28, 28)
             btn_ver.setToolTip("Ver detalles del funcionario")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #27ae60;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 16px;
+                    padding: 0px;
                 }
                 QPushButton:hover {
-                    background-color: #229954;
+                    background-color: rgba(39, 174, 96, 0.1);
+                    border-radius: 3px;
                 }
                 QPushButton:pressed {
-                    background-color: #1e8449;
+                    background-color: rgba(39, 174, 96, 0.2);
+                    border-radius: 3px;
                 }
             """
             )
             btn_ver.clicked.connect(lambda _, fid=func.get("id"): self.ver_funcionario(fid))
 
-            # Botón Eliminar
+            # Botón Eliminar (solo ícono sin fondo)
             btn_eliminar = QPushButton("🗑️")
-            btn_eliminar.setFixedSize(40, 40)
+            btn_eliminar.setFixedSize(28, 28)
             btn_eliminar.setToolTip("Eliminar funcionario")
             btn_eliminar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #e74c3c;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 16px;
+                    padding: 0px;
                 }
                 QPushButton:hover {
-                    background-color: #c0392b;
+                    background-color: rgba(231, 76, 60, 0.1);
+                    border-radius: 3px;
                 }
                 QPushButton:pressed {
-                    background-color: #a93226;
+                    background-color: rgba(231, 76, 60, 0.2);
+                    border-radius: 3px;
                 }
             """
             )
             btn_eliminar.clicked.connect(lambda _, fid=func.get("id"): self.eliminar_funcionario(fid))
 
             btn_layout.addWidget(btn_editar)
+            btn_layout.addSpacing(2)
             btn_layout.addWidget(btn_ver)
+            btn_layout.addSpacing(2)
             btn_layout.addWidget(btn_eliminar)
             btn_layout.addStretch()
             btn_widget.setLayout(btn_layout)
@@ -1017,19 +1191,39 @@ class EditarFuncionarioModal(QDialog):
         self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed)
         form_layout.addRow("", self.chk_discapacidad)
 
-        # Checkbox: Parqueadero Exclusivo (No compartir)
-        self.chk_no_compartir = QCheckBox("🚫 Parqueadero Exclusivo (No compartido)")
-        self.chk_no_compartir.setToolTip("El funcionario tendrá un parqueadero EXCLUSIVO que no se comparte con otros.")
-        self.chk_no_compartir.setStyleSheet(
+        # Checkbox: Exclusivo Directivo (hasta 4 carros)
+        self.chk_exclusivo_directivo = QCheckBox("🏢 Exclusivo Directivo (hasta 4 carros)")
+        self.chk_exclusivo_directivo.setToolTip(
+            "Solo para cargos: Director, Coordinador, Asesor.\n"
+            "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero."
+        )
+        self.chk_exclusivo_directivo.setStyleSheet(
             """
             QCheckBox {
                 font-weight: bold;
-                color: #e74c3c;
+                color: #8e44ad;
             }
         """
         )
-        self.chk_no_compartir.stateChanged.connect(self.on_no_compartir_changed)
-        form_layout.addRow("", self.chk_no_compartir)
+        self.chk_exclusivo_directivo.stateChanged.connect(self.on_exclusivo_directivo_changed)
+        form_layout.addRow("", self.chk_exclusivo_directivo)
+
+        # Checkbox: Carro Híbrido
+        self.chk_carro_hibrido = QCheckBox("🌿 Carro Híbrido (Incentivo Ambiental)")
+        self.chk_carro_hibrido.setToolTip(
+            "Marca esta casilla si el funcionario tiene carro híbrido.\n"
+            "Uso diario + parqueadero exclusivo (color rojo)"
+        )
+        self.chk_carro_hibrido.setStyleSheet(
+            """
+            QCheckBox {
+                font-weight: bold;
+                color: #27ae60;
+            }
+        """
+        )
+        self.chk_carro_hibrido.stateChanged.connect(self.on_carro_hibrido_changed)
+        form_layout.addRow("", self.chk_carro_hibrido)
 
         # Conectar cambio de cargo para validaciones
         self.combo_cargo.currentTextChanged.connect(self.on_cargo_changed_modal)
@@ -1048,31 +1242,75 @@ class EditarFuncionarioModal(QDialog):
         """Cuando se marca Pico y Placa, desmarca las otras opciones"""
         if state == 2:  # Checked
             self.chk_discapacidad.blockSignals(True)
-            self.chk_no_compartir.blockSignals(True)
+            self.chk_exclusivo_directivo.blockSignals(True)
+            self.chk_carro_hibrido.blockSignals(True)
             self.chk_discapacidad.setChecked(False)
-            self.chk_no_compartir.setChecked(False)
+            self.chk_exclusivo_directivo.setChecked(False)
+            self.chk_carro_hibrido.setChecked(False)
             self.chk_discapacidad.blockSignals(False)
-            self.chk_no_compartir.blockSignals(False)
+            self.chk_exclusivo_directivo.blockSignals(False)
+            self.chk_carro_hibrido.blockSignals(False)
 
     def on_discapacidad_changed(self, state):
         """Cuando se marca Discapacidad, desmarca las otras opciones"""
         if state == 2:  # Checked
             self.chk_pico_placa_solidario.blockSignals(True)
-            self.chk_no_compartir.blockSignals(True)
+            self.chk_exclusivo_directivo.blockSignals(True)
+            self.chk_carro_hibrido.blockSignals(True)
             self.chk_pico_placa_solidario.setChecked(False)
-            self.chk_no_compartir.setChecked(False)
+            self.chk_exclusivo_directivo.setChecked(False)
+            self.chk_carro_hibrido.setChecked(False)
             self.chk_pico_placa_solidario.blockSignals(False)
-            self.chk_no_compartir.blockSignals(False)
+            self.chk_exclusivo_directivo.blockSignals(False)
+            self.chk_carro_hibrido.blockSignals(False)
 
-    def on_no_compartir_changed(self, state):
-        """Cuando se marca Parqueadero Exclusivo, desmarca las otras opciones"""
+    def on_exclusivo_directivo_changed(self, state):
+        """Cuando se marca Exclusivo Directivo en el modal, desmarca las otras opciones y valida el cargo"""
         if state == 2:  # Checked
+            # Validar cargo
+            from ..config.settings import CARGOS_DIRECTIVOS
+            cargo_actual = self.combo_cargo.currentText()
+
+            if cargo_actual not in CARGOS_DIRECTIVOS and cargo_actual != "-- Seleccione --":
+                # Bloquear el checkbox y mostrar advertencia
+                from PyQt5.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self,
+                    "Cargo No Permitido",
+                    f"El parqueadero exclusivo directivo solo esta disponible para:\n\n"
+                    f"- {', '.join(CARGOS_DIRECTIVOS)}\n\n"
+                    f"Cargo actual: {cargo_actual}\n\n"
+                    f"Por favor, cambie el cargo antes de activar esta opcion."
+                )
+                self.chk_exclusivo_directivo.blockSignals(True)
+                self.chk_exclusivo_directivo.setChecked(False)
+                self.chk_exclusivo_directivo.blockSignals(False)
+                return
+
+            # Desmarcar las otras opciones
             self.chk_pico_placa_solidario.blockSignals(True)
             self.chk_discapacidad.blockSignals(True)
+            self.chk_carro_hibrido.blockSignals(True)
             self.chk_pico_placa_solidario.setChecked(False)
             self.chk_discapacidad.setChecked(False)
+            self.chk_carro_hibrido.setChecked(False)
             self.chk_pico_placa_solidario.blockSignals(False)
             self.chk_discapacidad.blockSignals(False)
+            self.chk_carro_hibrido.blockSignals(False)
+
+    def on_carro_hibrido_changed(self, state):
+        """Cuando se marca Carro Hibrido en el modal, desmarca las otras opciones"""
+        if state == 2:  # Checked
+            # Desmarcar las otras opciones
+            self.chk_pico_placa_solidario.blockSignals(True)
+            self.chk_discapacidad.blockSignals(True)
+            self.chk_exclusivo_directivo.blockSignals(True)
+            self.chk_pico_placa_solidario.setChecked(False)
+            self.chk_discapacidad.setChecked(False)
+            self.chk_exclusivo_directivo.setChecked(False)
+            self.chk_pico_placa_solidario.blockSignals(False)
+            self.chk_discapacidad.blockSignals(False)
+            self.chk_exclusivo_directivo.blockSignals(False)
 
     def on_cargo_changed_modal(self, cargo: str):
         """Validaciones o acciones cuando cambia el cargo"""
@@ -1102,26 +1340,32 @@ class EditarFuncionarioModal(QDialog):
         # Bloquear señales temporalmente para evitar conflictos
         self.chk_pico_placa_solidario.blockSignals(True)
         self.chk_discapacidad.blockSignals(True)
-        self.chk_no_compartir.blockSignals(True)
+        self.chk_exclusivo_directivo.blockSignals(True)
+        self.chk_carro_hibrido.blockSignals(True)
 
         # Desmarcar todos primero
         self.chk_pico_placa_solidario.setChecked(False)
         self.chk_discapacidad.setChecked(False)
-        self.chk_no_compartir.setChecked(False)
+        self.chk_exclusivo_directivo.setChecked(False)
+        self.chk_carro_hibrido.setChecked(False)
 
-        # Marcar solo el que corresponde
-        if self.funcionario_data.get("pico_placa_solidario", False):
+        # Marcar solo el que corresponde (prioridad: carro híbrido > exclusivo directivo > otros)
+        if self.funcionario_data.get("tiene_carro_hibrido", False):
+            # Carro híbrido tiene máxima prioridad
+            self.chk_carro_hibrido.setChecked(True)
+        elif self.funcionario_data.get("tiene_parqueadero_exclusivo", False):
+            # Exclusivo directivo
+            self.chk_exclusivo_directivo.setChecked(True)
+        elif self.funcionario_data.get("pico_placa_solidario", False):
             self.chk_pico_placa_solidario.setChecked(True)
         elif self.funcionario_data.get("discapacidad", False):
             self.chk_discapacidad.setChecked(True)
-        elif not self.funcionario_data.get("permite_compartir", True):
-            # Si permite_compartir es False, significa parqueadero exclusivo
-            self.chk_no_compartir.setChecked(True)
 
         # Reactivar señales
         self.chk_pico_placa_solidario.blockSignals(False)
         self.chk_discapacidad.blockSignals(False)
-        self.chk_no_compartir.blockSignals(False)
+        self.chk_exclusivo_directivo.blockSignals(False)
+        self.chk_carro_hibrido.blockSignals(False)
 
     def guardar_cambios(self):
         """Guarda los cambios del funcionario"""
@@ -1179,26 +1423,41 @@ class EditarFuncionarioModal(QDialog):
             return
 
         # Determinar los valores de los campos según el checkbox marcado
-        if self.chk_no_compartir.isChecked():
-            # Parqueadero exclusivo (no compartido)
+        if self.chk_carro_hibrido.isChecked():
+            # Carro híbrido (incentivo ambiental)
             permite_compartir = False
             pico_placa_solidario = False
             discapacidad = False
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = True
+        elif self.chk_exclusivo_directivo.isChecked():
+            # Exclusivo directivo (hasta 4 vehículos)
+            permite_compartir = False
+            pico_placa_solidario = False
+            discapacidad = False
+            tiene_parqueadero_exclusivo = True
+            tiene_carro_hibrido = False
         elif self.chk_pico_placa_solidario.isChecked():
             # Pico y placa solidario
             permite_compartir = True
             pico_placa_solidario = True
             discapacidad = False
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = False
         elif self.chk_discapacidad.isChecked():
             # Funcionario con discapacidad
             permite_compartir = True
             pico_placa_solidario = False
             discapacidad = True
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = False
         else:
             # Ninguno marcado (funcionario regular que comparte)
             permite_compartir = True
             pico_placa_solidario = False
             discapacidad = False
+            tiene_parqueadero_exclusivo = False
+            tiene_carro_hibrido = False
 
         exito, error_msg = self.funcionario_model.actualizar(
             funcionario_id=self.funcionario_data["id"],
@@ -1214,6 +1473,8 @@ class EditarFuncionarioModal(QDialog):
             permite_compartir=permite_compartir,
             pico_placa_solidario=pico_placa_solidario,
             discapacidad=discapacidad,
+            tiene_parqueadero_exclusivo=tiene_parqueadero_exclusivo,
+            tiene_carro_hibrido=tiene_carro_hibrido,
         )
 
         if exito:

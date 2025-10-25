@@ -66,6 +66,8 @@ class FuncionarioModel:
         permite_compartir: bool = True,
         pico_placa_solidario: bool = False,
         discapacidad: bool = False,
+        tiene_parqueadero_exclusivo: bool = False,
+        tiene_carro_hibrido: bool = False,
     ) -> tuple:
         """Crea un nuevo funcionario en la base de datos
 
@@ -73,6 +75,8 @@ class FuncionarioModel:
             permite_compartir: Si el funcionario permite compartir parqueadero (default: True)
             pico_placa_solidario: Si puede usar parqueadero en días no correspondientes (default: False)
             discapacidad: Si el funcionario tiene condición de discapacidad (default: False)
+            tiene_parqueadero_exclusivo: Si es directivo con parqueadero exclusivo (hasta 4 vehículos) (default: False)
+            tiene_carro_hibrido: Si tiene carro híbrido - uso diario, parqueadero exclusivo (default: False)
 
         Returns:
             tuple: (bool: éxito, str: mensaje de error si existe)
@@ -94,11 +98,20 @@ class FuncionarioModel:
         # Validación 3: Lógica de permite_compartir según cargo
         permite_compartir = ValidadorReglasNegocio.validar_cargo_permite_compartir(cargo.strip(), permite_compartir)
 
+        # Validación 4: tiene_parqueadero_exclusivo solo para directivos
+        from ..config.settings import CARGOS_DIRECTIVOS
+        if tiene_parqueadero_exclusivo and cargo.strip() not in CARGOS_DIRECTIVOS:
+            return False, (
+                f"🚫 Parqueadero exclusivo no permitido\n\n"
+                f"❌ El cargo '{cargo.strip()}' no puede tener parqueadero exclusivo.\n"
+                f"✅ Solo disponible para: {', '.join(CARGOS_DIRECTIVOS)}"
+            )
+
         query = """
             INSERT INTO funcionarios
             (cedula, nombre, apellidos, direccion_grupo, cargo, celular, no_tarjeta_proximidad,
-             permite_compartir, pico_placa_solidario, discapacidad)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             permite_compartir, pico_placa_solidario, discapacidad, tiene_parqueadero_exclusivo, tiene_carro_hibrido)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         params = (
             cedula.strip(),
@@ -111,13 +124,19 @@ class FuncionarioModel:
             permite_compartir,
             pico_placa_solidario,
             discapacidad,
+            tiene_parqueadero_exclusivo,
+            tiene_carro_hibrido,
         )
 
         exito, error = self.db.execute_query(query, params)
 
         if exito:
             msg_extra = []
-            if not permite_compartir:
+            if tiene_carro_hibrido:
+                msg_extra.append("🌿 Carro híbrido registrado (uso diario, parqueadero exclusivo - incentivo ambiental)")
+            elif tiene_parqueadero_exclusivo:
+                msg_extra.append("🏢 Parqueadero exclusivo activado (hasta 4 vehículos, sin restricción PAR/IMPAR)")
+            elif not permite_compartir:
                 msg_extra.append("🚫 No permite compartir parqueadero (exclusivo)")
             if pico_placa_solidario:
                 msg_extra.append("🔄 Pico y placa solidario activado")
@@ -213,6 +232,8 @@ class FuncionarioModel:
         permite_compartir: bool = True,
         pico_placa_solidario: bool = False,
         discapacidad: bool = False,
+        tiene_parqueadero_exclusivo: bool = False,
+        tiene_carro_hibrido: bool = False,
     ) -> tuple:
         """
         Actualiza los datos de un funcionario
@@ -221,6 +242,8 @@ class FuncionarioModel:
             permite_compartir: Si el funcionario permite compartir parqueadero (default: True)
             pico_placa_solidario: Si puede usar parqueadero en días no correspondientes (default: False)
             discapacidad: Si el funcionario tiene condición de discapacidad (default: False)
+            tiene_parqueadero_exclusivo: Si es directivo con parqueadero exclusivo (hasta 4 vehículos) (default: False)
+            tiene_carro_hibrido: Si tiene carro híbrido - uso diario, parqueadero exclusivo (default: False)
 
         Returns:
             tuple: (bool: éxito, str: mensaje de error si existe)
@@ -250,17 +273,50 @@ class FuncionarioModel:
             return False, mensaje
 
         # Validación 4: Si cambia a "no permite compartir", verificar asignaciones existentes
-        es_valido, mensaje = ValidadorAsignacion.validar_cambio_permite_compartir(
-            funcionario_id, permite_compartir, funcionario_actual.get("permite_compartir", True), self.db
-        )
-        if not es_valido:
-            return False, mensaje
+        # NOTA: Esta validación está comentada porque el campo permite_compartir
+        # ahora se gestiona automáticamente según los checkboxes activos
+        # es_valido, mensaje = ValidadorAsignacion.validar_cambio_permite_compartir(
+        #     funcionario_id, permite_compartir, funcionario_actual.get("permite_compartir", True), self.db
+        # )
+        # if not es_valido:
+        #     return False, mensaje
+
+        # Validación 5: tiene_parqueadero_exclusivo solo para directivos
+        from ..config.settings import CARGOS_DIRECTIVOS
+        cargo_actual = cargo.strip()
+        cargo_anterior = funcionario_actual.get("cargo", "")
+
+        # Si se intenta activar parqueadero exclusivo, validar que sea directivo
+        if tiene_parqueadero_exclusivo and cargo_actual not in CARGOS_DIRECTIVOS:
+            return False, (
+                f"🚫 Parqueadero exclusivo no permitido\n\n"
+                f"❌ El cargo '{cargo_actual}' no puede tener parqueadero exclusivo.\n"
+                f"✅ Solo disponible para: {', '.join(CARGOS_DIRECTIVOS)}"
+            )
+
+        # Si se degrada el cargo (de directivo a no directivo), desactivar parqueadero exclusivo
+        if cargo_anterior in CARGOS_DIRECTIVOS and cargo_actual not in CARGOS_DIRECTIVOS:
+            tiene_parqueadero_exclusivo = False
+            # Verificar si tiene más de 2 vehículos asignados
+            query_count_vehiculos = """
+                SELECT COUNT(*) as total FROM vehiculos
+                WHERE funcionario_id = %s AND activo = TRUE
+            """
+            result = self.db.fetch_one(query_count_vehiculos, (funcionario_id,))
+            if result and result.get("total", 0) > 2:
+                return False, (
+                    f"⚠️ No se puede cambiar el cargo\n\n"
+                    f"❌ El funcionario tiene {result.get('total')} vehículos registrados.\n"
+                    f"📌 Los cargos no directivos solo permiten hasta 2 vehículos.\n\n"
+                    f"💡 Solución: Elimine vehículos adicionales antes de cambiar el cargo."
+                )
 
         query = """
             UPDATE funcionarios
             SET cedula = %s, nombre = %s, apellidos = %s, direccion_grupo = %s,
                 cargo = %s, celular = %s, no_tarjeta_proximidad = %s,
-                permite_compartir = %s, pico_placa_solidario = %s, discapacidad = %s
+                permite_compartir = %s, pico_placa_solidario = %s, discapacidad = %s,
+                tiene_parqueadero_exclusivo = %s, tiene_carro_hibrido = %s
             WHERE id = %s
         """
         params = (
@@ -274,6 +330,8 @@ class FuncionarioModel:
             permite_compartir,
             pico_placa_solidario,
             discapacidad,
+            tiene_parqueadero_exclusivo,
+            tiene_carro_hibrido,
             funcionario_id,
         )
 
@@ -281,7 +339,11 @@ class FuncionarioModel:
 
         if exito:
             msg_extra = []
-            if not permite_compartir:
+            if tiene_carro_hibrido:
+                msg_extra.append("🌿 Carro híbrido registrado (uso diario, parqueadero exclusivo - incentivo ambiental)")
+            elif tiene_parqueadero_exclusivo:
+                msg_extra.append("🏢 Parqueadero exclusivo activado (hasta 4 vehículos, sin restricción PAR/IMPAR)")
+            elif not permite_compartir:
                 msg_extra.append("🚫 No permite compartir parqueadero (exclusivo)")
             if pico_placa_solidario:
                 msg_extra.append("🔄 Pico y placa solidario activado")

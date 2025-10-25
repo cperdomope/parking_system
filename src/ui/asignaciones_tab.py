@@ -1241,7 +1241,8 @@ class AsignacionesTab(QWidget):
         query = """
             SELECT v.*,
                    f.nombre, f.apellidos, f.cedula, f.cargo,
-                   f.permite_compartir, f.pico_placa_solidario, f.discapacidad
+                   f.permite_compartir, f.pico_placa_solidario, f.discapacidad,
+                   f.tiene_parqueadero_exclusivo
             FROM vehiculos v
             JOIN funcionarios f ON v.funcionario_id = f.id
             LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
@@ -1261,8 +1262,6 @@ class AsignacionesTab(QWidget):
 
             # Agregar indicadores visuales
             indicadores = []
-            if not vehiculo.get("permite_compartir", True):
-                indicadores.append("🚫EXCLUSIVO")
             if vehiculo.get("pico_placa_solidario"):
                 indicadores.append("🔄SOL")
             if vehiculo.get("discapacidad"):
@@ -1307,27 +1306,82 @@ class AsignacionesTab(QWidget):
 
             if vehiculo_data and sotano_seleccionado:
                 tipo_vehiculo = vehiculo_data.get("tipo_vehiculo", "Carro")
+                funcionario_id = vehiculo_data.get("funcionario_id")
 
                 # Para CARROS: buscar disponibles y parcialmente asignados con complemento
                 if tipo_vehiculo == "Carro":
+                    # Verificar si el funcionario tiene parqueadero exclusivo directivo
+                    query_check_exclusivo = """
+                        SELECT tiene_parqueadero_exclusivo, cargo
+                        FROM funcionarios
+                        WHERE id = %s AND activo = TRUE
+                    """
+                    func_data = self.db.fetch_one(query_check_exclusivo, (funcionario_id,))
+                    tiene_exclusivo = func_data and func_data.get("tiene_parqueadero_exclusivo", False)
+                    cargo = func_data.get("cargo", "") if func_data else ""
+
+                    from ..config.settings import CARGOS_DIRECTIVOS
+                    es_directivo_exclusivo = tiene_exclusivo and cargo in CARGOS_DIRECTIVOS
+
                     # Obtener parqueaderos disponibles para carros
                     parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
                         sotano=sotano_seleccionado, tipo_vehiculo="Carro", estado="Disponible"
                     )
 
-                    # También obtener parcialmente asignados que necesiten el complemento PAR/IMPAR
-                    parqueaderos_complemento = self.parqueadero_model.obtener_disponibles(
-                        vehiculo_data["tipo_circulacion"]
-                    )
-
-                    # Filtrar por sótano
-                    parqueaderos_complemento_sotano = [
-                        p for p in parqueaderos_complemento if p.get("sotano", "Sótano-1") == sotano_seleccionado
-                    ]
-
-                    # Combinar listas sin duplicados
                     todos_parqueaderos = {p["id"]: p for p in parqueaderos_disponibles}
-                    todos_parqueaderos.update({p["id"]: p for p in parqueaderos_complemento_sotano})
+
+                    if es_directivo_exclusivo:
+                        # CASO ESPECIAL: Directivo con parqueadero exclusivo
+                        # Buscar parqueaderos que ya tienen vehículos de este directivo
+                        query_parqueaderos_directivo = """
+                            SELECT DISTINCT p.id, p.numero_parqueadero, p.estado,
+                                   COALESCE(p.sotano, 'Sótano-1') as sotano,
+                                   COUNT(a.id) as vehiculos_asignados
+                            FROM parqueaderos p
+                            JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
+                            JOIN vehiculos v ON a.vehiculo_id = v.id
+                            WHERE v.funcionario_id = %s
+                            AND COALESCE(p.sotano, 'Sótano-1') = %s
+                            GROUP BY p.id, p.numero_parqueadero, p.estado, p.sotano
+                            HAVING COUNT(a.id) < 4
+                        """
+                        parqueaderos_directivo = self.db.fetch_all(
+                            query_parqueaderos_directivo, (funcionario_id, sotano_seleccionado)
+                        )
+
+                        # Agregar parqueaderos del directivo que aún tienen espacio
+                        for park in parqueaderos_directivo:
+                            park["estado_display"] = f"Parcial ({park['vehiculos_asignados']}/4)"
+                            todos_parqueaderos[park["id"]] = park
+
+                        print(f"Directivo exclusivo: {len(parqueaderos_directivo)} parqueaderos propios con espacio")
+                    else:
+                        # Funcionarios regulares: también obtener parcialmente asignados con complemento PAR/IMPAR
+                        parqueaderos_complemento = self.parqueadero_model.obtener_disponibles(
+                            vehiculo_data["tipo_circulacion"]
+                        )
+
+                        # Filtrar por sótano y VALIDAR que solo tengan 1 carro asignado
+                        parqueaderos_complemento_sotano = []
+                        for p in parqueaderos_complemento:
+                            if p.get("sotano", "Sótano-1") == sotano_seleccionado:
+                                # VALIDACIÓN ADICIONAL: Contar cuántos carros hay asignados
+                                query_count_carros = """
+                                    SELECT COUNT(*) as total_carros
+                                    FROM asignaciones a
+                                    JOIN vehiculos v ON a.vehiculo_id = v.id
+                                    WHERE a.parqueadero_id = %s
+                                    AND a.activo = TRUE
+                                    AND v.tipo_vehiculo = 'Carro'
+                                """
+                                count_result = self.db.fetch_one(query_count_carros, (p["id"],))
+                                total_carros = count_result.get("total_carros", 0) if count_result else 0
+
+                                # Solo agregar si tiene EXACTAMENTE 1 carro (no 2 o más)
+                                if total_carros == 1:
+                                    parqueaderos_complemento_sotano.append(p)
+
+                        todos_parqueaderos.update({p["id"]: p for p in parqueaderos_complemento_sotano})
 
                 # Para MOTOS y BICICLETAS: solo buscar completamente disponibles
                 else:
@@ -1419,87 +1473,19 @@ class AsignacionesTab(QWidget):
             )
             return
 
-        # ========== VALIDACIÓN: PERMITE COMPARTIR ==========
-        permite_compartir = vehiculo_data.get("permite_compartir", True)
+        # ========== OBTENER DATOS DEL FUNCIONARIO ==========
         pico_placa_solidario = vehiculo_data.get("pico_placa_solidario", False)
         discapacidad = vehiculo_data.get("discapacidad", False)
+        tiene_parqueadero_exclusivo = vehiculo_data.get("tiene_parqueadero_exclusivo", False)
         funcionario_nombre = f"{vehiculo_data.get('nombre', '')} {vehiculo_data.get('apellidos', '')}"
         cargo = vehiculo_data.get("cargo", "")
-
-        # Verificar si el parqueadero ya tiene asignaciones
-        query_check = """
-            SELECT COUNT(*) as total
-            FROM asignaciones
-            WHERE parqueadero_id = %s AND activo = TRUE
-        """
-        resultado = self.db.fetch_one(query_check, (parqueadero_id,))
-        asignaciones_existentes = resultado.get("total", 0) if resultado else 0
-
-        # Si el funcionario NO permite compartir y el parqueadero tiene asignaciones, bloquear
-        if not permite_compartir and asignaciones_existentes > 0:
-            QMessageBox.warning(
-                self,
-                "🚫 Parqueadero Exclusivo",
-                f"⚠️ NO se puede asignar este vehículo\n\n"
-                f"👤 Funcionario: {funcionario_nombre}\n"
-                f"💼 Cargo: {cargo}\n"
-                f"🚫 Política: Parqueadero EXCLUSIVO (no permite compartir)\n\n"
-                f"📍 El parqueadero seleccionado ya tiene {asignaciones_existentes} vehículo(s) asignado(s)\n\n"
-                f"💡 Solución: Seleccione un parqueadero completamente disponible",
-            )
-            return
-
-        # Mensaje informativo para funcionarios con parqueadero exclusivo
-        if not permite_compartir and asignaciones_existentes == 0:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setWindowTitle("🚫 Parqueadero Exclusivo")
-            msg.setText("Asignación de Parqueadero Exclusivo")
-            msg.setInformativeText(
-                f"👤 Funcionario: {funcionario_nombre}\n"
-                f"💼 Cargo: {cargo}\n"
-                f"🚫 Política: NO permite compartir parqueadero\n\n"
-                f"📍 Este parqueadero quedará marcado como COMPLETO\n"
-                f"⚠️ Nadie más podrá usar este espacio\n\n"
-                f"¿Desea continuar con la asignación exclusiva?"
-            )
-            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            msg.setDefaultButton(QMessageBox.Yes)
-
-            if msg.exec_() != QMessageBox.Yes:
-                return
 
         # Realizar asignación usando el modelo (validaciones adicionales en modelo)
         exito, mensaje = self.parqueadero_model.asignar_vehiculo(vehiculo_data["id"], parqueadero_id, observaciones)
 
         if exito:
-            # Si el funcionario NO permite compartir, marcar parqueadero como Completo usando estado_manual
-            if not permite_compartir:
-                try:
-                    # Actualizar el estado_manual de la asignación para forzar "Completo"
-                    query_update = """
-                        UPDATE asignaciones
-                        SET estado_manual = 'Completo'
-                        WHERE vehiculo_id = %s AND activo = TRUE
-                    """
-                    self.db.execute_query(query_update, (vehiculo_data["id"],))
-
-                    # Actualizar estado del parqueadero directamente
-                    query_update_park = """
-                        UPDATE parqueaderos
-                        SET estado = 'Completo'
-                        WHERE id = %s
-                    """
-                    self.db.execute_query(query_update_park, (parqueadero_id,))
-
-                    print(f"Parqueadero {parqueadero_id} marcado como Completo (exclusivo)")
-                except Exception as e:
-                    print(f"Error al marcar parqueadero como Completo: {e}")
-
             # Agregar indicadores al mensaje si aplica
             msg_extra = []
-            if not permite_compartir:
-                msg_extra.append("🚫 Parqueadero marcado como COMPLETO (exclusivo)")
             if pico_placa_solidario:
                 msg_extra.append("🔄 Pico y placa solidario activado")
             if discapacidad:
@@ -1536,7 +1522,6 @@ class AsignacionesTab(QWidget):
                         CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
                         f.cedula,
                         f.cargo,
-                        f.permite_compartir,
                         f.pico_placa_solidario,
                         f.discapacidad,
                         v.tipo_vehiculo,
@@ -1561,7 +1546,6 @@ class AsignacionesTab(QWidget):
                         CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
                         f.cedula,
                         f.cargo,
-                        f.permite_compartir,
                         f.pico_placa_solidario,
                         f.discapacidad,
                         v.tipo_vehiculo,
@@ -1617,8 +1601,6 @@ class AsignacionesTab(QWidget):
             # Agregar indicadores visuales al nombre del funcionario
             funcionario_texto = asig["funcionario"]
             indicadores = []
-            if not asig.get("permite_compartir", True):
-                indicadores.append("🚫")
             if asig.get("pico_placa_solidario"):
                 indicadores.append("🔄")
             if asig.get("discapacidad"):
@@ -1629,11 +1611,6 @@ class AsignacionesTab(QWidget):
 
             funcionario_item = QTableWidgetItem(funcionario_texto)
             funcionario_item.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
-
-            # Colorear si tiene parqueadero exclusivo
-            if not asig.get("permite_compartir", True):
-                funcionario_item.setBackground(QBrush(QColor("#fadbd8")))
-                funcionario_item.setForeground(QBrush(QColor("#c0392b")))
 
             self.tabla_asignaciones.setItem(i, 2, funcionario_item)
 
@@ -1672,61 +1649,62 @@ class AsignacionesTab(QWidget):
                 observaciones_item.setForeground(QBrush(QColor("#2c3e50")))
             self.tabla_asignaciones.setItem(i, 7, observaciones_item)
 
-            # Botones de acción (Ver y Liberar)
+            # Botones de acción (Ver y Liberar) - Solo íconos
             btn_widget = QWidget()
             btn_layout = QHBoxLayout()
-            btn_layout.setSpacing(5)
-            btn_layout.setContentsMargins(5, 5, 5, 5)
+            btn_layout.setSpacing(3)
+            btn_layout.setContentsMargins(2, 2, 2, 2)
 
-            # Botón Ver
+            # Botón Ver (solo ícono sin fondo)
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(40, 40)
+            btn_ver.setFixedSize(28, 28)
             btn_ver.setToolTip("Ver detalles de la asignación")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #27ae60;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 16px;
+                    padding: 0px;
                 }
                 QPushButton:hover {
-                    background-color: #229954;
+                    background-color: rgba(39, 174, 96, 0.1);
+                    border-radius: 3px;
                 }
                 QPushButton:pressed {
-                    background-color: #1e8449;
+                    background-color: rgba(39, 174, 96, 0.2);
+                    border-radius: 3px;
                 }
             """
             )
             btn_ver.clicked.connect(lambda _, asig_data=asig: self.ver_asignacion(asig_data))
 
-            # Botón Liberar
+            # Botón Liberar (solo ícono sin fondo)
             btn_liberar = QPushButton("🔓")
-            btn_liberar.setFixedSize(40, 40)
+            btn_liberar.setFixedSize(28, 28)
             btn_liberar.setToolTip("Liberar asignación")
             btn_liberar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #e74c3c;
-                    color: white;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 14px;
+                    font-size: 16px;
+                    padding: 0px;
                 }
                 QPushButton:hover {
-                    background-color: #c0392b;
+                    background-color: rgba(231, 76, 60, 0.1);
+                    border-radius: 3px;
                 }
                 QPushButton:pressed {
-                    background-color: #a93226;
+                    background-color: rgba(231, 76, 60, 0.2);
+                    border-radius: 3px;
                 }
             """
             )
             btn_liberar.clicked.connect(lambda _, vid=asig["vehiculo_id"]: self.liberar_asignacion(vid))
 
             btn_layout.addWidget(btn_ver)
+            btn_layout.addSpacing(2)
             btn_layout.addWidget(btn_liberar)
             btn_layout.addStretch()
             btn_widget.setLayout(btn_layout)

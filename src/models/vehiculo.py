@@ -15,7 +15,7 @@ class VehiculoModel:
 
     def __init__(self, db: DatabaseManager):
         self.db = db
-        self.validador = ValidadorVehiculos()
+        self.validador = ValidadorVehiculos(db)
 
     def validar_placa_unica(self, placa: str, vehiculo_id: int = None) -> Tuple[bool, str]:
         """Valida que la placa no exista en el sistema
@@ -69,7 +69,7 @@ class VehiculoModel:
 
         # Validación 2: Reglas de negocio del funcionario
         es_valido, mensaje_validacion = self.validador.validar_registro_vehiculo(
-            vehiculos_actuales, tipo_vehiculo, placa
+            vehiculos_actuales, tipo_vehiculo, placa, funcionario_id
         )
 
         if not es_valido:
@@ -181,7 +181,7 @@ class VehiculoModel:
             Tuple[bool, str]: (es_válido, mensaje)
         """
         vehiculos_actuales = self.obtener_por_funcionario(funcionario_id)
-        return self.validador.validar_registro_vehiculo(vehiculos_actuales, tipo_vehiculo, placa)
+        return self.validador.validar_registro_vehiculo(vehiculos_actuales, tipo_vehiculo, placa, funcionario_id)
 
     def obtener_por_id(self, vehiculo_id: int) -> Dict:
         """Obtiene un vehículo específico por su ID
@@ -233,7 +233,7 @@ class VehiculoModel:
 
             # Validación 2: Reglas de negocio del funcionario
             es_valido, mensaje_validacion = self.validador.validar_registro_vehiculo(
-                otros_vehiculos, tipo_vehiculo, placa
+                otros_vehiculos, tipo_vehiculo, placa, funcionario_id
             )
 
             if not es_valido:
