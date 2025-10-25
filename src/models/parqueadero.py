@@ -304,17 +304,8 @@ class ParqueaderoModel:
                     AND v.tipo_vehiculo = 'Carro'
                     LIMIT 1
                 ) != %s
-                AND (
-                    -- Verificar que el funcionario del carro existente permite compartir
-                    SELECT f.permite_compartir
-                    FROM asignaciones a
-                    JOIN vehiculos v ON a.vehiculo_id = v.id
-                    JOIN funcionarios f ON v.funcionario_id = f.id
-                    WHERE a.parqueadero_id = p.id
-                    AND a.activo = TRUE
-                    AND v.tipo_vehiculo = 'Carro'
-                    LIMIT 1
-                ) = TRUE
+                -- ✅ CORRECCIÓN v2.0.2: Eliminada validación de 'permite_compartir' (campo obsoleto)
+                -- La lógica de compartir se valida únicamente con los 4 checkboxes siguientes
                 AND (
                     -- Verificar que NO tiene pico y placa solidario
                     SELECT f.pico_placa_solidario
