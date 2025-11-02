@@ -24,25 +24,34 @@ from PyQt5.QtWidgets import (
 
 from ..database.manager import DatabaseManager
 from ..models.parqueadero import ParqueaderoModel
+from ..utils.formatters import format_numero_parqueadero
 
 
 class DetalleParqueaderoModal(QDialog):
     """Modal para mostrar información detallada de un parqueadero"""
 
-    def __init__(self, parqueadero_id: int, numero_parqueadero: int, db_manager: DatabaseManager, parent=None):
+    def __init__(self, parqueadero_id: int, numero_parqueadero=None, db_manager: DatabaseManager = None, parent=None):
         super().__init__(parent)
 
         # Validaciones de inicialización
-        if not parqueadero_id or not numero_parqueadero or not db_manager:
+        if not parqueadero_id or not db_manager:
             raise ValueError("Parámetros de inicialización inválidos")
 
         self.parqueadero_id = parqueadero_id
-        self.numero_parqueadero = numero_parqueadero
         self.db = db_manager
         self.parqueadero_model = ParqueaderoModel(self.db)
         self.info_parqueadero = None
 
+        # SIEMPRE obtener numero_parqueadero de la BD (ignorar parámetro)
+        # Esto evita problemas con formato inconsistente
         try:
+            query = "SELECT numero_parqueadero FROM parqueaderos WHERE id = %s"
+            result = self.db.fetch_one(query, (self.parqueadero_id,))
+            if result:
+                self.numero_parqueadero = result['numero_parqueadero']
+            else:
+                self.numero_parqueadero = "N/A"
+
             self.setup_ui()
             self.cargar_informacion()
         except Exception as e:
@@ -51,7 +60,7 @@ class DetalleParqueaderoModal(QDialog):
 
     def setup_ui(self):
         """Configura la interfaz del modal"""
-        self.setWindowTitle(f"📊 Detalle Parqueadero P-{self.numero_parqueadero:03d}")
+        self.setWindowTitle(f"📊 Detalle Parqueadero {format_numero_parqueadero(self.numero_parqueadero)}")
         self.setModal(True)
 
         # Aplicar estilo base para asegurar texto negro en todo el modal
@@ -152,7 +161,7 @@ class DetalleParqueaderoModal(QDialog):
         lbl_numero_label.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(lbl_numero_label, 0, 0)
 
-        lbl_numero = QLabel(f"P-{self.numero_parqueadero:03d}")
+        lbl_numero = QLabel(f"{format_numero_parqueadero(self.numero_parqueadero)}")
         lbl_numero.setStyleSheet(
             "font-size: 22px; font-weight: bold; color: #1976D2; "
             "padding: 6px 12px; background-color: #E3F2FD; "

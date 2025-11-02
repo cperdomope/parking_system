@@ -582,7 +582,22 @@ class VerVehiculoModal(QDialog):
         # Información del parqueadero
         parqueadero = self.vehiculo_actual.get("numero_parqueadero")
         if parqueadero:
-            self.lbl_parqueadero.setText(f"P-{parqueadero:03d}")
+            # ✅ CORRECCIÓN: numero_parqueadero ahora es VARCHAR(10) con formato P-XXX (migración v3)
+            # Si viene como número (legacy), formatear. Si ya viene como P-XXX, usar directamente
+            if isinstance(parqueadero, int):
+                # Legacy: número entero
+                parqueadero_texto = f"P-{parqueadero:03d}"
+            elif isinstance(parqueadero, str) and parqueadero.startswith("P-"):
+                # Nuevo formato: ya viene como P-XXX
+                parqueadero_texto = parqueadero
+            elif isinstance(parqueadero, str) and parqueadero.isdigit():
+                # String numérico sin formato
+                parqueadero_texto = f"P-{int(parqueadero):03d}"
+            else:
+                # Caso por defecto
+                parqueadero_texto = str(parqueadero)
+
+            self.lbl_parqueadero.setText(parqueadero_texto)
             self.lbl_parqueadero.setStyleSheet(
                 "font-size: 12px; padding: 5px; background-color: #e3f2fd; color: #1976d2; border-radius: 3px; font-weight: bold;"
             )

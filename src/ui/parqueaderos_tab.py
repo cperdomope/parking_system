@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
 
 from ..database.manager import DatabaseManager
 from ..models.parqueadero import ParqueaderoModel
-from ..widgets.parking_widget import ParkingSpaceWidget
+from .widgets.parking_widget import ParkingSpaceWidget
 from .modal_detalle_parqueadero import DetalleParqueaderoModal
 
 

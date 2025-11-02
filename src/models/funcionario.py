@@ -171,6 +171,17 @@ class FuncionarioModel:
         """
         return self.db.fetch_all(query)
 
+    def obtener_todos_incluyendo_inactivos(self) -> List[Dict]:
+        """Obtiene TODOS los funcionarios (activos e inactivos)"""
+        query = """
+            SELECT f.*, COUNT(v.id) as total_vehiculos
+            FROM funcionarios f
+            LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+            GROUP BY f.id
+            ORDER BY f.activo DESC, f.apellidos, f.nombre
+        """
+        return self.db.fetch_all(query)
+
     def obtener_por_id(self, funcionario_id: int) -> Dict:
         """Obtiene un funcionario por su ID"""
         query = """
@@ -364,57 +375,215 @@ class FuncionarioModel:
 
     def eliminar(self, funcionario_id: int) -> Tuple[bool, str]:
         """
-        Elimina un funcionario y TODOS sus datos relacionados de forma COMPLETA
-        Nueva implementación que garantiza eliminación total, no solo desactivación
+        Desactiva un funcionario (borrado lógico) y libera sus recursos asociados
+        Marca el funcionario como inactivo, desactiva sus vehículos y libera parqueaderos
+        IMPORTANTE: No elimina físicamente de la BD para mantener historial
 
         Args:
-            funcionario_id (int): ID del funcionario a eliminar
+            funcionario_id (int): ID del funcionario a desactivar
 
         Returns:
             Tuple[bool, str]: (éxito, mensaje detallado)
         """
-        # Verificar que el funcionario existe antes de intentar eliminar
+        from ..core.logger import logger
+
+        # Verificar que el funcionario existe y está activo
         funcionario = self.obtener_por_id(funcionario_id)
         if not funcionario:
             return (
                 False,
                 f"🔍 Funcionario no encontrado\n\n"
-                f"❌ No existe un funcionario con ID: {funcionario_id}\n"
-                f"💡 Verifique que el funcionario no haya sido eliminado previamente",
+                f"❌ No existe un funcionario activo con ID: {funcionario_id}\n"
+                f"💡 Verifique que el funcionario no haya sido desactivado previamente",
             )
 
-        # Obtener datos relacionados para mostrar resumen
-        datos_relacionados = self.obtener_datos_relacionados(funcionario_id)
-        vehiculos_count = len(datos_relacionados.get("vehiculos", []))
-        parqueaderos_count = len(datos_relacionados.get("parqueaderos_afectados", []))
+        try:
+            nombre_completo = f"{funcionario['nombre']} {funcionario['apellidos']}"
+            cedula = funcionario['cedula']
 
-        exito, mensaje, detalles = self.gestor_eliminacion.eliminar_funcionario_completo(str(funcionario_id))
+            # Obtener datos relacionados para mostrar resumen
+            datos_relacionados = self.obtener_datos_relacionados(funcionario_id)
+            vehiculos = datos_relacionados.get("vehiculos", [])
+            parqueaderos_afectados = datos_relacionados.get("parqueaderos_afectados", [])
 
-        if exito:
+            logger.info(f"Iniciando desactivación de funcionario: {nombre_completo} (ID: {funcionario_id})")
+
+            # 1. Liberar parqueaderos eliminando asignaciones
+            parqueaderos_liberados = 0
+            if parqueaderos_afectados:
+                query_eliminar_asignaciones = """
+                    DELETE FROM asignaciones
+                    WHERE vehiculo_id IN (
+                        SELECT id FROM vehiculos WHERE funcionario_id = %s
+                    )
+                """
+                exito_asig, _ = self.db.execute_query(query_eliminar_asignaciones, (funcionario_id,))
+                if exito_asig:
+                    parqueaderos_liberados = len(parqueaderos_afectados)
+                    logger.info(f"Liberados {parqueaderos_liberados} parqueaderos")
+
+            # 2. Eliminar vehículos asociados (borrado físico)
+            vehiculos_eliminados = 0
+            if vehiculos:
+                query_eliminar_vehiculos = """
+                    DELETE FROM vehiculos
+                    WHERE funcionario_id = %s
+                """
+                exito_veh, _ = self.db.execute_query(query_eliminar_vehiculos, (funcionario_id,))
+                if exito_veh:
+                    vehiculos_eliminados = len(vehiculos)
+                    logger.info(f"Eliminados {vehiculos_eliminados} vehículos físicamente")
+
+            # 3. Desactivar funcionario (borrado lógico)
+            query_desactivar_funcionario = """
+                UPDATE funcionarios
+                SET activo = FALSE
+                WHERE id = %s
+            """
+            exito_func, error_func = self.db.execute_query(query_desactivar_funcionario, (funcionario_id,))
+
+            if not exito_func:
+                logger.error(f"Error al desactivar funcionario {funcionario_id}: {error_func}")
+                return (
+                    False,
+                    f"❌ Error al desactivar funcionario\n\n{error_func}"
+                )
+
+            logger.info(f"Funcionario {nombre_completo} desactivado exitosamente")
+
+            # Mensaje de éxito
+            mensaje_exito = (
+                f"✅ Funcionario desactivado exitosamente\n\n"
+                f"👤 Funcionario: {nombre_completo}\n"
+                f"🆔 Cédula: {cedula}\n\n"
+                f"📋 Resumen de operaciones:\n"
+                f"   • Funcionario marcado como INACTIVO\n"
+                f"   • Vehículos eliminados físicamente: {vehiculos_eliminados}\n"
+                f"   • Parqueaderos liberados: {parqueaderos_liberados}\n\n"
+                f"💾 El historial del funcionario se mantiene en la base de datos\n"
+                f"📊 El funcionario ya no aparecerá en listados activos"
+            )
+
+            return (True, mensaje_exito)
+
+        except Exception as e:
+            logger.error(f"Error inesperado al desactivar funcionario {funcionario_id}: {e}", exc_info=True)
             return (
-                True,
-                f"✅ Funcionario eliminado exitosamente\n\n"
-                f"👤 Funcionario: {funcionario['nombre']} {funcionario['apellidos']}\n"
-                f"🏷️ Cédula: {funcionario['cedula']}\n"
-                f"🚗 Vehículos eliminados: {vehiculos_count}\n"
-                f"🌐 Espacios liberados: {parqueaderos_count}\n\n"
-                f"📝 Eliminación en cascada completada",
+                False,
+                f"❌ Error inesperado al desactivar funcionario\n\n"
+                f"Error: {str(e)}\n"
+                f"💡 Consulte los logs para más detalles"
             )
-        else:
-            return False, f"🚫 Error en eliminación: {mensaje}"
 
     def eliminar_por_cedula(self, cedula: str) -> Tuple[bool, str]:
         """
-        Elimina un funcionario por su cédula y TODOS sus datos relacionados
+        Desactiva un funcionario por su cédula (borrado lógico)
 
         Args:
-            cedula (str): Cédula del funcionario a eliminar
+            cedula (str): Cédula del funcionario a desactivar
 
         Returns:
             Tuple[bool, str]: (éxito, mensaje detallado)
         """
-        exito, mensaje, detalles = self.gestor_eliminacion.eliminar_funcionario_completo(cedula)
-        return exito, mensaje
+        # Buscar funcionario por cédula
+        query = "SELECT id FROM funcionarios WHERE cedula = %s AND activo = TRUE"
+        funcionario = self.db.fetch_one(query, (cedula,))
+
+        if not funcionario:
+            return (
+                False,
+                f"❌ No se encontró un funcionario activo con cédula: {cedula}"
+            )
+
+        # Usar el método eliminar() que ya implementa borrado lógico
+        return self.eliminar(funcionario['id'])
+
+    def reactivar(self, funcionario_id: int) -> Tuple[bool, str]:
+        """
+        Reactiva un funcionario previamente desactivado
+        Marca el funcionario y sus vehículos como activos nuevamente
+
+        Args:
+            funcionario_id (int): ID del funcionario a reactivar
+
+        Returns:
+            Tuple[bool, str]: (éxito, mensaje detallado)
+        """
+        from ..core.logger import logger
+
+        # Verificar que el funcionario existe y está inactivo
+        query = "SELECT * FROM funcionarios WHERE id = %s AND activo = FALSE"
+        funcionario = self.db.fetch_one(query, (funcionario_id,))
+
+        if not funcionario:
+            return (
+                False,
+                f"🔍 Funcionario no encontrado\n\n"
+                f"❌ No existe un funcionario INACTIVO con ID: {funcionario_id}\n"
+                f"💡 Verifique que el funcionario no esté ya activo"
+            )
+
+        try:
+            nombre_completo = f"{funcionario['nombre']} {funcionario['apellidos']}"
+            cedula = funcionario['cedula']
+
+            logger.info(f"Iniciando reactivación de funcionario: {nombre_completo} (ID: {funcionario_id})")
+
+            # 1. Reactivar vehículos asociados
+            query_reactivar_vehiculos = """
+                UPDATE vehiculos
+                SET activo = TRUE
+                WHERE funcionario_id = %s AND activo = FALSE
+            """
+            exito_veh, error_veh = self.db.execute_query(query_reactivar_vehiculos, (funcionario_id,))
+
+            vehiculos_reactivados = 0
+            if exito_veh:
+                # Contar cuántos vehículos se reactivaron
+                query_count = "SELECT COUNT(*) as total FROM vehiculos WHERE funcionario_id = %s AND activo = TRUE"
+                result = self.db.fetch_one(query_count, (funcionario_id,))
+                vehiculos_reactivados = result['total'] if result else 0
+                logger.info(f"Reactivados {vehiculos_reactivados} vehículos")
+
+            # 2. Reactivar funcionario
+            query_reactivar_funcionario = """
+                UPDATE funcionarios
+                SET activo = TRUE
+                WHERE id = %s
+            """
+            exito_func, error_func = self.db.execute_query(query_reactivar_funcionario, (funcionario_id,))
+
+            if not exito_func:
+                logger.error(f"Error al reactivar funcionario {funcionario_id}: {error_func}")
+                return (
+                    False,
+                    f"❌ Error al reactivar funcionario\n\n{error_func}"
+                )
+
+            logger.info(f"Funcionario {nombre_completo} reactivado exitosamente")
+
+            # Mensaje de éxito
+            mensaje_exito = (
+                f"✅ Funcionario reactivado exitosamente\n\n"
+                f"👤 Funcionario: {nombre_completo}\n"
+                f"🆔 Cédula: {cedula}\n\n"
+                f"📋 Resumen de operaciones:\n"
+                f"   • Funcionario marcado como ACTIVO\n"
+                f"   • Vehículos reactivados: {vehiculos_reactivados}\n\n"
+                f"✨ El funcionario vuelve a aparecer en los listados\n"
+                f"🚗 Sus vehículos están disponibles para asignación"
+            )
+
+            return (True, mensaje_exito)
+
+        except Exception as e:
+            logger.error(f"Error inesperado al reactivar funcionario {funcionario_id}: {e}", exc_info=True)
+            return (
+                False,
+                f"❌ Error inesperado al reactivar funcionario\n\n"
+                f"Error: {str(e)}\n"
+                f"💡 Consulte los logs para más detalles"
+            )
 
     def obtener_reporte_previa_eliminacion(self, funcionario_id: int) -> str:
         """

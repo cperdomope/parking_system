@@ -1,0 +1,78 @@
+# Pre-commit hooks para Sistema de Gestión de Parqueaderos
+# Instalación: pip install pre-commit
+# Activar: pre-commit install
+
+repos:
+  # Formateo de código con Black
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3.8
+        args: ['--line-length=100', '--target-version=py38']
+
+  # Linting con Flake8
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=100', '--ignore=E203,W503,E501']
+        additional_dependencies: [flake8-docstrings]
+
+  # Ordenar imports con isort
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile', 'black', '--line-length', '100']
+
+  # Remover trailing whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-json
+      - id: pretty-format-json
+        args: ['--autofix', '--no-sort-keys']
+
+  # Seguridad - detectar secretos
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Type checking con mypy (opcional, comentado por defecto)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [types-all]
+  #       args: ['--ignore-missing-imports']
+
+# Configuración global
+default_language_version:
+  python: python3.8
+
+# Archivos a excluir
+exclude: |
+  (?x)(
+    ^venv/|
+    ^\.venv/|
+    ^build/|
+    ^dist/|
+    ^\.git/|
+    ^\.mypy_cache/|
+    ^\.pytest_cache/|
+    ^__pycache__/|
+    .*\.egg-info/|
+    ^logs/|
+    ^reports/
+  )

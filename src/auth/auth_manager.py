@@ -5,7 +5,6 @@ Versión 2.0 - Con seguridad mejorada (bcrypt + protección fuerza bruta)
 """
 
 import time
-import logging
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict, Optional, Tuple
@@ -13,9 +12,7 @@ from typing import Dict, Optional, Tuple
 import bcrypt
 
 from ..database.manager import DatabaseManager
-
-# Configurar logging
-logger = logging.getLogger('auth_manager')
+from ..core.logger import logger
 
 
 class AuthManager:
@@ -37,6 +34,8 @@ class AuthManager:
         self.failed_attempts = defaultdict(list)  # {username: [timestamp1, timestamp2, ...]}
         self.lockout_duration = 900  # 15 minutos en segundos
         self.max_attempts = 5  # Máximo de intentos fallidos antes del bloqueo
+
+        logger.info("AuthManager inicializado correctamente")
 
     def is_locked_out(self, usuario: str) -> Tuple[bool, int]:
         """

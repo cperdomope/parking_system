@@ -27,6 +27,7 @@ from PyQt5.QtWidgets import (
 from ..database.manager import DatabaseManager
 from ..models.parqueadero import ParqueaderoModel
 from ..models.vehiculo import VehiculoModel
+from ..utils.formatters import format_numero_parqueadero
 
 
 class EditarAsignacionDialog(QDialog):
@@ -385,7 +386,7 @@ class EditarAsignacionDialog(QDialog):
         )
         self.lbl_placa.setText(self.asignacion_data["placa"])
         self.lbl_sotano_actual.setText(self.asignacion_data["sotano"])
-        self.lbl_parqueadero_actual.setText(f"P-{self.asignacion_data['numero_parqueadero']:03d}")
+        self.lbl_parqueadero_actual.setText(f"{format_numero_parqueadero(self.asignacion_data['numero_parqueadero'])}")
 
         # Cargar observaciones actuales
         observaciones_actuales = self.asignacion_data.get("observaciones", "") or ""
@@ -432,12 +433,12 @@ class EditarAsignacionDialog(QDialog):
 
                 # Agregar parqueadero actual si es del mismo sótano
                 if sotano_seleccionado == self.asignacion_data["sotano"]:
-                    texto_actual = f"P-{parqueadero_actual['numero_parqueadero']:03d} (ACTUAL)"
+                    texto_actual = f"{format_numero_parqueadero(parqueadero_actual['numero_parqueadero'])} (ACTUAL)"
                     self.combo_nuevo_parqueadero.addItem(texto_actual, parqueadero_actual["numero_parqueadero"])
 
                 # Agregar parqueaderos disponibles
                 for park in sorted(parqueaderos_disponibles, key=lambda x: x["numero_parqueadero"]):
-                    texto = f"P-{park['numero_parqueadero']:03d} ({park['estado'].replace('_', ' ')})"
+                    texto = f"{format_numero_parqueadero(park['numero_parqueadero'])} ({park['estado'].replace('_', ' ')})"
                     self.combo_nuevo_parqueadero.addItem(texto, park["id"])
 
         except Exception as e:
@@ -646,7 +647,7 @@ class VerAsignacionModal(QDialog):
         # Información del parqueadero
         self.lbl_sotano.setText(self.asignacion_data.get("sotano", "N/A"))
         numero_parqueadero = self.asignacion_data.get("numero_parqueadero", 0)
-        self.lbl_numero.setText(f"P-{numero_parqueadero:03d}")
+        self.lbl_numero.setText(f"{format_numero_parqueadero(numero_parqueadero)}")
 
         # Información del funcionario
         self.lbl_funcionario.setText(self.asignacion_data.get("funcionario", "N/A"))
@@ -1394,7 +1395,7 @@ class AsignacionesTab(QWidget):
                 # Llenar el combo con los parqueaderos encontrados
                 for park in sorted(todos_parqueaderos.values(), key=lambda x: x["numero_parqueadero"]):
                     estado_str = park.get("estado_display", park["estado"]).replace("_", " ")
-                    texto = f"P-{park['numero_parqueadero']:03d} ({estado_str})"
+                    texto = f"{format_numero_parqueadero(park['numero_parqueadero'])} ({estado_str})"
                     self.combo_parqueadero_disponible.addItem(texto, park["id"])
 
                 print(f"Parqueaderos cargados para {tipo_vehiculo} en {sotano_seleccionado}: {len(todos_parqueaderos)}")
@@ -1448,7 +1449,7 @@ class AsignacionesTab(QWidget):
         self.combo_parqueadero_disponible.addItem("-- Seleccione --", None)
 
         for park in sorted(todos_parqueaderos.values(), key=lambda x: x["numero_parqueadero"]):
-            texto = f"P-{park['numero_parqueadero']:03d} ({park['estado'].replace('_', ' ')})"
+            texto = f"{format_numero_parqueadero(park['numero_parqueadero'])} ({park['estado'].replace('_', ' ')})"
             self.combo_parqueadero_disponible.addItem(texto, park["id"])
 
     def realizar_asignacion(self):
@@ -1584,7 +1585,7 @@ class AsignacionesTab(QWidget):
             self.tabla_asignaciones.setItem(i, 0, sotano_item)
 
             # Indicador de parqueadero con estado manual si aplica
-            parqueadero_texto = f"P-{asig['numero_parqueadero']:03d}"
+            parqueadero_texto = f"{format_numero_parqueadero(asig['numero_parqueadero'])}"
             if asig.get("estado_manual") == "Completo":
                 parqueadero_texto += " 🚫"  # Indicador de exclusivo
 

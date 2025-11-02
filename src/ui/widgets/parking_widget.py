@@ -8,6 +8,8 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import QFrame, QLabel, QVBoxLayout, QHBoxLayout, QProgressBar
 
+from src.utils.formatters import format_numero_parqueadero
+
 
 class ParkingSpaceWidget(QFrame):
     """Widget personalizado para representar un espacio de parqueo con información visual enriquecida"""
@@ -57,7 +59,8 @@ class ParkingSpaceWidget(QFrame):
         header_layout.setSpacing(2)
 
         icono_tipo = self._obtener_icono_tipo_espacio()
-        self.lbl_numero = QLabel(f"{icono_tipo} P-{self.numero:03d}")
+        numero_display = format_numero_parqueadero(self.numero)
+        self.lbl_numero = QLabel(f"{icono_tipo} {numero_display}")
         self.lbl_numero.setStyleSheet(
             "font-size: 13px; font-weight: bold; color: #1976D2; padding: 2px;"
         )
@@ -225,9 +228,10 @@ class ParkingSpaceWidget(QFrame):
 
     def _generar_tooltip(self) -> str:
         """Genera un tooltip enriquecido con información detallada"""
+        numero_display = format_numero_parqueadero(self.numero)
         if self.vehiculos_actuales == 0:
             return (
-                f"📊 PARQUEADERO P-{self.numero:03d}\n"
+                f"📊 PARQUEADERO {numero_display}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Estado: Disponible\n"
                 f"Capacidad: 0/{self.capacidad_total}\n"
@@ -274,10 +278,11 @@ class ParkingSpaceWidget(QFrame):
         else:
             estado_ocupacion = "🟢 Espacio disponible"
 
+        numero_display = format_numero_parqueadero(self.numero)
         return (
             f"📊 INFORMACIÓN DETALLADA\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Parqueadero: P-{self.numero:03d}\n"
+            f"Parqueadero: {numero_display}\n"
             f"Sótano: {self.sotano or 'N/A'}\n"
             f"Tipo: {self.tipo_espacio}\n"
             f"Ocupación: {self.vehiculos_actuales}/{self.capacidad_total}\n"

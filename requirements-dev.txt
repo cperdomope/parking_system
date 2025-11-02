@@ -1,0 +1,45 @@
+# Dependencias de Desarrollo para Sistema de Gestión de Parqueaderos
+# Para instalar: pip install -r requirements-dev.txt
+
+# Incluir dependencias principales
+-r requirements.txt
+
+# ==================== TESTING ====================
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-qt>=4.2.0          # Testing de PyQt5
+pytest-timeout>=2.2.0
+
+# ==================== FORMATEO Y LINTING ====================
+black>=24.3.0
+flake8>=7.0.0
+flake8-docstrings>=1.7.0
+isort>=5.13.0
+autopep8>=2.0.4
+
+# ==================== TYPE CHECKING ====================
+mypy>=1.8.0
+types-PyQt5
+types-requests
+
+# ==================== PRE-COMMIT ====================
+pre-commit>=3.6.0
+
+# ==================== DOCUMENTACIÓN ====================
+sphinx>=7.2.0
+sphinx-rtd-theme>=2.0.0
+sphinx-autodoc-typehints>=1.25.0
+
+# ==================== DEBUGGING ====================
+ipdb>=0.13.13
+ipython>=8.20.0
+
+# ==================== ANÁLISIS DE CÓDIGO ====================
+pylint>=3.0.3
+radon>=6.0.1              # Complejidad ciclomática
+bandit>=1.7.6             # Análisis de seguridad
+
+# ==================== PROFILING ====================
+py-spy>=0.3.14
+memory_profiler>=0.61.0

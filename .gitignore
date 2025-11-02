@@ -1,63 +1,208 @@
-# Archivos compilados de Python
+# ============================================
+# Python - Archivos Compilados / Optimizados
+# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
-# Distribuciones
-*.egg-info/
-dist/
+# ============================================
+# Distribución / Empaquetado
+# ============================================
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Entornos virtuales
-venv/
+# ============================================
+# PyInstaller
+# ============================================
+*.manifest
+*.spec
+
+# ============================================
+# Instaladores y Logs
+# ============================================
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================================
+# Tests / Coverage
+# ============================================
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# ============================================
+# Traducciones
+# ============================================
+*.mo
+*.pot
+
+# ============================================
+# Django / Flask
+# ============================================
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+instance/
+.webassets-cache
+
+# ============================================
+# Scrapy / Sphinx / PyBuilder
+# ============================================
+.scrapy
+docs/_build/
+.pybuilder/
+target/
+
+# ============================================
+# Jupyter Notebook
+# ============================================
+.ipynb_checkpoints
+
+# ============================================
+# IPython
+# ============================================
+profile_default/
+ipython_config.py
+
+# ============================================
+# Entornos Virtuales
+# ============================================
+.env
+.venv
 env/
+venv/
 ENV/
+env.bak/
+venv.bak/
 parking_env/
 
-# IDE
+# ============================================
+# IDEs y Editores
+# ============================================
+# VS Code
 .vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
 .idea/
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython
+cython_debug/
+
+# Vim / Emacs
 *.swp
 *.swo
 *~
 
-# Base de datos local (si aplica)
+# ============================================
+# Archivos de Base de Datos
+# ============================================
 *.db
 *.sqlite
 *.sqlite3
+parking_management.db
 
-# Logs
-*.log
+# ============================================
+# Logs y Archivos Temporales
+# ============================================
 logs/
+*.log
 
-# Configuración local
-local_settings.py
-.env
-
-# Archivos de sistema
+# ============================================
+# Archivos del Sistema Operativo
+# ============================================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# Scripts temporales de migración/fix
-fix_*.py
-check_*.py
-update_*.py
-migrate_*.py
+# Linux
+*~
 
-# Documentación temporal de cambios
-CAMBIOS_*.md
-TODO_*.md
-NOTAS_*.md
-
-# Archivos SQL temporales de migración
-add_*.sql
-update_*.sql
-migrate_*.sql
-fix_*.sql
-
-# Archivos de backup
+# ============================================
+# Archivos Temporales
+# ============================================
+*.tmp
+*.temp
 *.bak
 *.backup
 *.old
 *_backup.*
 *_old.*
+
+# ============================================
+# Reportes y Exportaciones Temporales
+# ============================================
+# Reportes generados por la aplicación (datos de usuario)
+reporte_*.csv
+reporte_*.xlsx
+reporte_*.pdf
+export_*.csv
+
+# ============================================
+# Directorio de Reportes Generados
+# ============================================
+reports/
+
+# ============================================
+# Archivos Específicos Temporales (Si existen)
+# ============================================
+# Si tienes archivos temporales específicos, añádelos aquí con nombre exacto
+# Ejemplo:
+# temp_analysis.py
+# debug_session.log

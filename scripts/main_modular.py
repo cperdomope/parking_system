@@ -16,7 +16,7 @@ from src.ui.vehiculos_tab import VehiculosTab
 from src.ui.parqueaderos_tab import ParqueaderosTab
 from src.ui.asignaciones_tab import AsignacionesTab
 from src.ui.reportes_tab import ReportesTab
-from src.widgets.styles import AppStyles
+from src.ui.widgets.styles import AppStyles
 
 
 class MainWindow(QMainWindow):

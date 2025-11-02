@@ -7,6 +7,7 @@ import mysql.connector
 from mysql.connector import Error
 
 from ..config.settings import DatabaseConfig
+from ..core.logger import logger
 
 
 class DatabaseManager:
@@ -29,6 +30,7 @@ class DatabaseManager:
 
     def connect(self) -> bool:
         try:
+            logger.info(f"Intentando conectar a la base de datos: {self.config.database}")
             self.connection = mysql.connector.connect(
                 host=self.config.host,
                 user=self.config.user,
@@ -37,9 +39,11 @@ class DatabaseManager:
                 port=self.config.port,
             )
             self.cursor = self.connection.cursor(dictionary=True)
+            logger.info(f"Conexión establecida correctamente a: {self.config.database}")
             print(f"Conectado a la base de datos: {self.config.database}")
             return True
         except Error as e:
+            logger.error(f"Error al conectar a la base de datos: {e}")
             print(f"Error al conectar a la base de datos: {e}")
             return False
 
@@ -48,6 +52,7 @@ class DatabaseManager:
         if self.connection and self.connection.is_connected():
             self.cursor.close()
             self.connection.close()
+            logger.info("Desconectado de la base de datos")
             print("Desconectado de la base de datos")
 
     def ensure_connection(self):
@@ -73,11 +78,13 @@ class DatabaseManager:
 
             self.cursor.execute(query, params or ())
             self.connection.commit()
+            logger.debug(f"Query ejecutado exitosamente: {query[:50]}...")
             return (True, "")
         except Error as e:
             if self.connection:
                 self.connection.rollback()
             error_msg = str(e)
+            logger.error(f"Error ejecutando query: {error_msg}")
             print(f"Error ejecutando query: {error_msg}")
             return (False, error_msg)
 

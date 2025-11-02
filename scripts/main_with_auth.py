@@ -18,7 +18,7 @@ from PyQt5.QtCore import Qt
 
 # Importaciones de módulos locales
 from src.auth.login_window import FuturisticLoginWindow
-from main_modular import MainWindow
+from scripts.main_modular import MainWindow
 
 
 class AuthenticatedApp:

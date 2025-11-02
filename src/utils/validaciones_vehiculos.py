@@ -24,9 +24,10 @@ class ValidadorVehiculos:
     """
 
     # Cantidad máxima de vehículos por funcionario
-    MAX_VEHICULOS_POR_FUNCIONARIO = 2
+    MAX_VEHICULOS_POR_FUNCIONARIO = 3  # Máximo 3 vehículos en total (combinaciones específicas)
     MAX_VEHICULOS_DIRECTIVO_EXCLUSIVO = 6  # 4 carros + 1 moto + 1 bicicleta
     MAX_CARROS_DIRECTIVO_EXCLUSIVO = 4
+    MAX_CARROS_REGULAR = 2  # Máximo 2 carros para regulares
     MAX_MOTOS_DIRECTIVO_EXCLUSIVO = 1
     MAX_BICICLETAS_DIRECTIVO_EXCLUSIVO = 1
 
@@ -176,14 +177,13 @@ class ValidadorVehiculos:
         """
         Valida las combinaciones permitidas de vehículos
 
-        Combinaciones válidas (funcionarios regulares):
-        - 1 carro + 1 moto
-        - 1 carro + 1 bicicleta
-        - 1 moto + 1 bicicleta
-        - 2 carros (con placas par/impar diferentes)
+        Combinaciones válidas (funcionarios regulares - MÁXIMO 3 VEHÍCULOS):
+        1. 1 Carro + 1 Moto + 1 Bicicleta
+        2. 2 Carros + 1 Bicicleta (carros con placas PAR/IMPAR diferentes)
+        3. 2 Carros + 1 Moto (carros con placas PAR/IMPAR diferentes)
 
         Combinaciones válidas (directivos con parqueadero exclusivo):
-        - Hasta 4 carros sin restricción PAR/IMPAR
+        - Hasta 4 carros sin restricción PAR/IMPAR + 1 moto + 1 bicicleta (6 total)
 
         Args:
             vehiculos_actuales (List[Dict]): Vehículos actuales del funcionario
@@ -262,43 +262,93 @@ class ValidadorVehiculos:
                     )
                 return True, ""
 
-        # Validaciones para funcionarios regulares
-        if nuevo_tipo == TipoVehiculo.CARRO.value:
-            if conteo[TipoVehiculo.CARRO.value] >= 1:
-                # Ya tiene un carro, validar que sea diferente tipo de placa
-                # Esta validación se hace en validar_pico_y_placa_carros
-                return True, ""
-            elif conteo[TipoVehiculo.MOTO.value] >= 1 or conteo[TipoVehiculo.BICICLETA.value] >= 1:
-                # Combinación válida: carro + moto/bicicleta
-                return True, ""
+        # ====================================================================================
+        # VALIDACIONES PARA FUNCIONARIOS REGULARES
+        # ====================================================================================
+        # Combinaciones válidas permitidas:
+        # 1. 1 Carro + 1 Moto + 1 Bicicleta
+        # 2. 2 Carros + 1 Bicicleta
+        # 3. 2 Carros + 1 Moto
+        # ====================================================================================
 
-        elif nuevo_tipo == TipoVehiculo.MOTO.value:
-            if conteo[TipoVehiculo.MOTO.value] >= 1:
-                return (
-                    False,
-                    "🏍️ No se puede registrar otra moto\n\n"
-                    "📋 Ya tiene una moto registrada.\n"
-                    "🔒 Límite: 1 moto por funcionario.\n\n"
-                    "💡 Puede registrar un carro o bicicleta como segundo vehículo.",
-                )
-            elif conteo[TipoVehiculo.CARRO.value] >= 1 or conteo[TipoVehiculo.BICICLETA.value] >= 1:
-                # Combinación válida: moto + carro/bicicleta
-                return True, ""
+        cant_carros = conteo[TipoVehiculo.CARRO.value]
+        cant_motos = conteo[TipoVehiculo.MOTO.value]
+        cant_bicis = conteo[TipoVehiculo.BICICLETA.value]
 
-        elif nuevo_tipo == TipoVehiculo.BICICLETA.value:
-            if conteo[TipoVehiculo.BICICLETA.value] >= 1:
-                return (
-                    False,
-                    "🚲 No se puede registrar otra bicicleta\n\n"
-                    "📋 Ya tiene una bicicleta registrada.\n"
-                    "🔒 Límite: 1 bicicleta por funcionario.\n\n"
-                    "💡 Puede registrar un carro o moto como segundo vehículo.",
-                )
-            elif conteo[TipoVehiculo.CARRO.value] >= 1 or conteo[TipoVehiculo.MOTO.value] >= 1:
-                # Combinación válida: bicicleta + carro/moto
-                return True, ""
+        # Validar límite de 2 carros para regulares
+        if nuevo_tipo == TipoVehiculo.CARRO.value and cant_carros >= self.MAX_CARROS_REGULAR:
+            return (
+                False,
+                f"🚗 Límite de carros alcanzado\n\n"
+                f"📊 Carros actuales: {cant_carros}\n"
+                f"🔒 Máximo permitido: {self.MAX_CARROS_REGULAR} carros para funcionarios regulares\n\n"
+                f"💡 Puede registrar moto o bicicleta si aún no tiene una."
+            )
 
-        return True, ""
+        # Validar que solo puede tener 1 moto
+        if nuevo_tipo == TipoVehiculo.MOTO.value and cant_motos >= 1:
+            return (
+                False,
+                "🏍️ No se puede registrar otra moto\n\n"
+                "📋 Ya tiene una moto registrada.\n"
+                "🔒 Límite: 1 moto por funcionario regular.\n\n"
+                "💡 Combinaciones válidas:\n"
+                "   • 1 Carro + 1 Moto + 1 Bicicleta\n"
+                "   • 2 Carros + 1 Moto (carros con placas PAR/IMPAR)"
+            )
+
+        # Validar que solo puede tener 1 bicicleta
+        if nuevo_tipo == TipoVehiculo.BICICLETA.value and cant_bicis >= 1:
+            return (
+                False,
+                "🚲 No se puede registrar otra bicicleta\n\n"
+                "📋 Ya tiene una bicicleta registrada.\n"
+                "🔒 Límite: 1 bicicleta por funcionario regular.\n\n"
+                "💡 Combinaciones válidas:\n"
+                "   • 1 Carro + 1 Moto + 1 Bicicleta\n"
+                "   • 2 Carros + 1 Bicicleta (carros con placas PAR/IMPAR)"
+            )
+
+        # Verificar que la combinación resultante sea válida
+        cant_carros_nuevo = cant_carros + (1 if nuevo_tipo == TipoVehiculo.CARRO.value else 0)
+        cant_motos_nuevo = cant_motos + (1 if nuevo_tipo == TipoVehiculo.MOTO.value else 0)
+        cant_bicis_nuevo = cant_bicis + (1 if nuevo_tipo == TipoVehiculo.BICICLETA.value else 0)
+
+        # Combinación 1: 1 Carro + 1 Moto + 1 Bicicleta
+        combinacion1 = (cant_carros_nuevo == 1 and cant_motos_nuevo == 1 and cant_bicis_nuevo == 1)
+
+        # Combinación 2: 2 Carros + 1 Bicicleta
+        combinacion2 = (cant_carros_nuevo == 2 and cant_bicis_nuevo == 1 and cant_motos_nuevo == 0)
+
+        # Combinación 3: 2 Carros + 1 Moto
+        combinacion3 = (cant_carros_nuevo == 2 and cant_motos_nuevo == 1 and cant_bicis_nuevo == 0)
+
+        # Combinaciones parciales válidas (1 o 2 vehículos)
+        combinacion_parcial_valida = (
+            # Solo 1 vehículo
+            (cant_carros_nuevo + cant_motos_nuevo + cant_bicis_nuevo == 1) or
+            # 2 vehículos: cualquier combinación de 2 elementos
+            (cant_carros_nuevo == 1 and cant_motos_nuevo == 1 and cant_bicis_nuevo == 0) or
+            (cant_carros_nuevo == 1 and cant_bicis_nuevo == 1 and cant_motos_nuevo == 0) or
+            (cant_carros_nuevo == 2 and cant_motos_nuevo == 0 and cant_bicis_nuevo == 0) or
+            (cant_motos_nuevo == 1 and cant_bicis_nuevo == 1 and cant_carros_nuevo == 0)
+        )
+
+        # Validar que la combinación sea válida
+        if combinacion1 or combinacion2 or combinacion3 or combinacion_parcial_valida:
+            return True, ""
+
+        # Si no es ninguna combinación válida, rechazar
+        return (
+            False,
+            f"🚫 Combinación de vehículos no permitida\n\n"
+            f"📊 Vehículos actuales: {cant_carros} Carro(s), {cant_motos} Moto(s), {cant_bicis} Bicicleta(s)\n"
+            f"➕ Intentando agregar: {nuevo_tipo}\n\n"
+            f"✅ Combinaciones válidas para funcionarios regulares:\n"
+            f"   1. 1 Carro + 1 Moto + 1 Bicicleta\n"
+            f"   2. 2 Carros + 1 Bicicleta (placas PAR/IMPAR)\n"
+            f"   3. 2 Carros + 1 Moto (placas PAR/IMPAR)"
+        )
 
     def validar_registro_vehiculo(
         self, vehiculos_actuales: List[Dict], nuevo_tipo: str, nueva_placa: str = "", funcionario_id: int = None

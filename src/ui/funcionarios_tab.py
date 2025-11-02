@@ -3,8 +3,8 @@
 Módulo de la pestaña Funcionarios del sistema de gestión de parqueadero
 """
 
-from PyQt5.QtCore import QRegExp, pyqtSignal
-from PyQt5.QtGui import QBrush, QColor, QRegExpValidator
+from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
+from PyQt5.QtGui import QBrush, QColor, QFont, QRegExpValidator
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -27,6 +27,7 @@ from PyQt5.QtWidgets import (
 from ..config.settings import CARGOS_DISPONIBLES, DIRECCIONES_DISPONIBLES
 from ..database.manager import DatabaseManager
 from ..models.funcionario import FuncionarioModel
+from ..utils.formatters import format_numero_parqueadero
 
 
 class FuncionariosTab(QWidget):
@@ -40,6 +41,13 @@ class FuncionariosTab(QWidget):
         super().__init__()
         self.db = db_manager
         self.funcionario_model = FuncionarioModel(self.db)
+
+        # Variables de paginación
+        self.filas_por_pagina = 5
+        self.pagina_actual = 1
+        self.total_funcionarios = 0
+        self.funcionarios_completos = []  # Lista completa de funcionarios
+
         self.setup_ui()
         self.cargar_funcionarios()
 
@@ -58,32 +66,46 @@ class FuncionariosTab(QWidget):
         form_layout = QGridLayout()
         form_layout.setSpacing(10)  # Espaciado uniforme
 
-        # Campos del formulario
+        # ===== FILA 0: Cédula, Nombre, Apellidos, Celular, No.Tarjeta Prox =====
         form_layout.addWidget(self.crear_label_obligatorio("Cédula:"), 0, 0)
         self.txt_cedula = QLineEdit()
-        # Validador para cédula: solo números, entre 7 y 10 dígitos
         cedula_validator = QRegExpValidator(QRegExp("^[0-9]{7,10}$"))
         self.txt_cedula.setValidator(cedula_validator)
-        self.txt_cedula.setPlaceholderText("Ingrese 7-10 dígitos numéricos")
+        self.txt_cedula.setPlaceholderText("Solo números")
         self.txt_cedula.setMaxLength(10)
         form_layout.addWidget(self.txt_cedula, 0, 1)
 
         form_layout.addWidget(self.crear_label_obligatorio("Nombre:"), 0, 2)
         self.txt_nombre = QLineEdit()
-        # Validador para nombre: solo letras, espacios y tildes
         nombre_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
         self.txt_nombre.setValidator(nombre_validator)
-        self.txt_nombre.setPlaceholderText("Solo letras y espacios")
+        self.txt_nombre.setPlaceholderText("Escriba su nombre")
         form_layout.addWidget(self.txt_nombre, 0, 3)
 
         form_layout.addWidget(self.crear_label_obligatorio("Apellidos:"), 0, 4)
         self.txt_apellidos = QLineEdit()
-        # Validador para apellidos: solo letras, espacios y tildes
         apellidos_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
         self.txt_apellidos.setValidator(apellidos_validator)
-        self.txt_apellidos.setPlaceholderText("Solo letras y espacios")
+        self.txt_apellidos.setPlaceholderText("Digite su apellido")
         form_layout.addWidget(self.txt_apellidos, 0, 5)
 
+        form_layout.addWidget(self.crear_label_obligatorio("Celular:"), 0, 6)
+        self.txt_celular = QLineEdit()
+        celular_validator = QRegExpValidator(QRegExp("^[0-9]{10}$"))
+        self.txt_celular.setValidator(celular_validator)
+        self.txt_celular.setPlaceholderText("10 dígitos numéricos (ej: 3001234567)")
+        self.txt_celular.setMaxLength(10)
+        form_layout.addWidget(self.txt_celular, 0, 7)
+
+        form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 0, 8)
+        self.txt_tarjeta = QLineEdit()
+        tarjeta_validator = QRegExpValidator(QRegExp("^[a-zA-Z0-9]{1,15}$"))
+        self.txt_tarjeta.setValidator(tarjeta_validator)
+        self.txt_tarjeta.setPlaceholderText("Alfanumérico, máx 15 caracteres")
+        self.txt_tarjeta.setMaxLength(15)
+        form_layout.addWidget(self.txt_tarjeta, 0, 9)
+
+        # ===== FILA 1: Dirección/Grupo, Cargo, Checkboxes =====
         form_layout.addWidget(self.crear_label_obligatorio("Dirección/Grupo:"), 1, 0)
         self.combo_direccion = QComboBox()
         self.combo_direccion.addItem("-- Seleccione --", "")
@@ -96,30 +118,11 @@ class FuncionariosTab(QWidget):
         self.combo_cargo.addItems(CARGOS_DISPONIBLES)
         form_layout.addWidget(self.combo_cargo, 1, 3)
 
-        form_layout.addWidget(self.crear_label_obligatorio("Celular:"), 1, 4)
-        self.txt_celular = QLineEdit()
-        # Validador para celular: exactamente 10 números
-        celular_validator = QRegExpValidator(QRegExp("^[0-9]{10}$"))
-        self.txt_celular.setValidator(celular_validator)
-        self.txt_celular.setPlaceholderText("10 dígitos numéricos (ej: 3001234567)")
-        self.txt_celular.setMaxLength(10)
-        form_layout.addWidget(self.txt_celular, 1, 5)
-
-        form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 2, 0)
-        self.txt_tarjeta = QLineEdit()
-        # Validador para tarjeta: números y letras, máximo 15 caracteres
-        tarjeta_validator = QRegExpValidator(QRegExp("^[a-zA-Z0-9]{1,15}$"))
-        self.txt_tarjeta.setValidator(tarjeta_validator)
-        self.txt_tarjeta.setPlaceholderText("Alfanumérico, máx 15 caracteres")
-        self.txt_tarjeta.setMaxLength(15)
-        form_layout.addWidget(self.txt_tarjeta, 2, 1)
-
-        # ===== NUEVOS CHECKBOXES - REGLAS DE NEGOCIO (Solo uno puede estar activo) =====
-        # Contenedor horizontal para los tres checkboxes
+        # ===== CHECKBOXES EN FILA 2 (columnas 2-5) =====
         checkboxes_layout = QHBoxLayout()
 
         # Checkbox: Pico y Placa Solidario
-        self.chk_pico_placa_solidario = QCheckBox("🔄 Pico y Placa Solidario")
+        self.chk_pico_placa_solidario = QCheckBox("Pico y Placa Solidario")
         self.chk_pico_placa_solidario.setToolTip(
             "Permite al funcionario usar el parqueadero en días que normalmente no le corresponderían.\n"
             "Ignora restricciones de PAR/IMPAR."
@@ -144,9 +147,9 @@ class FuncionariosTab(QWidget):
         self.chk_pico_placa_solidario.stateChanged.connect(self.on_pico_placa_changed_main)
 
         # Checkbox: Discapacidad
-        self.chk_discapacidad = QCheckBox("♿ Funcionario con Discapacidad")
+        self.chk_discapacidad = QCheckBox("Funcionario con Discapacidad")
         self.chk_discapacidad.setToolTip(
-            "Marca al funcionario con condición de discapacidad.\n" "Tiene prioridad para espacios especiales."
+            "Marca al funcionario con condición de discapacidad.\nTiene prioridad para espacios especiales."
         )
         self.chk_discapacidad.setStyleSheet(
             """
@@ -168,7 +171,7 @@ class FuncionariosTab(QWidget):
         self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed_main)
 
         # Checkbox: Exclusivo Directivo (hasta 4 carros)
-        self.chk_exclusivo_directivo = QCheckBox("🏢 Exclusivo Directivo (hasta 4 carros)")
+        self.chk_exclusivo_directivo = QCheckBox("Exclusivo Directivo (4 carros)")
         self.chk_exclusivo_directivo.setToolTip(
             "Solo para cargos: Director, Coordinador, Asesor.\n"
             "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero.\n"
@@ -194,7 +197,7 @@ class FuncionariosTab(QWidget):
         self.chk_exclusivo_directivo.stateChanged.connect(self.on_exclusivo_directivo_changed_main)
 
         # Checkbox: Carro Híbrido (incentivo ambiental)
-        self.chk_carro_hibrido = QCheckBox("🌿 Carro Híbrido (Incentivo Ambiental)")
+        self.chk_carro_hibrido = QCheckBox("Carro Híbrido (Incentivo Ambiental)")
         self.chk_carro_hibrido.setToolTip(
             "Marca esta casilla si el funcionario tiene carro híbrido.\n"
             "BENEFICIOS:\n"
@@ -226,13 +229,13 @@ class FuncionariosTab(QWidget):
         checkboxes_layout.addWidget(self.chk_discapacidad)
         checkboxes_layout.addWidget(self.chk_exclusivo_directivo)
         checkboxes_layout.addWidget(self.chk_carro_hibrido)
-        checkboxes_layout.addStretch()
 
-        # Agregar el layout horizontal completo al grid en una sola fila
-        form_layout.addLayout(checkboxes_layout, 3, 0, 1, 6)
+        # Agregar el layout horizontal en fila 1, columnas 4-9 (después de Cargo)
+        form_layout.addLayout(checkboxes_layout, 1, 4, 1, 6)
 
-        # ============= BOTONES (PRIMERA COLUMNA, DEBAJO DE CHECKBOXES) =============
+        # ===== FILA 2: BOTONES CENTRADOS =====
         btn_layout = QHBoxLayout()
+        btn_layout.addStretch()  # Espaciado izquierdo para centrar
 
         self.btn_guardar_funcionario = QPushButton("Guardar")
         self.btn_guardar_funcionario.clicked.connect(self.guardar_funcionario)
@@ -285,20 +288,103 @@ class FuncionariosTab(QWidget):
 
         btn_layout.addWidget(self.btn_guardar_funcionario)
         btn_layout.addWidget(self.btn_limpiar_funcionario)
-        btn_layout.addStretch()
+        btn_layout.addStretch()  # Espaciado derecho para centrar
 
-        # Botones en fila 4, columna 0, ocupando 2 columnas
-        form_layout.addLayout(btn_layout, 4, 0, 1, 2)
+        # Botones centrados en fila 2
+        form_layout.addLayout(btn_layout, 2, 0, 1, 10)
 
         form_group.setLayout(form_layout)
         layout.addWidget(form_group)
+
+        # Barra de búsqueda y filtros
+        search_group = QGroupBox("Buscar y Filtrar Funcionarios")
+        search_layout = QHBoxLayout()
+
+        # Filtro por Estado
+        estado_label = QLabel("Estado:")
+        estado_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+
+        self.combo_filtro_estado = QComboBox()
+        self.combo_filtro_estado.addItem("Todos", "todos")
+        self.combo_filtro_estado.addItem("Activos", "activos")
+        self.combo_filtro_estado.addItem("Inactivos", "inactivos")
+        self.combo_filtro_estado.setCurrentIndex(1)  # Por defecto: Activos
+        self.combo_filtro_estado.currentIndexChanged.connect(self.filtrar_funcionarios)
+        self.combo_filtro_estado.setStyleSheet("""
+            QComboBox {
+                padding: 8px;
+                border: 2px solid #27ae60;
+                border-radius: 5px;
+                font-size: 13px;
+                min-width: 120px;
+                background-color: white;
+            }
+            QComboBox:focus {
+                border: 2px solid #229954;
+                background-color: #e8f8f0;
+            }
+            QComboBox::drop-down {
+                border: none;
+                padding-right: 5px;
+            }
+        """)
+
+        search_label = QLabel("Buscar por Cédula:")
+        search_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+
+        self.txt_buscar_cedula = QLineEdit()
+        self.txt_buscar_cedula.setPlaceholderText("Ingrese la cédula para filtrar...")
+        self.txt_buscar_cedula.setMaxLength(10)
+        self.txt_buscar_cedula.textChanged.connect(self.filtrar_funcionarios)
+        self.txt_buscar_cedula.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                border: 2px solid #3498db;
+                border-radius: 5px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #2980b9;
+                background-color: #e8f4fd;
+            }
+        """)
+
+        self.btn_limpiar_busqueda = QPushButton("Limpiar")
+        self.btn_limpiar_busqueda.clicked.connect(self.limpiar_busqueda)
+        self.btn_limpiar_busqueda.setStyleSheet("""
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                font-weight: bold;
+                padding: 8px 15px;
+                border: none;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
+            }
+        """)
+
+        self.lbl_resultados = QLabel("")
+        self.lbl_resultados.setStyleSheet("font-size: 11px; color: #7f8c8d; font-style: italic;")
+
+        search_layout.addWidget(estado_label)
+        search_layout.addWidget(self.combo_filtro_estado)
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.txt_buscar_cedula)
+        search_layout.addWidget(self.btn_limpiar_busqueda)
+        search_layout.addWidget(self.lbl_resultados)
+        search_layout.addStretch()
+
+        search_group.setLayout(search_layout)
+        layout.addWidget(search_group)
 
         # Tabla de funcionarios con configuración fija y mejorada
         tabla_group = QGroupBox("Lista de Funcionarios")
         tabla_layout = QVBoxLayout()
 
         self.tabla_funcionarios = QTableWidget()
-        self.tabla_funcionarios.setColumnCount(12)
+        self.tabla_funcionarios.setColumnCount(13)
         self.tabla_funcionarios.setHorizontalHeaderLabels(
             [
                 "Cédula",
@@ -312,6 +398,7 @@ class FuncionariosTab(QWidget):
                 "Compartir",
                 "Solidario",
                 "Discap.",
+                "Estado",
                 "Acciones",
             ]
         )
@@ -334,10 +421,21 @@ class FuncionariosTab(QWidget):
         self.tabla_funcionarios.setColumnWidth(8, 80)  # Compartir
         self.tabla_funcionarios.setColumnWidth(9, 80)  # Solidario
         self.tabla_funcionarios.setColumnWidth(10, 70)  # Discapacidad
-        self.tabla_funcionarios.setColumnWidth(11, 240)  # Acciones
+        self.tabla_funcionarios.setColumnWidth(11, 90)  # Estado
+        self.tabla_funcionarios.setColumnWidth(12, 110)  # Acciones (reducido de 240 a 110)
 
-        # Configurar altura de filas fija
-        self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(60)
+        # Configurar altura de filas reducida para evitar superposición con botones de paginación
+        altura_fila_reducida = 50  # Reducido de 60px a 50px para mejor ajuste
+        self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(altura_fila_reducida)
+
+        # Establecer altura mínima y máxima para mostrar exactamente 5 filas sin scroll
+        # Cálculo: altura_encabezado (45px) + (5 filas × 50px) + margen (20px) = 315px
+        altura_encabezado = 45
+        num_filas_visibles = 5
+        margen_seguridad = 20
+        altura_total = altura_encabezado + (num_filas_visibles * altura_fila_reducida) + margen_seguridad
+        self.tabla_funcionarios.setMinimumHeight(altura_total)
+        self.tabla_funcionarios.setMaximumHeight(altura_total)
 
         # Estilo de encabezados
         self.tabla_funcionarios.horizontalHeader().setStyleSheet(
@@ -377,6 +475,104 @@ class FuncionariosTab(QWidget):
         )
 
         tabla_layout.addWidget(self.tabla_funcionarios)
+
+        # Controles de paginación
+        paginacion_layout = QHBoxLayout()
+
+        self.btn_primera_pagina = QPushButton("<<")
+        self.btn_primera_pagina.setToolTip("Primera página")
+        self.btn_primera_pagina.setFixedSize(40, 30)
+        self.btn_primera_pagina.clicked.connect(self.ir_a_primera_pagina)
+        self.btn_primera_pagina.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+            }
+        """)
+
+        self.btn_anterior = QPushButton("<")
+        self.btn_anterior.setToolTip("Página anterior")
+        self.btn_anterior.setFixedSize(40, 30)
+        self.btn_anterior.clicked.connect(self.pagina_anterior)
+        self.btn_anterior.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+            }
+        """)
+
+        self.lbl_pagina = QLabel("Página 1 de 1")
+        self.lbl_pagina.setAlignment(Qt.AlignCenter)
+        self.lbl_pagina.setStyleSheet("font-weight: bold; font-size: 12px; padding: 0 10px;")
+
+        self.btn_siguiente = QPushButton(">")
+        self.btn_siguiente.setToolTip("Página siguiente")
+        self.btn_siguiente.setFixedSize(40, 30)
+        self.btn_siguiente.clicked.connect(self.pagina_siguiente)
+        self.btn_siguiente.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+            }
+        """)
+
+        self.btn_ultima_pagina = QPushButton(">>")
+        self.btn_ultima_pagina.setToolTip("Última página")
+        self.btn_ultima_pagina.setFixedSize(40, 30)
+        self.btn_ultima_pagina.clicked.connect(self.ir_a_ultima_pagina)
+        self.btn_ultima_pagina.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+            }
+        """)
+
+        self.lbl_total_registros = QLabel("Total: 0 funcionarios")
+        self.lbl_total_registros.setStyleSheet("font-size: 11px; color: #7f8c8d; font-style: italic;")
+
+        paginacion_layout.addStretch()
+        paginacion_layout.addWidget(self.btn_primera_pagina)
+        paginacion_layout.addWidget(self.btn_anterior)
+        paginacion_layout.addWidget(self.lbl_pagina)
+        paginacion_layout.addWidget(self.btn_siguiente)
+        paginacion_layout.addWidget(self.btn_ultima_pagina)
+        paginacion_layout.addSpacing(20)
+        paginacion_layout.addWidget(self.lbl_total_registros)
+        paginacion_layout.addStretch()
+
+        tabla_layout.addLayout(paginacion_layout)
         tabla_group.setLayout(tabla_layout)
         layout.addWidget(tabla_group)
 
@@ -641,24 +837,74 @@ class FuncionariosTab(QWidget):
         self.chk_carro_hibrido.setChecked(False)
 
     def cargar_funcionarios(self):
-        """Carga la lista de funcionarios en la tabla"""
-        funcionarios = self.funcionario_model.obtener_todos()
+        """Carga la lista de funcionarios en la tabla con paginación, respetando el filtro de estado"""
+        # Obtener todos los funcionarios
+        todos_funcionarios = self.funcionario_model.obtener_todos_incluyendo_inactivos()
 
-        self.tabla_funcionarios.setRowCount(len(funcionarios))
+        # Aplicar filtro de estado
+        filtro_estado = self.combo_filtro_estado.currentData()
+        if filtro_estado == "activos":
+            self.funcionarios_completos = [func for func in todos_funcionarios if func.get("activo", True)]
+        elif filtro_estado == "inactivos":
+            self.funcionarios_completos = [func for func in todos_funcionarios if not func.get("activo", True)]
+        else:  # "todos"
+            self.funcionarios_completos = todos_funcionarios
 
-        for i, func in enumerate(funcionarios):
+        self.total_funcionarios = len(self.funcionarios_completos)
+
+        # Calcular paginación
+        total_paginas = (self.total_funcionarios + self.filas_por_pagina - 1) // self.filas_por_pagina
+        if total_paginas == 0:
+            total_paginas = 1
+
+        # Ajustar página actual si excede el total
+        if self.pagina_actual > total_paginas:
+            self.pagina_actual = total_paginas
+
+        # Calcular índices de inicio y fin para la página actual
+        inicio = (self.pagina_actual - 1) * self.filas_por_pagina
+        fin = min(inicio + self.filas_por_pagina, self.total_funcionarios)
+
+        # Obtener funcionarios para la página actual
+        funcionarios_pagina = self.funcionarios_completos[inicio:fin]
+
+        # Configurar tabla para mostrar solo las filas de esta página
+        self.tabla_funcionarios.setRowCount(len(funcionarios_pagina))
+
+        for i, func in enumerate(funcionarios_pagina):
             # Ajustar índices ya que eliminamos la columna ID oculta
-            self.tabla_funcionarios.setItem(i, 0, QTableWidgetItem(func.get("cedula", "")))
-            self.tabla_funcionarios.setItem(i, 1, QTableWidgetItem(func.get("nombre", "")))
-            self.tabla_funcionarios.setItem(i, 2, QTableWidgetItem(func.get("apellidos", "")))
-            self.tabla_funcionarios.setItem(i, 3, QTableWidgetItem(func.get("direccion_grupo", "")))
-            self.tabla_funcionarios.setItem(i, 4, QTableWidgetItem(func.get("cargo", "")))
-            self.tabla_funcionarios.setItem(i, 5, QTableWidgetItem(func.get("celular", "")))
-            self.tabla_funcionarios.setItem(i, 6, QTableWidgetItem(func.get("no_tarjeta_proximidad", "") or ""))
+            cedula_item = QTableWidgetItem(func.get("cedula", ""))
+            cedula_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 0, cedula_item)
+
+            nombre_item = QTableWidgetItem(func.get("nombre", ""))
+            nombre_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 1, nombre_item)
+
+            apellidos_item = QTableWidgetItem(func.get("apellidos", ""))
+            apellidos_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 2, apellidos_item)
+
+            direccion_item = QTableWidgetItem(func.get("direccion_grupo", ""))
+            direccion_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 3, direccion_item)
+
+            cargo_item = QTableWidgetItem(func.get("cargo", ""))
+            cargo_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 4, cargo_item)
+
+            celular_item = QTableWidgetItem(func.get("celular", ""))
+            celular_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 5, celular_item)
+
+            tarjeta_item = QTableWidgetItem(func.get("no_tarjeta_proximidad", "") or "")
+            tarjeta_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 6, tarjeta_item)
 
             # Formatear número de vehículos con mejor presentación
             total_vehiculos = func.get("total_vehiculos", 0)
             vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/2")
+            vehiculos_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
             self.tabla_funcionarios.setItem(i, 7, vehiculos_item)
 
             # ===== NUEVAS COLUMNAS: Indicadores visuales =====
@@ -704,96 +950,192 @@ class FuncionariosTab(QWidget):
                 discap_item.setForeground(QBrush(QColor("#155724")))
             self.tabla_funcionarios.setItem(i, 10, discap_item)
 
-            # Botones de acciones (Editar, Ver, Eliminar)
+            # Columna 11: Estado (Activo/Inactivo)
+            activo = func.get("activo", True)
+            estado_text = "Activo" if activo else "Inactivo"
+            estado_item = QTableWidgetItem(estado_text)
+            estado_item.setTextAlignment(0x0004 | 0x0080)  # Centro
+
+            if activo:
+                # Verde para activo
+                estado_item.setBackground(QBrush(QColor("#d4edda")))
+                estado_item.setForeground(QBrush(QColor("#155724")))
+                estado_item.setFont(QFont("Arial", 9, QFont.Bold))
+            else:
+                # Rojo para inactivo
+                estado_item.setBackground(QBrush(QColor("#f8d7da")))
+                estado_item.setForeground(QBrush(QColor("#721c24")))
+                estado_item.setFont(QFont("Arial", 9, QFont.Bold))
+
+            self.tabla_funcionarios.setItem(i, 11, estado_item)
+
+            # Botones de acciones (Editar, Ver, Eliminar/Reactivar)
             btn_layout = QHBoxLayout()
             btn_widget = QWidget()
-            btn_layout.setSpacing(3)
-            btn_layout.setContentsMargins(2, 2, 2, 2)
+            btn_widget.funcionario_id = func.get("id")  # Almacenar ID para búsquedas rápidas
+            btn_layout.setSpacing(1)
+            btn_layout.setContentsMargins(3, 5, 3, 5)
 
-            # Botón Editar (solo ícono sin fondo)
-            btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(28, 28)
+            # Botón Editar - Con fondo azul claro para que sea visible
+            btn_editar = QPushButton("✏")
+            btn_editar.setFixedSize(30, 30)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: transparent;
+                    background-color: #3498db;
                     border: none;
-                    font-size: 18px;
+                    border-radius: 4px;
+                    font-size: 14px;
                     padding: 0px;
-                    color: #3498db;
+                    color: white;
                 }
                 QPushButton:hover {
-                    background-color: rgba(52, 152, 219, 0.15);
-                    border-radius: 3px;
-                    color: #2980b9;
+                    background-color: #2980b9;
                 }
                 QPushButton:pressed {
-                    background-color: rgba(52, 152, 219, 0.3);
-                    border-radius: 3px;
-                    color: #21618c;
+                    background-color: #21618c;
                 }
             """
             )
             btn_editar.clicked.connect(lambda _, fid=func.get("id"): self.editar_funcionario(fid))
 
-            # Botón Ver (solo ícono sin fondo)
-            btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(28, 28)
+            # Botón Ver
+            btn_ver = QPushButton("👁")
+            btn_ver.setFixedSize(30, 30)
             btn_ver.setToolTip("Ver detalles del funcionario")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: transparent;
+                    background-color: #95a5a6;
                     border: none;
-                    font-size: 16px;
+                    border-radius: 4px;
+                    font-size: 14px;
                     padding: 0px;
+                    color: white;
                 }
                 QPushButton:hover {
-                    background-color: rgba(39, 174, 96, 0.1);
-                    border-radius: 3px;
+                    background-color: #7f8c8d;
                 }
                 QPushButton:pressed {
-                    background-color: rgba(39, 174, 96, 0.2);
-                    border-radius: 3px;
+                    background-color: #5d6d7e;
                 }
             """
             )
             btn_ver.clicked.connect(lambda _, fid=func.get("id"): self.ver_funcionario(fid))
 
-            # Botón Eliminar (solo ícono sin fondo)
-            btn_eliminar = QPushButton("🗑️")
-            btn_eliminar.setFixedSize(28, 28)
-            btn_eliminar.setToolTip("Eliminar funcionario")
-            btn_eliminar.setStyleSheet(
+            # Botón Eliminar o Reactivar según el estado
+            if activo:
+                # Si está activo, mostrar botón Eliminar
+                btn_eliminar = QPushButton("🗑")
+                btn_eliminar.setFixedSize(30, 30)
+                btn_eliminar.setToolTip("Desactivar funcionario")
+                btn_eliminar.setStyleSheet(
+                    """
+                    QPushButton {
+                        background-color: #e74c3c;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        padding: 0px;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #c0392b;
+                    }
+                    QPushButton:pressed {
+                        background-color: #a93226;
+                    }
                 """
-                QPushButton {
-                    background-color: transparent;
-                    border: none;
-                    font-size: 16px;
-                    padding: 0px;
-                }
-                QPushButton:hover {
-                    background-color: rgba(231, 76, 60, 0.1);
-                    border-radius: 3px;
-                }
-                QPushButton:pressed {
-                    background-color: rgba(231, 76, 60, 0.2);
-                    border-radius: 3px;
-                }
-            """
-            )
-            btn_eliminar.clicked.connect(lambda _, fid=func.get("id"): self.eliminar_funcionario(fid))
+                )
+                btn_eliminar.clicked.connect(lambda _, fid=func.get("id"): self.eliminar_funcionario(fid))
 
-            btn_layout.addWidget(btn_editar)
-            btn_layout.addSpacing(2)
-            btn_layout.addWidget(btn_ver)
-            btn_layout.addSpacing(2)
-            btn_layout.addWidget(btn_eliminar)
-            btn_layout.addStretch()
+                btn_layout.addWidget(btn_editar)
+                btn_layout.addWidget(btn_ver)
+                btn_layout.addWidget(btn_eliminar)
+            else:
+                # Si está inactivo, mostrar botón Reactivar
+                btn_reactivar = QPushButton("🔄")
+                btn_reactivar.setFixedSize(30, 30)
+                btn_reactivar.setToolTip("Reactivar funcionario")
+                btn_reactivar.setStyleSheet(
+                    """
+                    QPushButton {
+                        background-color: #27ae60;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        padding: 0px;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #229954;
+                    }
+                    QPushButton:pressed {
+                        background-color: #1e8449;
+                    }
+                """
+                )
+                btn_reactivar.clicked.connect(lambda _, fid=func.get("id"): self.reactivar_funcionario(fid))
+
+                # Solo mostrar botón de Ver y Reactivar para inactivos
+                btn_layout.addWidget(btn_ver)
+                btn_layout.addWidget(btn_reactivar)
+
             btn_widget.setLayout(btn_layout)
+            self.tabla_funcionarios.setCellWidget(i, 12, btn_widget)
 
-            self.tabla_funcionarios.setCellWidget(i, 11, btn_widget)
+        # Actualizar controles de paginación
+        self.actualizar_controles_paginacion()
+
+    def actualizar_controles_paginacion(self):
+        """Actualiza los labels y botones de paginación"""
+        total_paginas = (self.total_funcionarios + self.filas_por_pagina - 1) // self.filas_por_pagina
+        if total_paginas == 0:
+            total_paginas = 1
+
+        # Actualizar label de página
+        self.lbl_pagina.setText(f"Página {self.pagina_actual} de {total_paginas}")
+
+        # Actualizar label de total registros
+        if self.total_funcionarios == 0:
+            self.lbl_total_registros.setText("Total: 0 funcionarios")
+        elif self.total_funcionarios == 1:
+            self.lbl_total_registros.setText("Total: 1 funcionario")
+        else:
+            self.lbl_total_registros.setText(f"Total: {self.total_funcionarios} funcionarios")
+
+        # Habilitar/deshabilitar botones según la página actual
+        self.btn_primera_pagina.setEnabled(self.pagina_actual > 1)
+        self.btn_anterior.setEnabled(self.pagina_actual > 1)
+        self.btn_siguiente.setEnabled(self.pagina_actual < total_paginas)
+        self.btn_ultima_pagina.setEnabled(self.pagina_actual < total_paginas)
+
+    def ir_a_primera_pagina(self):
+        """Navega a la primera página"""
+        self.pagina_actual = 1
+        self.cargar_funcionarios()
+
+    def ir_a_ultima_pagina(self):
+        """Navega a la última página"""
+        total_paginas = (self.total_funcionarios + self.filas_por_pagina - 1) // self.filas_por_pagina
+        if total_paginas == 0:
+            total_paginas = 1
+        self.pagina_actual = total_paginas
+        self.cargar_funcionarios()
+
+    def pagina_anterior(self):
+        """Navega a la página anterior"""
+        if self.pagina_actual > 1:
+            self.pagina_actual -= 1
+            self.cargar_funcionarios()
+
+    def pagina_siguiente(self):
+        """Navega a la página siguiente"""
+        total_paginas = (self.total_funcionarios + self.filas_por_pagina - 1) // self.filas_por_pagina
+        if self.pagina_actual < total_paginas:
+            self.pagina_actual += 1
+            self.cargar_funcionarios()
 
     def editar_funcionario(self, funcionario_id: int):
         """Abre el modal para editar un funcionario"""
@@ -839,7 +1181,7 @@ class FuncionariosTab(QWidget):
             mensaje += "Se eliminarán los siguientes vehículos:\n"
             for vehiculo in vehiculos:
                 estado_asignacion = (
-                    f" (Parqueadero P-{vehiculo['numero_parqueadero']:03d})"
+                    f" (Parqueadero {format_numero_parqueadero(vehiculo['numero_parqueadero'])})"
                     if vehiculo["tiene_asignacion"]
                     else " (Sin asignar)"
                 )
@@ -849,7 +1191,7 @@ class FuncionariosTab(QWidget):
         if parqueaderos:
             mensaje += f"Se liberarán {len(parqueaderos)} parqueadero(s):\n"
             for parq in parqueaderos:
-                mensaje += f"• P-{parq['numero_parqueadero']:03d} (actualmente {parq['estado'].replace('_', ' ')})\n"
+                mensaje += f"• {format_numero_parqueadero(parq['numero_parqueadero'])} (actualmente {parq['estado'].replace('_', ' ')})\n"
             mensaje += "\n"
 
         mensaje += "Esta acción no se puede deshacer."
@@ -871,7 +1213,8 @@ class FuncionariosTab(QWidget):
                     "Éxito",
                     "Funcionario y todos sus datos asociados eliminados correctamente.\n\nLos parqueaderos han quedado disponibles.",
                 )
-                self.cargar_funcionarios()
+                # Actualización optimizada: remover fila de la tabla sin recargar todo
+                self._actualizar_fila_eliminada(funcionario_id)
                 # Emitir señal específica para eliminación en cascada
                 self.funcionario_eliminado.emit()
                 # También emitir la señal general para mantener compatibilidad
@@ -879,9 +1222,372 @@ class FuncionariosTab(QWidget):
             else:
                 QMessageBox.critical(self, "Error", f"No se pudo eliminar el funcionario.\n\nError: {error_msg}")
 
+    def reactivar_funcionario(self, funcionario_id: int):
+        """Reactiva un funcionario previamente desactivado"""
+        # Obtener datos del funcionario directamente de la base de datos (garantiza datos correctos)
+        query = "SELECT nombre, apellidos FROM funcionarios WHERE id = %s AND activo = FALSE"
+        funcionario_data = self.db.fetch_one(query, (funcionario_id,))
+
+        if not funcionario_data:
+            QMessageBox.warning(self, "Advertencia", "Funcionario no encontrado o ya está activo")
+            return
+
+        # Confirmar reactivación
+        nombre_completo = f"{funcionario_data['nombre']} {funcionario_data['apellidos']}"
+        respuesta = QMessageBox.question(
+            self,
+            "Confirmar Reactivación",
+            f"¿Está seguro de que desea reactivar al funcionario '{nombre_completo}'?\n\n"
+            f"Esto hará que:\n"
+            f"• El funcionario vuelva a aparecer en los listados\n"
+            f"• Sus vehículos estén disponibles para asignación\n"
+            f"• Pueda recibir nuevas asignaciones de parqueaderos",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if respuesta == QMessageBox.Yes:
+            exito, mensaje = self.funcionario_model.reactivar(funcionario_id)
+            if exito:
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    mensaje
+                )
+                # Actualización optimizada: remover fila de la tabla sin recargar todo
+                self._actualizar_fila_reactivada(funcionario_id)
+                # Emitir ambas señales para actualizar todas las pestañas
+                self.funcionario_creado.emit()  # Actualiza combos y dashboard
+                self.funcionario_eliminado.emit()  # Actualiza tabla de vehículos, asignaciones y parqueaderos
+            else:
+                QMessageBox.critical(self, "Error", mensaje)
+
+    def _actualizar_fila_eliminada(self, funcionario_id: int):
+        """Actualiza la tabla de manera optimizada cuando se elimina un funcionario"""
+        filtro_estado = self.combo_filtro_estado.currentData()
+
+        # Si estamos viendo "Activos" o "Todos", simplemente remover la fila de la tabla visual
+        if filtro_estado in ["activos", "todos"]:
+            # Buscar la fila en la tabla actual
+            for row in range(self.tabla_funcionarios.rowCount()):
+                # El ID del funcionario está almacenado en la columna 0 (cédula) como data
+                cedula_item = self.tabla_funcionarios.item(row, 0)
+                if cedula_item:
+                    # Buscar el funcionario en la lista completa por cédula
+                    cedula = cedula_item.text()
+                    for idx, func in enumerate(self.funcionarios_completos):
+                        if func.get("cedula") == cedula and func.get("id") == funcionario_id:
+                            # Actualizar el estado en memoria
+                            self.funcionarios_completos[idx]["activo"] = False
+                            # Remover la fila de la tabla visual
+                            self.tabla_funcionarios.removeRow(row)
+                            return
+
+        # Si estamos viendo "Inactivos", necesitamos recargar para mostrar el nuevo inactivo
+        if filtro_estado == "inactivos":
+            self.cargar_funcionarios()
+
+    def _actualizar_fila_reactivada(self, funcionario_id: int):
+        """Actualiza la tabla de manera optimizada cuando se reactiva un funcionario"""
+        filtro_estado = self.combo_filtro_estado.currentData()
+
+        # Si estamos viendo "Inactivos", remover la fila inmediatamente
+        if filtro_estado == "inactivos":
+            # Buscar y remover la fila que contiene este funcionario
+            for row in range(self.tabla_funcionarios.rowCount()):
+                # Buscar el widget de acciones que tiene el funcionario_id almacenado
+                widget_acciones = self.tabla_funcionarios.cellWidget(row, 12)  # Columna 12 es Acciones
+                if widget_acciones and hasattr(widget_acciones, 'funcionario_id'):
+                    if widget_acciones.funcionario_id == funcionario_id:
+                        # Encontramos la fila correcta, removerla inmediatamente
+                        self.tabla_funcionarios.removeRow(row)
+                        # Actualizar contador de funcionarios
+                        self.total_funcionarios = max(0, self.total_funcionarios - 1)
+                        # Actualizar label de paginación
+                        total_paginas = (self.total_funcionarios + self.filas_por_pagina - 1) // self.filas_por_pagina if self.total_funcionarios > 0 else 1
+                        self.lbl_pagina.setText(f"Página {self.pagina_actual} de {total_paginas}")
+                        # Actualizar label de total registros
+                        self.lbl_total_registros.setText(f"Total: {self.total_funcionarios} funcionarios")
+                        return
+
+        # Si estamos viendo "Activos" o "Todos", recargar para mostrar el reactivado
+        else:
+            self.cargar_funcionarios()
+
     def actualizar_funcionarios(self):
         """Actualiza la lista de funcionarios"""
         self.cargar_funcionarios()
+
+    def filtrar_funcionarios(self):
+        """Filtra los funcionarios según la cédula ingresada y el estado (activo/inactivo)"""
+        texto_busqueda = self.txt_buscar_cedula.text().strip()
+        filtro_estado = self.combo_filtro_estado.currentData()
+
+        # Obtener todos los funcionarios de nuevo (necesario para aplicar filtros)
+        todos_funcionarios = self.funcionario_model.obtener_todos_incluyendo_inactivos()
+
+        # Aplicar filtro de estado primero
+        if filtro_estado == "activos":
+            funcionarios_filtrados = [func for func in todos_funcionarios if func.get("activo", True)]
+        elif filtro_estado == "inactivos":
+            funcionarios_filtrados = [func for func in todos_funcionarios if not func.get("activo", True)]
+        else:  # "todos"
+            funcionarios_filtrados = todos_funcionarios
+
+        # Aplicar filtro de cédula si hay texto de búsqueda
+        if texto_busqueda:
+            funcionarios_filtrados = [
+                func for func in funcionarios_filtrados
+                if texto_busqueda in func.get("cedula", "")
+            ]
+
+        # Guardar temporalmente la lista completa
+        lista_original = self.funcionarios_completos
+        self.funcionarios_completos = funcionarios_filtrados
+        self.total_funcionarios = len(funcionarios_filtrados)
+
+        # Resetear a la primera página
+        self.pagina_actual = 1
+
+        # Calcular paginación
+        total_paginas = (self.total_funcionarios + self.filas_por_pagina - 1) // self.filas_por_pagina
+        if total_paginas == 0:
+            total_paginas = 1
+
+        # Calcular índices de inicio y fin para la página actual
+        inicio = (self.pagina_actual - 1) * self.filas_por_pagina
+        fin = min(inicio + self.filas_por_pagina, self.total_funcionarios)
+
+        # Obtener funcionarios para la página actual
+        funcionarios_pagina = self.funcionarios_completos[inicio:fin]
+
+        # Configurar tabla para mostrar solo las filas de esta página
+        self.tabla_funcionarios.setRowCount(len(funcionarios_pagina))
+
+        for i, func in enumerate(funcionarios_pagina):
+            # Ajustar índices ya que eliminamos la columna ID oculta
+            cedula_item = QTableWidgetItem(func.get("cedula", ""))
+            cedula_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 0, cedula_item)
+
+            nombre_item = QTableWidgetItem(func.get("nombre", ""))
+            nombre_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 1, nombre_item)
+
+            apellidos_item = QTableWidgetItem(func.get("apellidos", ""))
+            apellidos_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 2, apellidos_item)
+
+            direccion_item = QTableWidgetItem(func.get("direccion_grupo", ""))
+            direccion_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 3, direccion_item)
+
+            cargo_item = QTableWidgetItem(func.get("cargo", ""))
+            cargo_item.setTextAlignment(0x0001 | 0x0080)  # Izquierda horizontal, centro vertical
+            self.tabla_funcionarios.setItem(i, 4, cargo_item)
+
+            celular_item = QTableWidgetItem(func.get("celular", ""))
+            celular_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 5, celular_item)
+
+            tarjeta_item = QTableWidgetItem(func.get("no_tarjeta_proximidad", "") or "")
+            tarjeta_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 6, tarjeta_item)
+
+            # Formatear número de vehículos con mejor presentación
+            total_vehiculos = func.get("total_vehiculos", 0)
+            vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/2")
+            vehiculos_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
+            self.tabla_funcionarios.setItem(i, 7, vehiculos_item)
+
+            # ===== NUEVAS COLUMNAS: Indicadores visuales =====
+            permite_compartir = func.get("permite_compartir", True)
+            tiene_pico_placa = func.get("pico_placa_solidario", False)
+            tiene_discapacidad = func.get("discapacidad", False)
+
+            no_comparte = (not permite_compartir) or tiene_pico_placa or tiene_discapacidad
+
+            compartir_item = QTableWidgetItem("🚫 NO" if no_comparte else "✅ Sí")
+            compartir_item.setTextAlignment(0x0004 | 0x0080)
+            if no_comparte:
+                compartir_item.setBackground(QBrush(QColor("#fadbd8")))
+                compartir_item.setForeground(QBrush(QColor("#c0392b")))
+            else:
+                compartir_item.setBackground(QBrush(QColor("#d4edda")))
+                compartir_item.setForeground(QBrush(QColor("#155724")))
+            self.tabla_funcionarios.setItem(i, 8, compartir_item)
+
+            solidario_item = QTableWidgetItem("🔄 Sí" if tiene_pico_placa else "❌")
+            solidario_item.setTextAlignment(0x0004 | 0x0080)
+            if tiene_pico_placa:
+                solidario_item.setBackground(QBrush(QColor("#d1ecf1")))
+                solidario_item.setForeground(QBrush(QColor("#0c5460")))
+            self.tabla_funcionarios.setItem(i, 9, solidario_item)
+
+            discap_item = QTableWidgetItem("♿ Sí" if tiene_discapacidad else "❌")
+            discap_item.setTextAlignment(0x0004 | 0x0080)
+            if tiene_discapacidad:
+                discap_item.setBackground(QBrush(QColor("#d4edda")))
+                discap_item.setForeground(QBrush(QColor("#155724")))
+            self.tabla_funcionarios.setItem(i, 10, discap_item)
+
+            # Columna 11: Estado (Activo/Inactivo)
+            activo = func.get("activo", True)
+            estado_text = "Activo" if activo else "Inactivo"
+            estado_item = QTableWidgetItem(estado_text)
+            estado_item.setTextAlignment(0x0004 | 0x0080)
+
+            if activo:
+                estado_item.setBackground(QBrush(QColor("#d4edda")))
+                estado_item.setForeground(QBrush(QColor("#155724")))
+                estado_item.setFont(QFont("Arial", 9, QFont.Bold))
+            else:
+                estado_item.setBackground(QBrush(QColor("#f8d7da")))
+                estado_item.setForeground(QBrush(QColor("#721c24")))
+                estado_item.setFont(QFont("Arial", 9, QFont.Bold))
+
+            self.tabla_funcionarios.setItem(i, 11, estado_item)
+
+            # Botones de acciones (Editar, Ver, Eliminar/Reactivar)
+            btn_layout = QHBoxLayout()
+            btn_widget = QWidget()
+            btn_widget.funcionario_id = func.get("id")  # Almacenar ID para búsquedas rápidas
+            btn_layout.setSpacing(1)
+            btn_layout.setContentsMargins(3, 5, 3, 5)
+
+            # Botón Editar - Con fondo azul claro para que sea visible
+            btn_editar = QPushButton("✏")
+            btn_editar.setFixedSize(30, 30)
+            btn_editar.setToolTip("Editar funcionario")
+            btn_editar.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: #3498db;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    padding: 0px;
+                    color: white;
+                }
+                QPushButton:hover {
+                    background-color: #2980b9;
+                }
+                QPushButton:pressed {
+                    background-color: #21618c;
+                }
+            """
+            )
+            btn_editar.clicked.connect(lambda _, fid=func.get("id"): self.editar_funcionario(fid))
+
+            # Botón Ver
+            btn_ver = QPushButton("👁")
+            btn_ver.setFixedSize(30, 30)
+            btn_ver.setToolTip("Ver detalles del funcionario")
+            btn_ver.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: #95a5a6;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    padding: 0px;
+                    color: white;
+                }
+                QPushButton:hover {
+                    background-color: #7f8c8d;
+                }
+                QPushButton:pressed {
+                    background-color: #5d6d7e;
+                }
+            """
+            )
+            btn_ver.clicked.connect(lambda _, fid=func.get("id"): self.ver_funcionario(fid))
+
+            # Botón Eliminar o Reactivar según el estado
+            if activo:
+                # Si está activo, mostrar botón Eliminar
+                btn_eliminar = QPushButton("🗑")
+                btn_eliminar.setFixedSize(30, 30)
+                btn_eliminar.setToolTip("Desactivar funcionario")
+                btn_eliminar.setStyleSheet(
+                    """
+                    QPushButton {
+                        background-color: #e74c3c;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        padding: 0px;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #c0392b;
+                    }
+                    QPushButton:pressed {
+                        background-color: #a93226;
+                    }
+                """
+                )
+                btn_eliminar.clicked.connect(lambda _, fid=func.get("id"): self.eliminar_funcionario(fid))
+
+                btn_layout.addWidget(btn_editar)
+                btn_layout.addWidget(btn_ver)
+                btn_layout.addWidget(btn_eliminar)
+            else:
+                # Si está inactivo, mostrar botón Reactivar
+                btn_reactivar = QPushButton("🔄")
+                btn_reactivar.setFixedSize(30, 30)
+                btn_reactivar.setToolTip("Reactivar funcionario")
+                btn_reactivar.setStyleSheet(
+                    """
+                    QPushButton {
+                        background-color: #27ae60;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        padding: 0px;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #229954;
+                    }
+                    QPushButton:pressed {
+                        background-color: #1e8449;
+                    }
+                """
+                )
+                btn_reactivar.clicked.connect(lambda _, fid=func.get("id"): self.reactivar_funcionario(fid))
+
+                # Solo mostrar botón de Ver y Reactivar para inactivos
+                btn_layout.addWidget(btn_ver)
+                btn_layout.addWidget(btn_reactivar)
+
+            btn_widget.setLayout(btn_layout)
+            self.tabla_funcionarios.setCellWidget(i, 12, btn_widget)
+
+        # Restaurar lista original
+        self.funcionarios_completos = lista_original
+
+        # Actualizar controles de paginación
+        self.actualizar_controles_paginacion()
+
+        # Actualizar label de resultados
+        total_resultados = len(funcionarios_filtrados)
+        if total_resultados == 0:
+            self.lbl_resultados.setText("No se encontraron resultados")
+            self.lbl_resultados.setStyleSheet("font-size: 11px; color: #e74c3c; font-style: italic; font-weight: bold;")
+        elif total_resultados == 1:
+            self.lbl_resultados.setText("1 resultado encontrado")
+            self.lbl_resultados.setStyleSheet("font-size: 11px; color: #27ae60; font-style: italic; font-weight: bold;")
+        else:
+            self.lbl_resultados.setText(f"{total_resultados} resultados encontrados")
+            self.lbl_resultados.setStyleSheet("font-size: 11px; color: #27ae60; font-style: italic; font-weight: bold;")
+
+    def limpiar_busqueda(self):
+        """Limpia el campo de búsqueda y muestra todos los funcionarios"""
+        self.txt_buscar_cedula.clear()
+        self.pagina_actual = 1
+        self.cargar_funcionarios()
+        self.lbl_resultados.setText("")
 
 
 class VerFuncionarioModal(QDialog):
@@ -1080,7 +1786,7 @@ class VerFuncionarioModal(QDialog):
                 tiene_asignacion = vehiculo.get("tiene_asignacion", False)
 
                 estado = (
-                    f"Parqueadero P-{vehiculo.get('numero_parqueadero', 0):03d}" if tiene_asignacion else "Sin asignar"
+                    f"Parqueadero {format_numero_parqueadero(vehiculo.get('numero_parqueadero', 0))}" if tiene_asignacion else "Sin asignar"
                 )
                 texto_vehiculos += f"{i}. {tipo} - Placa: {placa} ({circulacion}) - {estado}\n"
 
