@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple
 from ..database.eliminacion_cascada import GestorEliminacionCascada
 from ..database.manager import DatabaseManager
 from ..utils.validaciones import ValidadorCampos, ValidadorReglasNegocio
-from ..utils.validaciones_asignacion import ValidadorAsignacion
+from ..utils.validaciones_asignaciones import ValidadorAsignacion
 
 
 class FuncionarioModel:

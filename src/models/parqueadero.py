@@ -8,7 +8,8 @@ from typing import Dict, List, Tuple
 from mysql.connector import Error
 
 from ..database.manager import DatabaseManager
-from ..utils.validaciones_asignacion import ValidadorAsignacion
+from ..utils.validaciones_asignaciones import ValidadorAsignacion
+from ..utils.formatters import format_numero_parqueadero
 
 
 class ParqueaderoModel:
@@ -470,7 +471,7 @@ class ParqueaderoModel:
                 f"✅ {msg_base}\n\n"
                 f"🚗 Vehículo: {vehiculo_data['placa']}\n"
                 f"👤 Funcionario: {vehiculo_data['nombre']} {vehiculo_data['apellidos']}\n"
-                f"📍 Parqueadero: P-{parqueadero_data['numero_parqueadero']:03d}"
+                f"📍 Parqueadero: {format_numero_parqueadero(parqueadero_data['numero_parqueadero'])}"
             )
 
             if msg_info:
