@@ -786,11 +786,11 @@ class VehiculosTab(QWidget):
             self.cargar_vehiculos_async()
             self.cargar_combo_funcionarios()
 
-            # Emitir señal con delay de 300ms para garantizar que otras pestañas vean los datos
+            # Emitir señal con delay de 1000ms (1 segundo) para garantizar que otras pestañas vean los datos
             # Este delay es necesario porque MySQL puede tardar en propagar commits entre conexiones
-            # 300ms es suficiente para que todas las conexiones vean el nuevo vehículo
-            print("🔄 [DEBUG] Programando emisión de señal vehiculo_creado en 300ms...")
-            QTimer.singleShot(300, lambda: self._emit_vehiculo_creado())
+            # CRÍTICO: 300ms NO era suficiente - aumentado a 1000ms para garantizar visibilidad
+            print("🔄 [DEBUG] Programando emisión de señal vehiculo_creado en 1000ms...")
+            QTimer.singleShot(1000, lambda: self._emit_vehiculo_creado())
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
