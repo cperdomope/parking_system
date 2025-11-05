@@ -37,21 +37,64 @@ class GuardarVehiculoWorker(QThread):
 
     finished = pyqtSignal(bool, str)  # (exito, mensaje)
 
-    def __init__(self, vehiculo_model, funcionario_id, tipo_vehiculo, placa):
+    def __init__(self, db_config, funcionario_id, tipo_vehiculo, placa):
         super().__init__()
-        self.vehiculo_model = vehiculo_model
+        self.db_config = db_config
         self.funcionario_id = funcionario_id
         self.tipo_vehiculo = tipo_vehiculo
         self.placa = placa
 
     def run(self):
-        """Ejecuta el guardado en background"""
-        exito, mensaje = self.vehiculo_model.crear(
-            funcionario_id=self.funcionario_id,
-            tipo_vehiculo=self.tipo_vehiculo,
-            placa=self.placa
-        )
-        self.finished.emit(exito, mensaje)
+        """Ejecuta el guardado en background con conexión propia"""
+        import mysql.connector
+        from ..utils.validaciones_vehiculos import ValidadorVehiculos
+
+        connection = None
+        try:
+            # Crear conexión MySQL directa (no usar DatabaseManager por ser Singleton)
+            connection = mysql.connector.connect(**self.db_config)
+            cursor = connection.cursor(dictionary=True)
+
+            # Crear un objeto temporal tipo DatabaseManager para el modelo
+            class TempDB:
+                def __init__(self, conn, cur):
+                    self.connection = conn
+                    self.cursor = cur
+                    self.config = type('obj', (object,), self.db_config)
+
+                def fetch_all(self, query, params=None):
+                    self.cursor.execute(query, params or ())
+                    return self.cursor.fetchall()
+
+                def fetch_one(self, query, params=None):
+                    self.cursor.execute(query, params or ())
+                    return self.cursor.fetchone()
+
+                def execute_query(self, query, params=None):
+                    try:
+                        self.cursor.execute(query, params or ())
+                        self.connection.commit()
+                        return (True, None)
+                    except Exception as e:
+                        self.connection.rollback()
+                        return (False, str(e))
+
+            temp_db = TempDB(connection, cursor)
+            vehiculo_model = VehiculoModel(temp_db)
+
+            exito, mensaje = vehiculo_model.crear(
+                funcionario_id=self.funcionario_id,
+                tipo_vehiculo=self.tipo_vehiculo,
+                placa=self.placa
+            )
+            self.finished.emit(exito, mensaje)
+
+        except Exception as e:
+            self.finished.emit(False, f"Error en worker: {str(e)}")
+        finally:
+            if connection and connection.is_connected():
+                cursor.close()
+                connection.close()
 
 
 class CargarVehiculosWorker(QThread):
@@ -59,30 +102,46 @@ class CargarVehiculosWorker(QThread):
 
     finished = pyqtSignal(list)  # lista de vehículos
 
-    def __init__(self, db_manager):
+    def __init__(self, db_config):
         super().__init__()
-        self.db = db_manager
+        self.db_config = db_config
 
     def run(self):
-        """Ejecuta la consulta en background"""
-        query = """
-            SELECT
-                v.id,
-                CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
-                v.tipo_vehiculo,
-                v.placa,
-                v.ultimo_digito,
-                v.tipo_circulacion,
-                p.numero_parqueadero
-            FROM vehiculos v
-            JOIN funcionarios f ON v.funcionario_id = f.id
-            LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
-            LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
-            WHERE v.activo = TRUE
-            ORDER BY f.apellidos, f.nombre
-        """
-        vehiculos = self.db.fetch_all(query)
-        self.finished.emit(vehiculos)
+        """Ejecuta la consulta en background con conexión propia"""
+        import mysql.connector
+
+        connection = None
+        try:
+            # Crear conexión MySQL directa (no usar DatabaseManager por ser Singleton)
+            connection = mysql.connector.connect(**self.db_config)
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+                SELECT
+                    v.id,
+                    CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
+                    v.tipo_vehiculo,
+                    v.placa,
+                    v.ultimo_digito,
+                    v.tipo_circulacion,
+                    p.numero_parqueadero
+                FROM vehiculos v
+                JOIN funcionarios f ON v.funcionario_id = f.id
+                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+                WHERE v.activo = TRUE
+                ORDER BY f.apellidos, f.nombre
+            """
+            cursor.execute(query)
+            vehiculos = cursor.fetchall()
+            self.finished.emit(vehiculos)
+
+        except Exception as e:
+            self.finished.emit([])
+        finally:
+            if connection and connection.is_connected():
+                cursor.close()
+                connection.close()
 
 
 class CargarComboFuncionariosWorker(QThread):
@@ -90,62 +149,77 @@ class CargarComboFuncionariosWorker(QThread):
 
     finished = pyqtSignal(list)  # lista de (texto, funcionario_id)
 
-    def __init__(self, db_manager, funcionario_model):
+    def __init__(self, db_config):
         super().__init__()
-        self.db = db_manager
-        self.funcionario_model = funcionario_model
+        self.db_config = db_config
 
     def run(self):
-        """Ejecuta consulta optimizada en background - SIN N+1"""
-        # Query optimizada que obtiene TODO en una sola consulta
-        query = """
-            SELECT
-                f.id,
-                f.cedula,
-                f.nombre,
-                f.apellidos,
-                f.tiene_parqueadero_exclusivo,
-                COUNT(CASE WHEN v.tipo_vehiculo = 'Carro' THEN 1 END) as cant_carros,
-                COUNT(CASE WHEN v.tipo_vehiculo = 'Moto' THEN 1 END) as cant_motos,
-                COUNT(CASE WHEN v.tipo_vehiculo = 'Bicicleta' THEN 1 END) as cant_bicicletas
-            FROM funcionarios f
-            LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
-            WHERE f.activo = TRUE
-            GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.tiene_parqueadero_exclusivo
-            ORDER BY f.apellidos, f.nombre
-        """
+        """Ejecuta consulta optimizada en background - SIN N+1 con conexión propia"""
+        import mysql.connector
 
-        funcionarios_data = self.db.fetch_all(query)
+        connection = None
+        try:
+            # Crear conexión MySQL directa (no usar DatabaseManager por ser Singleton)
+            connection = mysql.connector.connect(**self.db_config)
+            cursor = connection.cursor(dictionary=True)
 
-        # Filtrar en Python (rápido en memoria)
-        resultado = []
+            # Query optimizada que obtiene TODO en una sola consulta
+            query = """
+                SELECT
+                    f.id,
+                    f.cedula,
+                    f.nombre,
+                    f.apellidos,
+                    f.tiene_parqueadero_exclusivo,
+                    COUNT(CASE WHEN v.tipo_vehiculo = 'Carro' THEN 1 END) as cant_carros,
+                    COUNT(CASE WHEN v.tipo_vehiculo = 'Moto' THEN 1 END) as cant_motos,
+                    COUNT(CASE WHEN v.tipo_vehiculo = 'Bicicleta' THEN 1 END) as cant_bicicletas
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+                WHERE f.activo = TRUE
+                GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.tiene_parqueadero_exclusivo
+                ORDER BY f.apellidos, f.nombre
+            """
 
-        for func in funcionarios_data:
-            funcionario_id = func["id"]
-            tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
-            cant_carros = func.get("cant_carros", 0)
-            cant_motos = func.get("cant_motos", 0)
-            cant_bicicletas = func.get("cant_bicicletas", 0)
+            cursor.execute(query)
+            funcionarios_data = cursor.fetchall()
 
-            mostrar_funcionario = False
+            # Filtrar en Python (rápido en memoria)
+            resultado = []
 
-            if tiene_exclusivo:
-                # Con parqueadero exclusivo siempre pueden registrar más vehículos
-                mostrar_funcionario = True
-            else:
-                # Verificar si completaron alguna combinación válida
-                combinacion1_completa = (cant_carros == 1 and cant_motos == 1 and cant_bicicletas == 1)
-                combinacion2_completa = (cant_carros == 2 and cant_bicicletas == 1 and cant_motos == 0)
-                combinacion3_completa = (cant_carros == 2 and cant_motos == 1 and cant_bicicletas == 0)
+            for func in funcionarios_data:
+                funcionario_id = func["id"]
+                tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+                cant_carros = func.get("cant_carros", 0)
+                cant_motos = func.get("cant_motos", 0)
+                cant_bicicletas = func.get("cant_bicicletas", 0)
 
-                if not (combinacion1_completa or combinacion2_completa or combinacion3_completa):
+                mostrar_funcionario = False
+
+                if tiene_exclusivo:
+                    # Con parqueadero exclusivo siempre pueden registrar más vehículos
                     mostrar_funcionario = True
+                else:
+                    # Verificar si completaron alguna combinación válida
+                    combinacion1_completa = (cant_carros == 1 and cant_motos == 1 and cant_bicicletas == 1)
+                    combinacion2_completa = (cant_carros == 2 and cant_bicicletas == 1 and cant_motos == 0)
+                    combinacion3_completa = (cant_carros == 2 and cant_motos == 1 and cant_bicicletas == 0)
 
-            if mostrar_funcionario:
-                texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
-                resultado.append((texto, funcionario_id))
+                    if not (combinacion1_completa or combinacion2_completa or combinacion3_completa):
+                        mostrar_funcionario = True
 
-        self.finished.emit(resultado)
+                if mostrar_funcionario:
+                    texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
+                    resultado.append((texto, funcionario_id))
+
+            self.finished.emit(resultado)
+
+        except Exception as e:
+            self.finished.emit([])
+        finally:
+            if connection and connection.is_connected():
+                cursor.close()
+                connection.close()
 
 
 class VehiculosTab(QWidget):
@@ -164,6 +238,15 @@ class VehiculosTab(QWidget):
         self.pagina_actual = 1  # Página actual de paginación
         self.filas_por_pagina = 6  # Máximo 6 filas por página
         self.ultimo_mensaje_validacion = None  # Guarda el último mensaje de validación para mostrarlo si el usuario intenta guardar
+
+        # Guardar configuración de DB para workers (cada worker necesita su propia conexión)
+        self.db_config = {
+            'host': db_manager.config.host,
+            'user': db_manager.config.user,
+            'password': db_manager.config.password,
+            'database': db_manager.config.database,
+            'port': db_manager.config.port
+        }
 
         # Workers para operaciones asíncronas
         self.guardar_worker = None
@@ -620,7 +703,7 @@ class VehiculosTab(QWidget):
             return
 
         # Crear y ejecutar worker thread optimizado
-        self.cargar_combo_worker = CargarComboFuncionariosWorker(self.db, self.funcionario_model)
+        self.cargar_combo_worker = CargarComboFuncionariosWorker(self.db_config)
         self.cargar_combo_worker.finished.connect(self.on_combo_funcionarios_cargado)
         self.cargar_combo_worker.start()
 
@@ -670,7 +753,7 @@ class VehiculosTab(QWidget):
 
         # Crear y ejecutar worker thread para guardar
         self.guardar_worker = GuardarVehiculoWorker(
-            self.vehiculo_model,
+            self.db_config,
             self.combo_funcionario.currentData(),
             tipo_vehiculo,
             placa
@@ -741,7 +824,7 @@ class VehiculosTab(QWidget):
             return
 
         # Crear y ejecutar worker thread
-        self.cargar_vehiculos_worker = CargarVehiculosWorker(self.db)
+        self.cargar_vehiculos_worker = CargarVehiculosWorker(self.db_config)
         self.cargar_vehiculos_worker.finished.connect(self.on_vehiculos_cargados)
         self.cargar_vehiculos_worker.start()
 
