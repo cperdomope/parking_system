@@ -3,7 +3,7 @@
 Módulo de la pestaña Vehículos del sistema de gestión de parqueadero
 """
 
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QThread, pyqtSlot
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (
     QComboBox,
@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
+    QApplication,
 )
 
 from ..database.manager import DatabaseManager
@@ -25,6 +26,126 @@ from ..models.funcionario import FuncionarioModel
 from ..models.vehiculo import VehiculoModel
 from .modales_vehiculos import EditarVehiculoModal, EliminarVehiculoModal
 from ..utils.formatters import format_numero_parqueadero
+
+
+# ============================================================================
+# WORKER THREADS PARA OPERACIONES ASÍNCRONAS
+# ============================================================================
+
+class GuardarVehiculoWorker(QThread):
+    """Worker thread para guardar vehículo sin bloquear UI"""
+
+    finished = pyqtSignal(bool, str)  # (exito, mensaje)
+
+    def __init__(self, vehiculo_model, funcionario_id, tipo_vehiculo, placa):
+        super().__init__()
+        self.vehiculo_model = vehiculo_model
+        self.funcionario_id = funcionario_id
+        self.tipo_vehiculo = tipo_vehiculo
+        self.placa = placa
+
+    def run(self):
+        """Ejecuta el guardado en background"""
+        exito, mensaje = self.vehiculo_model.crear(
+            funcionario_id=self.funcionario_id,
+            tipo_vehiculo=self.tipo_vehiculo,
+            placa=self.placa
+        )
+        self.finished.emit(exito, mensaje)
+
+
+class CargarVehiculosWorker(QThread):
+    """Worker thread para cargar vehículos sin bloquear UI"""
+
+    finished = pyqtSignal(list)  # lista de vehículos
+
+    def __init__(self, db_manager):
+        super().__init__()
+        self.db = db_manager
+
+    def run(self):
+        """Ejecuta la consulta en background"""
+        query = """
+            SELECT
+                v.id,
+                CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
+                v.tipo_vehiculo,
+                v.placa,
+                v.ultimo_digito,
+                v.tipo_circulacion,
+                p.numero_parqueadero
+            FROM vehiculos v
+            JOIN funcionarios f ON v.funcionario_id = f.id
+            LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+            LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+            WHERE v.activo = TRUE
+            ORDER BY f.apellidos, f.nombre
+        """
+        vehiculos = self.db.fetch_all(query)
+        self.finished.emit(vehiculos)
+
+
+class CargarComboFuncionariosWorker(QThread):
+    """Worker thread optimizado para cargar funcionarios con query única"""
+
+    finished = pyqtSignal(list)  # lista de (texto, funcionario_id)
+
+    def __init__(self, db_manager, funcionario_model):
+        super().__init__()
+        self.db = db_manager
+        self.funcionario_model = funcionario_model
+
+    def run(self):
+        """Ejecuta consulta optimizada en background - SIN N+1"""
+        # Query optimizada que obtiene TODO en una sola consulta
+        query = """
+            SELECT
+                f.id,
+                f.cedula,
+                f.nombre,
+                f.apellidos,
+                f.tiene_parqueadero_exclusivo,
+                COUNT(CASE WHEN v.tipo_vehiculo = 'Carro' THEN 1 END) as cant_carros,
+                COUNT(CASE WHEN v.tipo_vehiculo = 'Moto' THEN 1 END) as cant_motos,
+                COUNT(CASE WHEN v.tipo_vehiculo = 'Bicicleta' THEN 1 END) as cant_bicicletas
+            FROM funcionarios f
+            LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+            WHERE f.activo = TRUE
+            GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.tiene_parqueadero_exclusivo
+            ORDER BY f.apellidos, f.nombre
+        """
+
+        funcionarios_data = self.db.fetch_all(query)
+
+        # Filtrar en Python (rápido en memoria)
+        resultado = []
+
+        for func in funcionarios_data:
+            funcionario_id = func["id"]
+            tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+            cant_carros = func.get("cant_carros", 0)
+            cant_motos = func.get("cant_motos", 0)
+            cant_bicicletas = func.get("cant_bicicletas", 0)
+
+            mostrar_funcionario = False
+
+            if tiene_exclusivo:
+                # Con parqueadero exclusivo siempre pueden registrar más vehículos
+                mostrar_funcionario = True
+            else:
+                # Verificar si completaron alguna combinación válida
+                combinacion1_completa = (cant_carros == 1 and cant_motos == 1 and cant_bicicletas == 1)
+                combinacion2_completa = (cant_carros == 2 and cant_bicicletas == 1 and cant_motos == 0)
+                combinacion3_completa = (cant_carros == 2 and cant_motos == 1 and cant_bicicletas == 0)
+
+                if not (combinacion1_completa or combinacion2_completa or combinacion3_completa):
+                    mostrar_funcionario = True
+
+            if mostrar_funcionario:
+                texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
+                resultado.append((texto, funcionario_id))
+
+        self.finished.emit(resultado)
 
 
 class VehiculosTab(QWidget):
@@ -43,6 +164,12 @@ class VehiculosTab(QWidget):
         self.pagina_actual = 1  # Página actual de paginación
         self.filas_por_pagina = 6  # Máximo 6 filas por página
         self.ultimo_mensaje_validacion = None  # Guarda el último mensaje de validación para mostrarlo si el usuario intenta guardar
+
+        # Workers para operaciones asíncronas
+        self.guardar_worker = None
+        self.cargar_vehiculos_worker = None
+        self.cargar_combo_worker = None
+
         self.setup_ui()
         self.cargar_vehiculos()
         self.cargar_combo_funcionarios()
@@ -84,15 +211,17 @@ class VehiculosTab(QWidget):
                 border-color: #3498db;
             }
             QComboBox::drop-down {
-                border: none;
-                width: 30px;
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #b0bec5;
+                background-color: #E0E0E0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #7f8c8d;
-                margin-right: 10px;
+                image: url(:/qt-project.org/styles/commonstyle/images/arrowdown-16.png);
             }
         """
         )
@@ -120,15 +249,17 @@ class VehiculosTab(QWidget):
                 border-color: #3498db;
             }
             QComboBox::drop-down {
-                border: none;
-                width: 30px;
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #b0bec5;
+                background-color: #E0E0E0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #7f8c8d;
-                margin-right: 10px;
+                image: url(:/qt-project.org/styles/commonstyle/images/arrowdown-16.png);
             }
         """
         )
@@ -297,16 +428,16 @@ class VehiculosTab(QWidget):
         self.tabla_vehiculos.setVerticalScrollBarPolicy(QtCore.ScrollBarAlwaysOff)
         self.tabla_vehiculos.setHorizontalScrollBarPolicy(QtCore.ScrollBarAsNeeded)
 
-        # Estilo de encabezados
+        # Estilo de encabezados - Color corporativo
         self.tabla_vehiculos.horizontalHeader().setStyleSheet(
             """
             QHeaderView::section {
-                background-color: #2c3e50;
+                background-color: #34B5A9;
                 color: white;
                 font-weight: bold;
                 padding: 10px;
                 border: none;
-                border-right: 1px solid #34495e;
+                border-right: 1px solid #2D9B8F;
                 text-align: center;
             }
         """
@@ -483,59 +614,32 @@ class VehiculosTab(QWidget):
         self.setLayout(layout)
 
     def cargar_combo_funcionarios(self):
-        """Carga el combo de funcionarios que aún tienen cupo disponible para registrar vehículos"""
-        from ..config.settings import CARGOS_DIRECTIVOS
+        """Carga el combo de funcionarios de forma asíncrona (Optimizado - SIN N+1)"""
+        # Evitar múltiples cargas simultáneas
+        if self.cargar_combo_worker and self.cargar_combo_worker.isRunning():
+            return
 
-        funcionarios = self.funcionario_model.obtener_todos()
+        # Crear y ejecutar worker thread optimizado
+        self.cargar_combo_worker = CargarComboFuncionariosWorker(self.db, self.funcionario_model)
+        self.cargar_combo_worker.finished.connect(self.on_combo_funcionarios_cargado)
+        self.cargar_combo_worker.start()
 
+    @pyqtSlot(list)
+    def on_combo_funcionarios_cargado(self, funcionarios_lista):
+        """Callback cuando termina de cargar el combo de funcionarios"""
+        # Limpiar y llenar combo
         self.combo_funcionario.clear()
         self.combo_funcionario.addItem("-- Seleccione --", None)
 
-        for func in funcionarios:
-            funcionario_id = func["id"]
-            cargo = func.get("cargo", "")
+        for texto, funcionario_id in funcionarios_lista:
+            self.combo_funcionario.addItem(texto, funcionario_id)
 
-            # Determinar si es directivo
-            es_directivo = cargo in CARGOS_DIRECTIVOS
-
-            # Obtener vehículos registrados del funcionario
-            vehiculos = self.vehiculo_model.obtener_por_funcionario(funcionario_id)
-            cant_vehiculos = len(vehiculos)
-
-            # Contar vehículos por tipo
-            cant_carros = sum(1 for v in vehiculos if v.get('tipo_vehiculo') == 'Carro')
-            cant_motos = sum(1 for v in vehiculos if v.get('tipo_vehiculo') == 'Moto')
-            cant_bicicletas = sum(1 for v in vehiculos if v.get('tipo_vehiculo') == 'Bicicleta')
-
-            # Lógica de filtrado:
-            # - Directivos: SIEMPRE aparecen (vehículos ilimitados)
-            # - Regulares: Solo si NO han completado alguna de las 3 combinaciones válidas
-            mostrar_funcionario = False
-
-            if es_directivo:
-                # Directivos siempre pueden registrar más vehículos
-                mostrar_funcionario = True
-            else:
-                # Regulares: verificar si han completado alguna de las 3 combinaciones válidas:
-                # 1. 1 Carro + 1 Moto + 1 Bicicleta
-                # 2. 2 Carros + 1 Bicicleta
-                # 3. 2 Carros + 1 Moto
-
-                combinacion1_completa = (cant_carros == 1 and cant_motos == 1 and cant_bicicletas == 1)
-                combinacion2_completa = (cant_carros == 2 and cant_bicicletas == 1 and cant_motos == 0)
-                combinacion3_completa = (cant_carros == 2 and cant_motos == 1 and cant_bicicletas == 0)
-
-                # Solo ocultar si completó alguna de las 3 combinaciones
-                if not (combinacion1_completa or combinacion2_completa or combinacion3_completa):
-                    mostrar_funcionario = True
-
-            # Agregar al combobox solo si cumple la condición
-            if mostrar_funcionario:
-                texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
-                self.combo_funcionario.addItem(texto, func["id"])
+        # Limpiar worker
+        self.cargar_combo_worker.deleteLater()
+        self.cargar_combo_worker = None
 
     def guardar_vehiculo(self):
-        """Guarda un nuevo vehículo con validaciones de reglas de negocio"""
+        """Guarda un nuevo vehículo con validaciones de reglas de negocio (Optimizado - Asíncrono)"""
         if self.combo_funcionario.currentData() is None:
             QMessageBox.warning(
                 self,
@@ -559,26 +663,52 @@ class VehiculosTab(QWidget):
             )
             return
 
-        # Intentar crear el vehículo con validaciones
-        exito, mensaje = self.vehiculo_model.crear(
-            funcionario_id=self.combo_funcionario.currentData(), tipo_vehiculo=tipo_vehiculo, placa=placa
+        # Deshabilitar botón mientras se guarda
+        self.btn_guardar_vehiculo.setEnabled(False)
+        self.btn_guardar_vehiculo.setText("⏳ Guardando...")
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+
+        # Crear y ejecutar worker thread para guardar
+        self.guardar_worker = GuardarVehiculoWorker(
+            self.vehiculo_model,
+            self.combo_funcionario.currentData(),
+            tipo_vehiculo,
+            placa
         )
+        self.guardar_worker.finished.connect(self.on_vehiculo_guardado)
+        self.guardar_worker.start()
+
+    @pyqtSlot(bool, str)
+    def on_vehiculo_guardado(self, exito, mensaje):
+        """Callback cuando termina el guardado en background"""
+        # Restaurar cursor y botón
+        QApplication.restoreOverrideCursor()
+        self.btn_guardar_vehiculo.setEnabled(True)
+        self.btn_guardar_vehiculo.setText("💾 Guardar")
 
         if exito:
             QMessageBox.information(self, "✅ Vehículo Registrado", mensaje)
             self.txt_placa.clear()
             self.combo_funcionario.setCurrentIndex(0)
-            self.cargar_vehiculos()
-            # Recargar combobox para filtrar funcionarios que completaron su cupo
+
+            # Refresh incremental - solo actualizar la última página
+            self.cargar_vehiculos_async()
+
+            # Recargar combo de funcionarios de forma asíncrona
             self.cargar_combo_funcionarios()
+
             # Emitir señal para notificar a otras pestañas
             self.vehiculo_creado.emit()
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
 
+        # Limpiar worker
+        self.guardar_worker.deleteLater()
+        self.guardar_worker = None
+
     def cargar_vehiculos(self):
-        """Carga todos los vehículos en la tabla con botones de acción"""
+        """Carga todos los vehículos en la tabla con botones de acción (Síncrono - solo para init)"""
         query = """
             SELECT
                 v.id,
@@ -603,6 +733,30 @@ class VehiculosTab(QWidget):
 
         # Mostrar todos los vehículos
         self.mostrar_vehiculos(vehiculos)
+
+    def cargar_vehiculos_async(self):
+        """Carga vehículos de forma asíncrona (Optimizado - no bloquea UI)"""
+        # Evitar múltiples cargas simultáneas
+        if self.cargar_vehiculos_worker and self.cargar_vehiculos_worker.isRunning():
+            return
+
+        # Crear y ejecutar worker thread
+        self.cargar_vehiculos_worker = CargarVehiculosWorker(self.db)
+        self.cargar_vehiculos_worker.finished.connect(self.on_vehiculos_cargados)
+        self.cargar_vehiculos_worker.start()
+
+    @pyqtSlot(list)
+    def on_vehiculos_cargados(self, vehiculos):
+        """Callback cuando terminan de cargar los vehículos"""
+        # Guardar lista completa para filtrado
+        self.vehiculos_completos = vehiculos
+
+        # Mostrar todos los vehículos
+        self.mostrar_vehiculos(vehiculos)
+
+        # Limpiar worker
+        self.cargar_vehiculos_worker.deleteLater()
+        self.cargar_vehiculos_worker = None
 
     def mostrar_vehiculos(self, vehiculos):
         """Muestra los vehículos en la tabla con paginación"""
@@ -801,8 +955,8 @@ class VehiculosTab(QWidget):
         self.cargar_combo_funcionarios()
 
     def actualizar_vehiculos(self):
-        """Actualiza la tabla de vehículos"""
-        self.cargar_vehiculos()
+        """Actualiza la tabla de vehículos (Optimizado - Asíncrono)"""
+        self.cargar_vehiculos_async()
 
     def validar_en_tiempo_real(self):
         """Valida el vehículo en tiempo real con retroalimentación visual por color del botón"""
@@ -1026,8 +1180,8 @@ class VehiculosTab(QWidget):
         try:
             modal = EditarVehiculoModal(vehiculo_id, self.vehiculo_model, self.funcionario_model, self)
 
-            # Conectar señal para actualizar tabla cuando se edite
-            modal.vehiculo_actualizado.connect(self.cargar_vehiculos)
+            # Conectar señal para actualizar tabla cuando se edite (Optimizado - Asíncrono)
+            modal.vehiculo_actualizado.connect(self.cargar_vehiculos_async)
             modal.vehiculo_actualizado.connect(self.vehiculo_creado.emit)  # Para sincronizar otros módulos
             modal.vehiculo_actualizado.connect(self.cargar_combo_funcionarios)  # Actualizar combo
 
@@ -1060,8 +1214,8 @@ class VehiculosTab(QWidget):
         try:
             modal = EliminarVehiculoModal(vehiculo_id, self.vehiculo_model, self)
 
-            # Conectar señal para actualizar tabla cuando se elimine
-            modal.vehiculo_eliminado.connect(self.cargar_vehiculos)
+            # Conectar señal para actualizar tabla cuando se elimine (Optimizado - Asíncrono)
+            modal.vehiculo_eliminado.connect(self.cargar_vehiculos_async)
             modal.vehiculo_eliminado.connect(self.vehiculo_creado.emit)  # Para sincronizar otros módulos
             modal.vehiculo_eliminado.connect(self.cargar_combo_funcionarios)  # Actualizar combo
 
