@@ -3,7 +3,7 @@
 Módulo de la pestaña Vehículos del sistema de gestión de parqueadero
 """
 
-from PyQt5.QtCore import pyqtSignal, Qt, QThread, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, Qt, QThread, pyqtSlot, QTimer
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (
     QComboBox,
@@ -775,14 +775,13 @@ class VehiculosTab(QWidget):
             self.txt_placa.clear()
             self.combo_funcionario.setCurrentIndex(0)
 
-            # Emitir señal PRIMERO para notificar a otras pestañas (sincronizado)
-            self.vehiculo_creado.emit()
-
-            # Luego refrescar esta pestaña de forma asíncrona
+            # Refrescar esta pestaña de forma asíncrona
             self.cargar_vehiculos_async()
-
-            # Recargar combo de funcionarios de forma asíncrona
             self.cargar_combo_funcionarios()
+
+            # Emitir señal con delay para garantizar que otras pestañas se actualicen después del commit
+            # Esto asegura que el vehículo esté disponible en la BD antes de que otras pestañas consulten
+            QTimer.singleShot(100, self.vehiculo_creado.emit)
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
