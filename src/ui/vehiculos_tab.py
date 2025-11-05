@@ -57,10 +57,11 @@ class GuardarVehiculoWorker(QThread):
 
             # Crear un objeto temporal tipo DatabaseManager para el modelo
             class TempDB:
-                def __init__(self, conn, cur):
+                def __init__(self, conn, cur, db_cfg):
                     self.connection = conn
                     self.cursor = cur
-                    self.config = type('obj', (object,), self.db_config)
+                    # Crear objeto config con los atributos necesarios
+                    self.config = type('obj', (object,), db_cfg)()
 
                 def fetch_all(self, query, params=None):
                     self.cursor.execute(query, params or ())
@@ -79,7 +80,7 @@ class GuardarVehiculoWorker(QThread):
                         self.connection.rollback()
                         return (False, str(e))
 
-            temp_db = TempDB(connection, cursor)
+            temp_db = TempDB(connection, cursor, self.db_config)
             vehiculo_model = VehiculoModel(temp_db)
 
             exito, mensaje = vehiculo_model.crear(
