@@ -1395,6 +1395,9 @@ class AsignacionesTab(QWidget):
             ORDER BY v.tipo_vehiculo, f.apellidos, f.nombre
         """
         vehiculos = self.db.fetch_all(query)
+        print(f"📊 [DEBUG] Vehículos sin asignar obtenidos: {len(vehiculos)}")
+        if vehiculos:
+            print(f"📊 [DEBUG] Primeros 3: {[v.get('placa', 'N/A') for v in vehiculos[:3]]}")
 
         self.combo_vehiculo_sin_asignar.clear()
         self.combo_vehiculo_sin_asignar.addItem("-- Seleccione vehículo --", None)
@@ -1911,9 +1914,12 @@ class AsignacionesTab(QWidget):
 
     def actualizar_vehiculos_sin_asignar(self):
         """Actualiza la lista de vehículos sin asignar cuando se actualicen los datos"""
+        print("🔄 [DEBUG] Señal recibida: actualizar_vehiculos_sin_asignar()")
         # Asegurar que la conexión vea los datos más recientes
         self.db.ensure_connection()
+        print("🔄 [DEBUG] Conexión refrescada, cargando vehículos...")
         self.cargar_vehiculos_sin_asignar()
+        print(f"🔄 [DEBUG] ComboBox actualizado: {self.combo_vehiculo_sin_asignar.count()} items")
 
     def editar_asignacion(self, asignacion_data):
         """Abre el diálogo de edición para una asignación"""

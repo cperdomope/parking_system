@@ -787,7 +787,8 @@ class VehiculosTab(QWidget):
             # Emitir señal con delay de 300ms para garantizar que otras pestañas vean los datos
             # Este delay es necesario porque MySQL puede tardar en propagar commits entre conexiones
             # 300ms es suficiente para que todas las conexiones vean el nuevo vehículo
-            QTimer.singleShot(300, self.vehiculo_creado.emit)
+            print("🔄 [DEBUG] Programando emisión de señal vehiculo_creado en 300ms...")
+            QTimer.singleShot(300, lambda: self._emit_vehiculo_creado())
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
@@ -795,6 +796,12 @@ class VehiculosTab(QWidget):
         # Limpiar worker
         self.guardar_worker.deleteLater()
         self.guardar_worker = None
+
+    def _emit_vehiculo_creado(self):
+        """Helper para emitir señal con debug"""
+        print("✅ [DEBUG] Emitiendo señal vehiculo_creado ahora...")
+        self.vehiculo_creado.emit()
+        print("✅ [DEBUG] Señal vehiculo_creado emitida!")
 
     def cargar_vehiculos(self):
         """Carga todos los vehículos en la tabla con botones de acción (Síncrono - solo para init)"""
