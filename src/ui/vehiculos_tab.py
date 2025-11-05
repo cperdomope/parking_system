@@ -775,14 +775,14 @@ class VehiculosTab(QWidget):
             self.txt_placa.clear()
             self.combo_funcionario.setCurrentIndex(0)
 
-            # Refresh incremental - solo actualizar la última página
+            # Emitir señal PRIMERO para notificar a otras pestañas (sincronizado)
+            self.vehiculo_creado.emit()
+
+            # Luego refrescar esta pestaña de forma asíncrona
             self.cargar_vehiculos_async()
 
             # Recargar combo de funcionarios de forma asíncrona
             self.cargar_combo_funcionarios()
-
-            # Emitir señal para notificar a otras pestañas
-            self.vehiculo_creado.emit()
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
