@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 Estilos CSS para la aplicación del sistema de gestión de parqueadero
+
+Color Corporativo: rgb(52, 181, 169) - #34B5A9
 """
 
 
 class AppStyles:
     """Define los estilos CSS para la aplicación"""
+
+    # Color corporativo de la entidad
+    COLOR_CORPORATIVO = "#34B5A9"  # rgb(52, 181, 169)
+    COLOR_CORPORATIVO_HOVER = "#2D9B8F"  # Versión más oscura para hover
+    COLOR_CORPORATIVO_DARK = "#267A70"  # Versión oscura para pressed
 
     MAIN_STYLE = """
     QMainWindow {
@@ -24,15 +31,18 @@ class AppStyles:
         margin-right: 2px;
         border-top-left-radius: 5px;
         border-top-right-radius: 5px;
+        min-width: 120px;
     }
 
     QTabBar::tab:selected {
         background-color: white;
-        border-bottom: 2px solid #2196F3;
+        border-bottom: 3px solid #34B5A9;
+        font-weight: bold;
     }
 
     QTabBar::tab:hover {
-        background-color: #e3e4e5;
+        background-color: #004884;
+        color: white;
     }
 
     QPushButton {
@@ -87,11 +97,16 @@ class AppStyles:
        ============================== */
     QComboBox {
         background-color: #ffffff;
-        border: 1px solid #b0bec5;
-        border-radius: 6px;
-        padding: 6px 30px 6px 10px;
+        border: 1px solid #bcbcbc;
+        border-radius: 3px;
+        padding: 2px 25px 2px 8px;
+        min-height: 22px;
         font-size: 14px;
         color: #333;
+    }
+
+    QComboBox:focus {
+        border: 1px solid #0078d7;
     }
 
     /* Sin cambios visuales al pasar el mouse sobre el combobox cerrado */
@@ -104,25 +119,22 @@ class AppStyles:
     QComboBox::drop-down {
         subcontrol-origin: padding;
         subcontrol-position: top right;
-        width: 25px;
-        border-left: 1px solid #b0bec5;
-        border-top-right-radius: 6px;
-        border-bottom-right-radius: 6px;
-        background: transparent;
+        width: 20px;
+        border-left: 1px solid #bcbcbc;
+        background-color: #e0e0e0;
+    }
+
+    QComboBox::drop-down:hover {
+        background-color: #34B5A9;
     }
 
     QComboBox::down-arrow {
-        image: none;
         width: 0;
         height: 0;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 7px solid #555;
-        margin-right: 6px;
-    }
-
-    QComboBox::down-arrow:on {
-        border-top: 7px solid #2196F3;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 6px solid #333333;
+        margin-top: 2px;
     }
 
     /* ==============================
@@ -130,7 +142,7 @@ class AppStyles:
        ============================== */
     QComboBox QAbstractItemView {
         background: #ffffff;
-        border: 1px solid #2196F3;
+        border: 1px solid #34B5A9;
         border-radius: 6px;
         padding: 2px;
         outline: none;
@@ -146,13 +158,13 @@ class AppStyles:
 
     /* 🌈 Hover y selección al desplegar */
     QComboBox QAbstractItemView::item:hover {
-        background-color: #42A5F5 !important;
+        background-color: #34B5A9 !important;
         color: #ffffff !important;
         font-weight: bold;
     }
 
     QComboBox QAbstractItemView::item:selected {
-        background-color: #42A5F5 !important;
+        background-color: #34B5A9 !important;
         color: #ffffff !important;
         font-weight: bold;
     }
@@ -190,12 +202,12 @@ class AppStyles:
     }
 
     QTableWidget::item:selected {
-        background-color: #E3F2FD;
-        color: #1976D2;
+        background-color: #D4F1ED;
+        color: #267A70;
     }
 
     QHeaderView::section {
-        background-color: #2196F3;
+        background-color: #34B5A9;
         color: white;
         padding: 8px;
         border: none;

@@ -92,8 +92,10 @@ class MainWindow(QMainWindow):
         # ============================================
         # CONEXIONES DESDE VEHÍCULOS
         # ============================================
-        # Cuando se cree un vehículo, actualizar:
+        # Cuando se cree/elimine un vehículo, actualizar:
         self.tab_vehiculos.vehiculo_creado.connect(self.tab_asignaciones.actualizar_vehiculos_sin_asignar)  # Lista sin asignar
+        self.tab_vehiculos.vehiculo_creado.connect(self.tab_asignaciones.cargar_asignaciones)  # Tabla asignaciones actuales
+        self.tab_vehiculos.vehiculo_creado.connect(self.tab_parqueaderos.actualizar_parqueaderos)  # Lista parqueaderos
         self.tab_vehiculos.vehiculo_creado.connect(self.tab_dashboard.actualizar_dashboard)  # Dashboard
         self.tab_vehiculos.vehiculo_creado.connect(self.tab_funcionarios.actualizar_funcionarios)  # Tabla funcionarios (contador vehículos)
 

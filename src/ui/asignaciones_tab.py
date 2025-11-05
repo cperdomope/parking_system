@@ -156,39 +156,39 @@ class EditarAsignacionDialog(QDialog):
         self.combo_nuevo_sotano.setStyleSheet(
             """
             QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 5px 30px 5px 10px;
+                background-color: #ffffff;
+                border: 1px solid #bcbcbc;
+                border-radius: 3px;
+                padding: 2px 25px 2px 8px;
+                min-height: 22px;
                 font-size: 13px;
-                background-color: white;
                 color: #000000;
             }
-            QComboBox:focus { border-color: #3498db; }
+            QComboBox:focus {
+                border: 1px solid #0078d7;
+            }
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 20px;
-                border-left: 1px solid #b0bec5;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                background: transparent;
+                border-left: 1px solid #bcbcbc;
+                background-color: #e0e0e0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
                 width: 0;
                 height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 7px solid #555;
-                margin-right: 6px;
-            }
-            QComboBox::down-arrow:on {
-                border-top: 7px solid #2196F3;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #333333;
+                margin-top: 2px;
             }
             QComboBox QAbstractItemView {
-                border: 2px solid #2196F3;
+                border: 2px solid #34B5A9;
                 background-color: #ffffff;
-                selection-background-color: #42A5F5 !important;
+                selection-background-color: #34B5A9 !important;
                 selection-color: #ffffff !important;
             }
             QComboBox QAbstractItemView::item {
@@ -198,12 +198,12 @@ class EditarAsignacionDialog(QDialog):
                 min-height: 25px;
             }
             QComboBox QAbstractItemView::item:selected {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
             QComboBox QAbstractItemView::item:hover {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
@@ -224,39 +224,39 @@ class EditarAsignacionDialog(QDialog):
         self.combo_nuevo_parqueadero.setStyleSheet(
             """
             QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 5px 30px 5px 10px;
+                background-color: #ffffff;
+                border: 1px solid #bcbcbc;
+                border-radius: 3px;
+                padding: 2px 25px 2px 8px;
+                min-height: 22px;
                 font-size: 13px;
-                background-color: white;
                 color: #000000;
             }
-            QComboBox:focus { border-color: #3498db; }
+            QComboBox:focus {
+                border: 1px solid #0078d7;
+            }
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 20px;
-                border-left: 1px solid #b0bec5;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                background: transparent;
+                border-left: 1px solid #bcbcbc;
+                background-color: #e0e0e0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
                 width: 0;
                 height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 7px solid #555;
-                margin-right: 6px;
-            }
-            QComboBox::down-arrow:on {
-                border-top: 7px solid #2196F3;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #333333;
+                margin-top: 2px;
             }
             QComboBox QAbstractItemView {
-                border: 2px solid #2196F3;
+                border: 2px solid #34B5A9;
                 background-color: #ffffff;
-                selection-background-color: #42A5F5 !important;
+                selection-background-color: #34B5A9 !important;
                 selection-color: #ffffff !important;
             }
             QComboBox QAbstractItemView::item {
@@ -266,12 +266,12 @@ class EditarAsignacionDialog(QDialog):
                 min-height: 25px;
             }
             QComboBox QAbstractItemView::item:selected {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
             QComboBox QAbstractItemView::item:hover {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
@@ -833,7 +833,9 @@ class AsignacionesTab(QWidget):
         assign_layout.setSpacing(10)
         assign_layout.setContentsMargins(15, 15, 15, 15)
 
-        # Fila 1: Vehículo
+        # ========== FILA 1: Vehículo, Sótano y Parqueadero en una sola fila ==========
+
+        # Vehículo
         lbl_vehiculo = QLabel("🚗 Vehículo:")
         lbl_vehiculo.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
         assign_layout.addWidget(lbl_vehiculo, 0, 0)
@@ -843,42 +845,40 @@ class AsignacionesTab(QWidget):
         self.combo_vehiculo_sin_asignar.setStyleSheet(
             """
             QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 8px 30px 8px 12px;
+                background-color: #ffffff;
+                border: 1px solid #bcbcbc;
+                border-radius: 3px;
+                padding: 2px 25px 2px 8px;
+                min-height: 22px;
                 font-size: 13px;
-                background-color: white;
                 color: #000000;
-                min-width: 300px;
+                min-width: 250px;
             }
             QComboBox:focus {
-                border-color: #3498db;
+                border: 1px solid #0078d7;
             }
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 20px;
-                border-left: 1px solid #b0bec5;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                background: transparent;
+                border-left: 1px solid #bcbcbc;
+                background-color: #e0e0e0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
                 width: 0;
                 height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 7px solid #555;
-                margin-right: 6px;
-            }
-            QComboBox::down-arrow:on {
-                border-top: 7px solid #2196F3;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #333333;
+                margin-top: 2px;
             }
             QComboBox QAbstractItemView {
-                border: 2px solid #2196F3;
+                border: 2px solid #34B5A9;
                 background-color: #ffffff;
-                selection-background-color: #42A5F5 !important;
+                selection-background-color: #34B5A9 !important;
                 selection-color: #ffffff !important;
             }
             QComboBox QAbstractItemView::item {
@@ -888,63 +888,63 @@ class AsignacionesTab(QWidget):
                 min-height: 25px;
             }
             QComboBox QAbstractItemView::item:selected {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
             QComboBox QAbstractItemView::item:hover {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
         """
         )
-        assign_layout.addWidget(self.combo_vehiculo_sin_asignar, 0, 1, 1, 2)
+        assign_layout.addWidget(self.combo_vehiculo_sin_asignar, 0, 1)
 
-        # Fila 2: Sótano y Parqueadero en una sola fila
+        # Sótano
         lbl_sotano = QLabel("🏢 Sótano:")
         lbl_sotano.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
-        assign_layout.addWidget(lbl_sotano, 1, 0)
+        assign_layout.addWidget(lbl_sotano, 0, 2)
 
         self.combo_sotano = QComboBox()
         self.combo_sotano.setFixedHeight(38)
         self.combo_sotano.setStyleSheet(
             """
             QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 8px 30px 8px 12px;
+                background-color: #ffffff;
+                border: 1px solid #bcbcbc;
+                border-radius: 3px;
+                padding: 2px 25px 2px 8px;
+                min-height: 22px;
                 font-size: 13px;
-                background-color: white;
                 color: #000000;
                 min-width: 120px;
             }
-            QComboBox:focus { border-color: #3498db; }
+            QComboBox:focus {
+                border: 1px solid #0078d7;
+            }
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 20px;
-                border-left: 1px solid #b0bec5;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                background: transparent;
+                border-left: 1px solid #bcbcbc;
+                background-color: #e0e0e0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
                 width: 0;
                 height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 7px solid #555;
-                margin-right: 6px;
-            }
-            QComboBox::down-arrow:on {
-                border-top: 7px solid #2196F3;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #333333;
+                margin-top: 2px;
             }
             QComboBox QAbstractItemView {
-                border: 2px solid #2196F3;
+                border: 2px solid #34B5A9;
                 background-color: #ffffff;
-                selection-background-color: #42A5F5 !important;
+                selection-background-color: #34B5A9 !important;
                 selection-color: #ffffff !important;
             }
             QComboBox QAbstractItemView::item {
@@ -954,63 +954,64 @@ class AsignacionesTab(QWidget):
                 min-height: 25px;
             }
             QComboBox QAbstractItemView::item:selected {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
             QComboBox QAbstractItemView::item:hover {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
         """
         )
         self.combo_sotano.currentTextChanged.connect(self.cargar_parqueaderos_por_sotano)
-        assign_layout.addWidget(self.combo_sotano, 1, 1)
+        assign_layout.addWidget(self.combo_sotano, 0, 3)
 
+        # Parqueadero
         lbl_parqueadero = QLabel("🅿️ Parqueadero:")
         lbl_parqueadero.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
-        assign_layout.addWidget(lbl_parqueadero, 1, 2)
+        assign_layout.addWidget(lbl_parqueadero, 0, 4)
 
         self.combo_parqueadero_disponible = QComboBox()
         self.combo_parqueadero_disponible.setFixedHeight(38)
         self.combo_parqueadero_disponible.setStyleSheet(
             """
             QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 8px 30px 8px 12px;
+                background-color: #ffffff;
+                border: 1px solid #bcbcbc;
+                border-radius: 3px;
+                padding: 2px 25px 2px 8px;
+                min-height: 22px;
                 font-size: 13px;
-                background-color: white;
                 color: #000000;
                 min-width: 180px;
             }
-            QComboBox:focus { border-color: #3498db; }
+            QComboBox:focus {
+                border: 1px solid #0078d7;
+            }
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 20px;
-                border-left: 1px solid #b0bec5;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                background: transparent;
+                border-left: 1px solid #bcbcbc;
+                background-color: #e0e0e0;
+            }
+            QComboBox::drop-down:hover {
+                background-color: #34B5A9;
             }
             QComboBox::down-arrow {
-                image: none;
                 width: 0;
                 height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 7px solid #555;
-                margin-right: 6px;
-            }
-            QComboBox::down-arrow:on {
-                border-top: 7px solid #2196F3;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #333333;
+                margin-top: 2px;
             }
             QComboBox QAbstractItemView {
-                border: 2px solid #2196F3;
+                border: 2px solid #34B5A9;
                 background-color: #ffffff;
-                selection-background-color: #42A5F5 !important;
+                selection-background-color: #34B5A9 !important;
                 selection-color: #ffffff !important;
             }
             QComboBox QAbstractItemView::item {
@@ -1020,42 +1021,26 @@ class AsignacionesTab(QWidget):
                 min-height: 25px;
             }
             QComboBox QAbstractItemView::item:selected {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
             QComboBox QAbstractItemView::item:hover {
-                background-color: #42A5F5 !important;
+                background-color: #34B5A9 !important;
                 color: #ffffff !important;
                 font-weight: bold;
             }
         """
         )
-        assign_layout.addWidget(self.combo_parqueadero_disponible, 1, 3)
+        assign_layout.addWidget(self.combo_parqueadero_disponible, 0, 5)
 
-        # Conectar evento para mostrar info del vehículo
-        self.combo_vehiculo_sin_asignar.currentTextChanged.connect(self.mostrar_info_vehiculo_seleccionado)
+        # Conectar evento para cargar parqueaderos cuando se selecciona un vehículo
+        self.combo_vehiculo_sin_asignar.currentTextChanged.connect(self.cargar_parqueaderos_por_sotano)
 
-        # Fila 3: Información del vehículo seleccionado
-        self.lbl_info_vehiculo = QLabel("")
-        self.lbl_info_vehiculo.setStyleSheet(
-            """
-            background-color: #e3f2fd;
-            color: #1976d2;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #90caf9;
-            font-size: 11px;
-            font-weight: 500;
-        """
-        )
-        self.lbl_info_vehiculo.setMinimumHeight(40)
-        assign_layout.addWidget(self.lbl_info_vehiculo, 2, 0, 1, 4)
-
-        # Fila 4: Observaciones
+        # ========== FILA 2: Observaciones y Botón de Asignar en la misma fila ==========
         lbl_observaciones = QLabel("📝 Observaciones:")
         lbl_observaciones.setStyleSheet("font-weight: bold; color: #34495e; font-size: 12px;")
-        assign_layout.addWidget(lbl_observaciones, 3, 0)
+        assign_layout.addWidget(lbl_observaciones, 1, 0)
 
         self.txt_observaciones = QTextEdit()
         self.txt_observaciones.setFixedHeight(60)
@@ -1076,11 +1061,11 @@ class AsignacionesTab(QWidget):
             }
         """
         )
-        assign_layout.addWidget(self.txt_observaciones, 3, 1, 1, 3)
+        assign_layout.addWidget(self.txt_observaciones, 1, 1, 1, 4)
 
-        # Fila 5: Botón de asignar centrado
+        # Botón de Asignar Parqueadero en la misma fila que Observaciones
         self.btn_asignar = QPushButton("✅ Asignar Parqueadero")
-        self.btn_asignar.setFixedSize(220, 42)
+        self.btn_asignar.setFixedSize(180, 38)
         self.btn_asignar.setStyleSheet(
             """
             QPushButton {
@@ -1088,10 +1073,11 @@ class AsignacionesTab(QWidget):
                     stop:0 #27ae60, stop:1 #2ecc71);
                 color: white;
                 border: none;
-                border-radius: 8px;
+                border-radius: 6px;
                 font-weight: bold;
-                font-size: 14px;
-                letter-spacing: 0.5px;
+                font-size: 12px;
+                letter-spacing: 0.3px;
+                padding: 8px 12px;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -1105,14 +1091,13 @@ class AsignacionesTab(QWidget):
         )
         self.btn_asignar.clicked.connect(self.realizar_asignacion)
 
+        # Contenedor para centrar verticalmente el botón con las observaciones
         btn_container = QWidget()
-        btn_layout_inner = QHBoxLayout(btn_container)
-        btn_layout_inner.setContentsMargins(0, 10, 0, 0)
-        btn_layout_inner.addStretch()
-        btn_layout_inner.addWidget(self.btn_asignar)
-        btn_layout_inner.addStretch()
+        btn_container_layout = QVBoxLayout(btn_container)
+        btn_container_layout.setContentsMargins(0, 11, 0, 11)
+        btn_container_layout.addWidget(self.btn_asignar)
 
-        assign_layout.addWidget(btn_container, 4, 0, 1, 4)
+        assign_layout.addWidget(btn_container, 1, 5)
 
         assign_group.setLayout(assign_layout)
         top_section_layout.addWidget(assign_group)
@@ -1180,22 +1165,33 @@ class AsignacionesTab(QWidget):
         self.tabla_asignaciones.setColumnWidth(8, 160)  # Acciones
 
         # Configurar altura de filas fija para acomodar los botones
-        self.tabla_asignaciones.verticalHeader().setDefaultSectionSize(62)
+        self.tabla_asignaciones.verticalHeader().setDefaultSectionSize(52)
 
-        # Estilo de encabezados
+        # Deshabilitar scroll vertical (paginación manual)
+        self.tabla_asignaciones.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Altura fija para mostrar exactamente 6 filas + encabezado
+        # 6 filas * 52px + encabezado (34px) + borde superior/inferior (4px)
+        self.tabla_asignaciones.setFixedHeight(6 * 52 + 34 + 4)
+
+        # Estilo de encabezados - Color corporativo (altura reducida)
         self.tabla_asignaciones.horizontalHeader().setStyleSheet(
             """
             QHeaderView::section {
-                background-color: #2c3e50;
+                background-color: #34B5A9;
                 color: white;
                 font-weight: bold;
-                padding: 10px;
+                padding: 6px;
                 border: none;
-                border-right: 1px solid #34495e;
+                border-right: 1px solid #2D9B8F;
                 text-align: center;
+                height: 34px;
             }
         """
         )
+
+        # Ajustar altura del encabezado
+        self.tabla_asignaciones.horizontalHeader().setFixedHeight(34)
 
         # Estilo general de la tabla
         self.tabla_asignaciones.setStyleSheet(
@@ -1208,7 +1204,7 @@ class AsignacionesTab(QWidget):
                 font-size: 11px;
             }
             QTableWidget::item {
-                padding: 10px 5px;
+                padding: 5px 5px;
                 border-bottom: 1px solid #ecf0f1;
                 text-align: center;
             }
@@ -1226,6 +1222,150 @@ class AsignacionesTab(QWidget):
         )
 
         tabla_layout.addWidget(self.tabla_asignaciones)
+
+        # ========== CONTROLES DE PAGINACIÓN ==========
+        pagination_widget = QWidget()
+        pagination_layout = QHBoxLayout(pagination_widget)
+        pagination_layout.setContentsMargins(0, 15, 0, 5)
+        pagination_layout.setSpacing(10)
+
+        # Botón Primera Página
+        self.btn_primera_pagina = QPushButton("⏮ Primera")
+        self.btn_primera_pagina.setFixedSize(100, 32)
+        self.btn_primera_pagina.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #34B5A9;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #2D9B8F;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+        """
+        )
+        self.btn_primera_pagina.clicked.connect(self.ir_primera_pagina)
+
+        # Botón Anterior
+        self.btn_anterior = QPushButton("◀ Anterior")
+        self.btn_anterior.setFixedSize(100, 32)
+        self.btn_anterior.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #34B5A9;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #2D9B8F;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+        """
+        )
+        self.btn_anterior.clicked.connect(self.pagina_anterior)
+
+        # Label de información de página
+        self.lbl_info_pagina = QLabel("Página 1 de 1")
+        self.lbl_info_pagina.setStyleSheet(
+            """
+            QLabel {
+                font-weight: bold;
+                font-size: 12px;
+                color: #2c3e50;
+                padding: 5px 15px;
+                background-color: #ecf0f1;
+                border-radius: 5px;
+            }
+        """
+        )
+        self.lbl_info_pagina.setAlignment(Qt.AlignCenter)
+        self.lbl_info_pagina.setFixedWidth(150)
+
+        # Botón Siguiente
+        self.btn_siguiente = QPushButton("Siguiente ▶")
+        self.btn_siguiente.setFixedSize(100, 32)
+        self.btn_siguiente.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #34B5A9;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #2D9B8F;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+        """
+        )
+        self.btn_siguiente.clicked.connect(self.pagina_siguiente)
+
+        # Botón Última Página
+        self.btn_ultima_pagina = QPushButton("Última ⏭")
+        self.btn_ultima_pagina.setFixedSize(100, 32)
+        self.btn_ultima_pagina.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #34B5A9;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #2D9B8F;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+        """
+        )
+        self.btn_ultima_pagina.clicked.connect(self.ir_ultima_pagina)
+
+        # Label de total de registros
+        self.lbl_total_registros = QLabel("Total: 0 asignaciones")
+        self.lbl_total_registros.setStyleSheet(
+            """
+            QLabel {
+                font-size: 11px;
+                color: #7f8c8d;
+                padding: 5px;
+            }
+        """
+        )
+
+        # Agregar widgets al layout de paginación
+        pagination_layout.addStretch()
+        pagination_layout.addWidget(self.btn_primera_pagina)
+        pagination_layout.addWidget(self.btn_anterior)
+        pagination_layout.addWidget(self.lbl_info_pagina)
+        pagination_layout.addWidget(self.btn_siguiente)
+        pagination_layout.addWidget(self.btn_ultima_pagina)
+        pagination_layout.addSpacing(20)
+        pagination_layout.addWidget(self.lbl_total_registros)
+        pagination_layout.addStretch()
+
+        tabla_layout.addWidget(pagination_widget)
         tabla_group.setLayout(tabla_layout)
 
         # Agregar la tabla directamente al layout principal (ocupa todo el ancho)
@@ -1233,8 +1373,12 @@ class AsignacionesTab(QWidget):
 
         self.setLayout(main_layout)
 
-        # Variables para filtrado
+        # Variables para paginación y filtrado
         self.asignaciones_completas = []  # Lista completa sin filtrar
+        self.asignaciones_para_mostrar = []  # Lista que se está mostrando actualmente
+        self.pagina_actual = 1
+        self.filas_por_pagina = 6
+        self.total_paginas = 1
 
     def cargar_vehiculos_sin_asignar(self):
         """Carga TODOS los vehículos sin asignar (Carros, Motos y Bicicletas)"""
@@ -1319,10 +1463,8 @@ class AsignacionesTab(QWidget):
                     """
                     func_data = self.db.fetch_one(query_check_exclusivo, (funcionario_id,))
                     tiene_exclusivo = func_data and func_data.get("tiene_parqueadero_exclusivo", False)
-                    cargo = func_data.get("cargo", "") if func_data else ""
-
-                    from ..config.settings import CARGOS_DIRECTIVOS
-                    es_directivo_exclusivo = tiene_exclusivo and cargo in CARGOS_DIRECTIVOS
+                    # Si tiene parqueadero exclusivo, es directivo exclusivo (sin restricción de cargo)
+                    es_directivo_exclusivo = tiene_exclusivo
 
                     # Obtener parqueaderos disponibles para carros
                     parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
@@ -1404,28 +1546,11 @@ class AsignacionesTab(QWidget):
             print(f"Error al cargar parqueaderos por sótano: {e}")
 
     def mostrar_info_vehiculo_seleccionado(self):
-        """Muestra información del vehículo seleccionado y prepara carga de parqueaderos"""
-        vehiculo_data = self.combo_vehiculo_sin_asignar.currentData()
-
-        if vehiculo_data:
-            tipo_vehiculo = vehiculo_data.get("tipo_vehiculo", "Carro")
-            icono_tipo = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}.get(tipo_vehiculo, "🚗")
-
-            info = f"{icono_tipo} {tipo_vehiculo} | "
-            info += f"Funcionario: {vehiculo_data['nombre']} {vehiculo_data['apellidos']} | "
-            info += f"Cédula: {vehiculo_data['cedula']}"
-
-            # Solo mostrar circulación para carros
-            if tipo_vehiculo == "Carro":
-                info += f" | Circulación: {vehiculo_data.get('tipo_circulacion', 'N/A')}"
-
-            self.lbl_info_vehiculo.setText(info)
-
-            # Cargar parqueaderos si ya hay un sótano seleccionado
-            if self.combo_sotano.currentData():
-                self.cargar_parqueaderos_por_sotano()
+        """Carga parqueaderos cuando se selecciona un vehículo (mantiene compatibilidad)"""
+        # Cargar parqueaderos si ya hay un sótano seleccionado
+        if self.combo_sotano.currentData():
+            self.cargar_parqueaderos_por_sotano()
         else:
-            self.lbl_info_vehiculo.clear()
             self.combo_parqueadero_disponible.clear()
 
     def cargar_parqueaderos_disponibles(self, tipo_circulacion: str):
@@ -1575,10 +1700,32 @@ class AsignacionesTab(QWidget):
             self.tabla_asignaciones.setRowCount(0)
 
     def mostrar_asignaciones(self, asignaciones):
-        """Muestra las asignaciones en la tabla"""
-        self.tabla_asignaciones.setRowCount(len(asignaciones))
+        """Muestra las asignaciones en la tabla con paginación"""
+        # Guardar todas las asignaciones para paginación
+        self.asignaciones_para_mostrar = asignaciones
 
-        for i, asig in enumerate(asignaciones):
+        # Calcular total de páginas
+        total_asignaciones = len(asignaciones)
+        self.total_paginas = max(1, (total_asignaciones + self.filas_por_pagina - 1) // self.filas_por_pagina)
+
+        # Ajustar página actual si es necesario
+        if self.pagina_actual > self.total_paginas:
+            self.pagina_actual = max(1, self.total_paginas)
+
+        # Calcular índices para la página actual
+        inicio = (self.pagina_actual - 1) * self.filas_por_pagina
+        fin = min(inicio + self.filas_por_pagina, total_asignaciones)
+
+        # Obtener asignaciones de la página actual
+        asignaciones_pagina = asignaciones[inicio:fin]
+
+        # Actualizar información de paginación
+        self.actualizar_info_paginacion()
+
+        # Mostrar solo las asignaciones de la página actual
+        self.tabla_asignaciones.setRowCount(len(asignaciones_pagina))
+
+        for i, asig in enumerate(asignaciones_pagina):
             # Crear items con alineación centrada y formato mejorado
             sotano_item = QTableWidgetItem(asig["sotano"])
             sotano_item.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
@@ -1650,22 +1797,22 @@ class AsignacionesTab(QWidget):
                 observaciones_item.setForeground(QBrush(QColor("#2c3e50")))
             self.tabla_asignaciones.setItem(i, 7, observaciones_item)
 
-            # Botones de acción (Ver y Liberar) - Solo íconos
+            # Botones de acción (Ver y Liberar) - Solo íconos compactos
             btn_widget = QWidget()
             btn_layout = QHBoxLayout()
-            btn_layout.setSpacing(3)
-            btn_layout.setContentsMargins(2, 2, 2, 2)
+            btn_layout.setSpacing(2)
+            btn_layout.setContentsMargins(3, 3, 3, 3)
 
             # Botón Ver (solo ícono sin fondo)
             btn_ver = QPushButton("👁️")
-            btn_ver.setFixedSize(28, 28)
+            btn_ver.setFixedSize(26, 26)
             btn_ver.setToolTip("Ver detalles de la asignación")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
                     background-color: transparent;
                     border: none;
-                    font-size: 16px;
+                    font-size: 14px;
                     padding: 0px;
                 }
                 QPushButton:hover {
@@ -1682,14 +1829,14 @@ class AsignacionesTab(QWidget):
 
             # Botón Liberar (solo ícono sin fondo)
             btn_liberar = QPushButton("🔓")
-            btn_liberar.setFixedSize(28, 28)
+            btn_liberar.setFixedSize(26, 26)
             btn_liberar.setToolTip("Liberar asignación")
             btn_liberar.setStyleSheet(
                 """
                 QPushButton {
                     background-color: transparent;
                     border: none;
-                    font-size: 16px;
+                    font-size: 14px;
                     padding: 0px;
                 }
                 QPushButton:hover {
@@ -1716,6 +1863,9 @@ class AsignacionesTab(QWidget):
         """Filtra las asignaciones por número de cédula"""
         cedula_buscar = self.cedula_filter.text().strip().lower()
 
+        # Resetear a la primera página al filtrar
+        self.pagina_actual = 1
+
         if not cedula_buscar:
             # Si no hay filtro, mostrar todas las asignaciones
             self.mostrar_asignaciones(self.asignaciones_completas)
@@ -1731,6 +1881,7 @@ class AsignacionesTab(QWidget):
     def limpiar_filtro(self):
         """Limpia el filtro de búsqueda"""
         self.cedula_filter.clear()
+        self.pagina_actual = 1
         self.mostrar_asignaciones(self.asignaciones_completas)
 
     def ver_asignacion(self, asignacion_data):
@@ -1760,6 +1911,8 @@ class AsignacionesTab(QWidget):
 
     def actualizar_vehiculos_sin_asignar(self):
         """Actualiza la lista de vehículos sin asignar cuando se actualicen los datos"""
+        # Asegurar que la conexión vea los datos más recientes
+        self.db.ensure_connection()
         self.cargar_vehiculos_sin_asignar()
 
     def editar_asignacion(self, asignacion_data):
@@ -1783,3 +1936,45 @@ class AsignacionesTab(QWidget):
         # Limpiar campos
         self.txt_observaciones.clear()
         self.cedula_filter.clear()
+
+    # ========== FUNCIONES DE PAGINACIÓN ==========
+
+    def actualizar_info_paginacion(self):
+        """Actualiza los labels y botones de paginación"""
+        total_asignaciones = len(self.asignaciones_para_mostrar) if hasattr(self, 'asignaciones_para_mostrar') else 0
+
+        # Actualizar label de página
+        self.lbl_info_pagina.setText(f"Página {self.pagina_actual} de {self.total_paginas}")
+
+        # Actualizar label de total
+        self.lbl_total_registros.setText(f"Total: {total_asignaciones} asignaciones")
+
+        # Habilitar/deshabilitar botones según la página actual
+        self.btn_primera_pagina.setEnabled(self.pagina_actual > 1)
+        self.btn_anterior.setEnabled(self.pagina_actual > 1)
+        self.btn_siguiente.setEnabled(self.pagina_actual < self.total_paginas)
+        self.btn_ultima_pagina.setEnabled(self.pagina_actual < self.total_paginas)
+
+    def pagina_anterior(self):
+        """Navega a la página anterior"""
+        if self.pagina_actual > 1:
+            self.pagina_actual -= 1
+            self.mostrar_asignaciones(self.asignaciones_para_mostrar)
+
+    def pagina_siguiente(self):
+        """Navega a la página siguiente"""
+        if self.pagina_actual < self.total_paginas:
+            self.pagina_actual += 1
+            self.mostrar_asignaciones(self.asignaciones_para_mostrar)
+
+    def ir_primera_pagina(self):
+        """Navega a la primera página"""
+        if self.pagina_actual != 1:
+            self.pagina_actual = 1
+            self.mostrar_asignaciones(self.asignaciones_para_mostrar)
+
+    def ir_ultima_pagina(self):
+        """Navega a la última página"""
+        if self.pagina_actual != self.total_paginas:
+            self.pagina_actual = self.total_paginas
+            self.mostrar_asignaciones(self.asignaciones_para_mostrar)

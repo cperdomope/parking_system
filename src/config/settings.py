@@ -322,18 +322,26 @@ class EstadoParqueadero(Enum):
 
 # Cargos disponibles en la organización
 CARGOS_DISPONIBLES = [
-    "Asesor(a)",
-    "Auxiliar",
-    "Conductor",
-    "Coordinación",
-    "Contraloría",
-    "Coordinador(a)",
-    "Director(a)",
     "Escolta",
-    "Jefe de Oficina",
+    "Conductor",
+    "Subdirector(a)",
     "Profesional",
+    "Coordinador(a)",
     "Técnico",
-    
+    "Asesor(a)",
+    "Jefe De Oficina",
+    "Director(a)",
+    "Auxiliar",
+    "Profesional",
+    "Coordinador(a)",
+    "Asistencial",
+    "Secretario(a)",
+    "Coordinación",
+    "Secretario E.",
+    "Técnico Administrativo",
+    "Contraloría",
+
+  
     
 ]
 
@@ -466,7 +474,6 @@ DIRECCIONES_DISPONIBLES = [
     "Coordinación - Grupo De Inspección Y Vigilancia A La Salud Pública En Entidades Territoriales",
     "Coordinación - Grupo De Conceptos, Derechos De Petición Y Apoyo Legislativo",
     "Contraloría",
-    "Comunicaciones",
     "Comunicaciones",
     "Análisis Y Evaluación",
     "Análisis",

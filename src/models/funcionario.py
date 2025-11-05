@@ -98,14 +98,8 @@ class FuncionarioModel:
         # Validación 3: Lógica de permite_compartir según cargo
         permite_compartir = ValidadorReglasNegocio.validar_cargo_permite_compartir(cargo.strip(), permite_compartir)
 
-        # Validación 4: tiene_parqueadero_exclusivo solo para directivos
-        from ..config.settings import CARGOS_DIRECTIVOS
-        if tiene_parqueadero_exclusivo and cargo.strip() not in CARGOS_DIRECTIVOS:
-            return False, (
-                f"🚫 Parqueadero exclusivo no permitido\n\n"
-                f"❌ El cargo '{cargo.strip()}' no puede tener parqueadero exclusivo.\n"
-                f"✅ Solo disponible para: {', '.join(CARGOS_DIRECTIVOS)}"
-            )
+        # Validación 4: tiene_parqueadero_exclusivo - ELIMINADA LA RESTRICCIÓN DE CARGO
+        # Ahora cualquier cargo puede tener parqueadero exclusivo si el usuario lo marca
 
         query = """
             INSERT INTO funcionarios
@@ -297,30 +291,8 @@ class FuncionarioModel:
         cargo_actual = cargo.strip()
         cargo_anterior = funcionario_actual.get("cargo", "")
 
-        # Si se intenta activar parqueadero exclusivo, validar que sea directivo
-        if tiene_parqueadero_exclusivo and cargo_actual not in CARGOS_DIRECTIVOS:
-            return False, (
-                f"🚫 Parqueadero exclusivo no permitido\n\n"
-                f"❌ El cargo '{cargo_actual}' no puede tener parqueadero exclusivo.\n"
-                f"✅ Solo disponible para: {', '.join(CARGOS_DIRECTIVOS)}"
-            )
-
-        # Si se degrada el cargo (de directivo a no directivo), desactivar parqueadero exclusivo
-        if cargo_anterior in CARGOS_DIRECTIVOS and cargo_actual not in CARGOS_DIRECTIVOS:
-            tiene_parqueadero_exclusivo = False
-            # Verificar si tiene más de 2 vehículos asignados
-            query_count_vehiculos = """
-                SELECT COUNT(*) as total FROM vehiculos
-                WHERE funcionario_id = %s AND activo = TRUE
-            """
-            result = self.db.fetch_one(query_count_vehiculos, (funcionario_id,))
-            if result and result.get("total", 0) > 2:
-                return False, (
-                    f"⚠️ No se puede cambiar el cargo\n\n"
-                    f"❌ El funcionario tiene {result.get('total')} vehículos registrados.\n"
-                    f"📌 Los cargos no directivos solo permiten hasta 2 vehículos.\n\n"
-                    f"💡 Solución: Elimine vehículos adicionales antes de cambiar el cargo."
-                )
+        # ELIMINADA LA RESTRICCIÓN DE CARGO PARA PARQUEADERO EXCLUSIVO
+        # Ahora cualquier cargo puede tener parqueadero exclusivo si está marcado
 
         query = """
             UPDATE funcionarios
@@ -408,21 +380,42 @@ class FuncionarioModel:
 
             logger.info(f"Iniciando desactivación de funcionario: {nombre_completo} (ID: {funcionario_id})")
 
-            # 1. Liberar parqueaderos eliminando asignaciones
+            # Obtener IDs de parqueaderos afectados ANTES de eliminar asignaciones
+            query_parqueaderos_ids = """
+                SELECT DISTINCT a.parqueadero_id
+                FROM asignaciones a
+                JOIN vehiculos v ON a.vehiculo_id = v.id
+                WHERE v.funcionario_id = %s AND a.activo = TRUE
+            """
+            parqueaderos_ids_result = self.db.fetch_all(query_parqueaderos_ids, (funcionario_id,))
+            parqueaderos_ids = [p['parqueadero_id'] for p in parqueaderos_ids_result] if parqueaderos_ids_result else []
+
+            # 1. Eliminar asignaciones activas físicamente
             parqueaderos_liberados = 0
             if parqueaderos_afectados:
                 query_eliminar_asignaciones = """
                     DELETE FROM asignaciones
                     WHERE vehiculo_id IN (
                         SELECT id FROM vehiculos WHERE funcionario_id = %s
-                    )
+                    ) AND activo = TRUE
                 """
                 exito_asig, _ = self.db.execute_query(query_eliminar_asignaciones, (funcionario_id,))
                 if exito_asig:
                     parqueaderos_liberados = len(parqueaderos_afectados)
-                    logger.info(f"Liberados {parqueaderos_liberados} parqueaderos")
+                    logger.info(f"Eliminadas {parqueaderos_liberados} asignaciones físicamente")
 
-            # 2. Eliminar vehículos asociados (borrado físico)
+            # 2. Actualizar estado de parqueaderos a "Disponible"
+            if parqueaderos_ids:
+                for parqueadero_id in parqueaderos_ids:
+                    query_update_estado = """
+                        UPDATE parqueaderos
+                        SET estado = 'Disponible'
+                        WHERE id = %s
+                    """
+                    self.db.execute_query(query_update_estado, (parqueadero_id,))
+                logger.info(f"Actualizados {len(parqueaderos_ids)} parqueaderos a estado 'Disponible'")
+
+            # 3. Eliminar vehículos asociados físicamente
             vehiculos_eliminados = 0
             if vehiculos:
                 query_eliminar_vehiculos = """
@@ -434,7 +427,7 @@ class FuncionarioModel:
                     vehiculos_eliminados = len(vehiculos)
                     logger.info(f"Eliminados {vehiculos_eliminados} vehículos físicamente")
 
-            # 3. Desactivar funcionario (borrado lógico)
+            # 4. Desactivar funcionario (borrado lógico)
             query_desactivar_funcionario = """
                 UPDATE funcionarios
                 SET activo = FALSE
@@ -458,8 +451,10 @@ class FuncionarioModel:
                 f"🆔 Cédula: {cedula}\n\n"
                 f"📋 Resumen de operaciones:\n"
                 f"   • Funcionario marcado como INACTIVO\n"
-                f"   • Vehículos eliminados físicamente: {vehiculos_eliminados}\n"
-                f"   • Parqueaderos liberados: {parqueaderos_liberados}\n\n"
+                f"   • Vehículos eliminados de la BD: {vehiculos_eliminados}\n"
+                f"   • Asignaciones eliminadas de la BD: {parqueaderos_liberados}\n"
+                f"   • Parqueaderos actualizados a 'Disponible': {len(parqueaderos_ids)}\n\n"
+                f"⚠️ Los vehículos y asignaciones fueron eliminados permanentemente\n"
                 f"💾 El historial del funcionario se mantiene en la base de datos\n"
                 f"📊 El funcionario ya no aparecerá en listados activos"
             )

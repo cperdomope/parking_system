@@ -237,19 +237,26 @@ class ParqueaderoModel:
                 if tipo_espacio in ["Moto", "Bicicleta"] and total_asigs >= 1:
                     estado_display = "Completo"
 
-                # REGLA 2: Carros con condiciones especiales (1 asignación → Completo)
+                # REGLA 2: Exclusivo Directivo (4 carros) - Parcialmente Asignado hasta 4/4
+                elif tipo_espacio == "Carro" and vehiculos_detalle and vehiculos_detalle[0].get("tiene_parqueadero_exclusivo"):
+                    if total_asigs < 4:
+                        estado_display = "Parcialmente_Asignado"
+                    else:
+                        estado_display = "Completo"
+
+                # REGLA 3: Carros con condiciones especiales (1 asignación → Completo)
                 elif tipo_espacio == "Carro" and total_asigs == 1:
                     if (
-                        permite_compartir == 0  # NO permite compartir (Parqueadero Exclusivo)
-                        or pico_placa_solidario == 1  # Tiene Pico y Placa Solidario
-                        or discapacidad == 1
-                    ):  # Tiene Discapacidad
+                        pico_placa_solidario == 1  # Tiene Pico y Placa Solidario
+                        or discapacidad == 1  # Tiene Discapacidad
+                        or (vehiculos_detalle and vehiculos_detalle[0].get("tiene_carro_hibrido"))  # Carro Híbrido
+                    ):
                         estado_display = "Completo"
                     else:
                         # Funcionario regular con 1 carro → Parcialmente Asignado
                         estado_display = "Parcialmente_Asignado"
 
-                # REGLA 3: Carros con 2 asignaciones (funcionarios regulares) → Completo
+                # REGLA 4: Carros con 2 asignaciones (funcionarios regulares) → Completo
                 elif tipo_espacio == "Carro" and total_asigs >= 2:
                     estado_display = "Completo"
 
@@ -507,10 +514,9 @@ class ParqueaderoModel:
 
             parqueadero_id = resultado["parqueadero_id"]
 
-            # Liberar la asignación
+            # Eliminar la asignación físicamente
             query_liberar = """
-                UPDATE asignaciones
-                SET activo = NULL, fecha_fin_asignacion = NOW()
+                DELETE FROM asignaciones
                 WHERE vehiculo_id = %s AND activo = TRUE
             """
             exito, _ = self.db.execute_query(query_liberar, (vehiculo_id,))

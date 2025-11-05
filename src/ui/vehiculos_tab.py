@@ -775,13 +775,19 @@ class VehiculosTab(QWidget):
             self.txt_placa.clear()
             self.combo_funcionario.setCurrentIndex(0)
 
+            # CRÍTICO: Asegurar que la conexión del hilo principal vea los datos recién comprometidos
+            # El worker usó su propia conexión MySQL, por lo que el hilo principal necesita
+            # reconectar o refrescar para ver los cambios comprometidos
+            self.db.ensure_connection()
+
             # Refrescar esta pestaña de forma asíncrona
             self.cargar_vehiculos_async()
             self.cargar_combo_funcionarios()
 
-            # Emitir señal con delay para garantizar que otras pestañas se actualicen después del commit
-            # Esto asegura que el vehículo esté disponible en la BD antes de que otras pestañas consulten
-            QTimer.singleShot(100, self.vehiculo_creado.emit)
+            # Emitir señal con delay de 300ms para garantizar que otras pestañas vean los datos
+            # Este delay es necesario porque MySQL puede tardar en propagar commits entre conexiones
+            # 300ms es suficiente para que todas las conexiones vean el nuevo vehículo
+            QTimer.singleShot(300, self.vehiculo_creado.emit)
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)

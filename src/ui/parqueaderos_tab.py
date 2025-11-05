@@ -52,7 +52,7 @@ class ParqueaderosTab(QWidget):
 
         # Estilo para estadísticas
         style_stats = "padding: 8px; border-radius: 4px; font-weight: bold;"
-        self.lbl_total.setStyleSheet(f"{style_stats} background-color: #E3F2FD; color: #1976D2;")
+        self.lbl_total.setStyleSheet(f"{style_stats} background-color: #E3F2FD; color: #267A70;")
         self.lbl_disponibles.setStyleSheet(f"{style_stats} background-color: #E8F5E9; color: #2E7D32;")
         self.lbl_parciales.setStyleSheet(f"{style_stats} background-color: #FFF3E0; color: #F57C00;")
         self.lbl_completos.setStyleSheet(f"{style_stats} background-color: #FFEBEE; color: #C62828;")
@@ -146,17 +146,15 @@ class ParqueaderosTab(QWidget):
                 if widget is not None:
                     widget.setParent(None)
 
-        # Calcular columnas dinámicamente para evitar scroll horizontal
-        # Usar 8 columnas por defecto para garantizar presentación consistente
-        if self.width() > 1200:  # Solo ajustar si hay suficiente espacio
-            columnas = min(max(8, self.width() // 170), 12)
-        else:
-            columnas = 8  # Siempre mostrar 8 columnas por defecto
+        # Usar número fijo de columnas para garantizar visualización consistente
+        # 7 columnas es un buen balance entre visualización y espacio
+        columnas = 7
 
         # Crear widgets de parqueaderos
         self.parqueaderos_data = {}  # Guardar referencia para filtros
 
         for i, park in enumerate(parqueaderos):
+            # Calcular posición en el grid: fila y columna
             row = i // columnas
             col = i % columnas
 
@@ -379,14 +377,15 @@ class ParqueaderosTab(QWidget):
                     if widget is not None:
                         widget.setParent(None)
 
-            # Calcular columnas dinámicamente
-            columnas = max(1, self.width() // 170) if self.width() > 0 else 8
-            columnas = min(columnas, 12)
+            # Usar número fijo de columnas para garantizar visualización consistente
+            # 7 columnas es un buen balance entre visualización y espacio
+            columnas = 7
 
             # Crear widgets de parqueaderos
             self.parqueaderos_data = {}
 
             for i, park in enumerate(parqueaderos):
+                # Calcular posición en el grid: fila y columna
                 row = i // columnas
                 col = i % columnas
 

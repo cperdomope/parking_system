@@ -104,7 +104,7 @@ class EditarVehiculoModal(QDialog):
 
         # Label informativo de pico y placa
         self.lbl_info_pico = QLabel("")
-        self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #2196F3;")
+        self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #34B5A9;")
         self.lbl_info_pico.setWordWrap(True)
         form_layout.addWidget(self.lbl_info_pico, 3, 0, 1, 2)
 
@@ -197,7 +197,7 @@ class EditarVehiculoModal(QDialog):
                     self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #FF9800;")
                 else:
                     self.lbl_info_pico.setText(f"Placa terminada en {ultimo_digito}: Circula días PARES (Tipo: PAR)")
-                    self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #2196F3;")
+                    self.lbl_info_pico.setStyleSheet("font-weight: bold; color: #34B5A9;")
         else:
             self.lbl_info_pico.clear()
 

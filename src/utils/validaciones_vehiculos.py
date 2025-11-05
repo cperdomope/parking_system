@@ -83,18 +83,17 @@ class ValidadorVehiculos:
         # Verificar si es directivo con parqueadero exclusivo
         max_vehiculos = self.MAX_VEHICULOS_POR_FUNCIONARIO
         if funcionario_id and self.db:
-            from ..config.settings import CARGOS_DIRECTIVOS
             query = """
-                SELECT cargo, tiene_parqueadero_exclusivo
+                SELECT tiene_parqueadero_exclusivo
                 FROM funcionarios
                 WHERE id = %s AND activo = TRUE
             """
             funcionario_data = self.db.fetch_one(query, (funcionario_id,))
             if funcionario_data:
-                cargo = funcionario_data.get("cargo", "")
                 tiene_exclusivo = funcionario_data.get("tiene_parqueadero_exclusivo", False)
 
-                if cargo in CARGOS_DIRECTIVOS and tiene_exclusivo:
+                # Si tiene parqueadero exclusivo, permite hasta 4 vehículos (sin restricción de cargo)
+                if tiene_exclusivo:
                     max_vehiculos = self.MAX_VEHICULOS_DIRECTIVO_EXCLUSIVO
 
         if total_actual >= max_vehiculos:
@@ -127,21 +126,19 @@ class ValidadorVehiculos:
         if not es_valida:
             return False, mensaje
 
-        # Verificar si es directivo con parqueadero exclusivo (exento de restricción PAR/IMPAR)
+        # Verificar si tiene parqueadero exclusivo (exento de restricción PAR/IMPAR)
         if funcionario_id and self.db:
-            from ..config.settings import CARGOS_DIRECTIVOS
             query = """
-                SELECT cargo, tiene_parqueadero_exclusivo
+                SELECT tiene_parqueadero_exclusivo
                 FROM funcionarios
                 WHERE id = %s AND activo = TRUE
             """
             funcionario_data = self.db.fetch_one(query, (funcionario_id,))
             if funcionario_data:
-                cargo = funcionario_data.get("cargo", "")
                 tiene_exclusivo = funcionario_data.get("tiene_parqueadero_exclusivo", False)
 
-                if cargo in CARGOS_DIRECTIVOS and tiene_exclusivo:
-                    # Directivo con exclusivo: NO validar PAR/IMPAR
+                # Si tiene parqueadero exclusivo: NO validar PAR/IMPAR (sin restricción de cargo)
+                if tiene_exclusivo:
                     return True, ""
 
         carros_actuales = [v for v in vehiculos_actuales if v.get("tipo_vehiculo") == TipoVehiculo.CARRO.value]
@@ -200,18 +197,17 @@ class ValidadorVehiculos:
         max_vehiculos = self.MAX_VEHICULOS_POR_FUNCIONARIO
         es_directivo_exclusivo = False
         if funcionario_id and self.db:
-            from ..config.settings import CARGOS_DIRECTIVOS
             query = """
-                SELECT cargo, tiene_parqueadero_exclusivo
+                SELECT tiene_parqueadero_exclusivo
                 FROM funcionarios
                 WHERE id = %s AND activo = TRUE
             """
             funcionario_data = self.db.fetch_one(query, (funcionario_id,))
             if funcionario_data:
-                cargo = funcionario_data.get("cargo", "")
                 tiene_exclusivo = funcionario_data.get("tiene_parqueadero_exclusivo", False)
 
-                if cargo in CARGOS_DIRECTIVOS and tiene_exclusivo:
+                # Si tiene parqueadero exclusivo, permite hasta 4 vehículos (sin restricción de cargo)
+                if tiene_exclusivo:
                     max_vehiculos = self.MAX_VEHICULOS_DIRECTIVO_EXCLUSIVO
                     es_directivo_exclusivo = True
 

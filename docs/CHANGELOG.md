@@ -15,6 +15,7 @@ Registro de cambios y actualizaciones del sistema.
 1. **Consultas N+1 en `cargar_combo_funcionarios()`**: Por cada funcionario (100+), se ejecutaba `obtener_por_funcionario()` - resultando en 100+ consultas SQL individuales
 2. **Bloqueo del hilo principal**: `guardar_vehiculo()` ejecutaba INSERT y 3 recargas completas de forma síncrona
 3. **Refresh completo**: Cada operación recargaba TODA la tabla y combo desde cero
+4. **Aislamiento de conexiones MySQL**: Worker threads creaban conexiones propias, causando que el hilo principal no viera datos recién comprometidos
 
 **Solución Implementada**:
 
@@ -45,14 +46,23 @@ GROUP BY f.id
 - Botón cambia a "⏳ Guardando..." durante operación
 - UI permanece responsiva durante todas las operaciones
 
+**4. Sincronización de Conexiones MySQL**:
+- `db.ensure_connection()` en `on_vehiculo_guardado()` para refrescar conexión principal
+- `db.ensure_connection()` en `actualizar_vehiculos_sin_asignar()` de Asignaciones tab
+- Delay de 300ms (antes 100ms) en `QTimer.singleShot()` para garantizar visibilidad de commits
+- Soluciona problema donde modales y ComboBoxes no veían vehículos recién guardados
+
 **Archivos Modificados**:
-- `src/ui/vehiculos_tab.py` (líneas 6-148):
+- `src/ui/vehiculos_tab.py` (líneas 6-148, 766-797):
   - Agregados imports `QThread`, `pyqtSlot`, `QApplication`
   - Nuevas clases: `GuardarVehiculoWorker`, `CargarVehiculosWorker`, `CargarComboFuncionariosWorker`
   - Modificado `guardar_vehiculo()`: Ahora asíncrono con callback `on_vehiculo_guardado()`
+  - Modificado `on_vehiculo_guardado()`: Agregado `db.ensure_connection()` y aumentado delay a 300ms
   - Modificado `cargar_combo_funcionarios()`: Query única optimizada
   - Nuevo método `cargar_vehiculos_async()`: Carga asíncrona de tabla
   - Actualizados modales para usar versión asíncrona
+- `src/ui/asignaciones_tab.py` (líneas 1912-1916):
+  - Modificado `actualizar_vehiculos_sin_asignar()`: Agregado `db.ensure_connection()`
 
 **Mejoras de Rendimiento**:
 - ✅ **Antes**: 2-5 segundos bloqueando UI
@@ -60,6 +70,8 @@ GROUP BY f.id
 - ✅ Reducción de 100+ queries SQL a 1 query optimizada
 - ✅ UI permanece responsiva durante todas las operaciones
 - ✅ Sin bloqueos del hilo principal
+- ✅ Vehículos aparecen inmediatamente en todas las pestañas (Asignaciones, modales)
+- ✅ Sin errores de NoneType en modales de edición/visualización
 
 **Impacto en el Usuario**:
 ```

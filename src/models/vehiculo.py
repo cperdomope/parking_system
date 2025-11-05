@@ -270,7 +270,7 @@ class VehiculoModel:
             return False, f"🚫 Error inesperado: {str(e)}"
 
     def eliminar(self, vehiculo_id: int) -> Tuple[bool, str]:
-        """Elimina un vehículo (desactivación lógica) y libera asignaciones
+        """Elimina un vehículo físicamente de la base de datos y libera asignaciones
 
         Args:
             vehiculo_id (int): ID del vehículo a eliminar
@@ -292,22 +292,30 @@ class VehiculoModel:
             # Iniciar transacción
             self.db.connection.autocommit = False
 
-            # 1. Liberar asignaciones activas
-            query_liberar = """
-                UPDATE asignaciones
-                SET activo = NULL, fecha_fin_asignacion = NOW()
+            # 1. Liberar asignaciones activas Y actualizar estado del parqueadero
+            # Importar ParqueaderoModel para usar su método liberar_asignacion()
+            from .parqueadero import ParqueaderoModel
+            parqueadero_model = ParqueaderoModel(self.db)
+
+            # Verificar si tiene asignaciones activas
+            query_check = """
+                SELECT parqueadero_id
+                FROM asignaciones
                 WHERE vehiculo_id = %s AND activo = TRUE
             """
-            exito, error = self.db.execute_query(query_liberar, (vehiculo_id,))
-            if not exito:
-                self.db.connection.rollback()
-                return False, f"🚫 Error liberando asignaciones: {error}"
+            asignacion_activa = self.db.fetch_one(query_check, (vehiculo_id,))
 
-            # 2. Desactivar el vehículo
+            if asignacion_activa:
+                # Usar el método del modelo de parqueadero que libera Y actualiza el estado
+                exito_liberacion = parqueadero_model.liberar_asignacion(vehiculo_id)
+                if not exito_liberacion:
+                    self.db.connection.rollback()
+                    return False, f"🚫 Error liberando asignación del parqueadero"
+
+            # 2. Eliminar el vehículo físicamente de la base de datos
             query_eliminar = """
-                UPDATE vehiculos
-                SET activo = FALSE
-                WHERE id = %s AND activo = TRUE
+                DELETE FROM vehiculos
+                WHERE id = %s
             """
             exito, error = self.db.execute_query(query_eliminar, (vehiculo_id,))
             if not exito:

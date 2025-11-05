@@ -116,7 +116,7 @@ class DetalleParqueaderoModal(QDialog):
         btn_actualizar_todo = QPushButton("🔄 Actualizar Todo")
         btn_actualizar_todo.clicked.connect(self.cargar_informacion)
         btn_actualizar_todo.setStyleSheet(
-            "padding: 10px 20px; background-color: #2196F3; color: white; "
+            "padding: 10px 20px; background-color: #34B5A9; color: white; "
             "border: none; border-radius: 6px; font-weight: bold; font-size: 14px;"
         )
         btn_layout.addWidget(btn_actualizar_todo)
@@ -139,7 +139,7 @@ class DetalleParqueaderoModal(QDialog):
         group.setStyleSheet(
             "QGroupBox { "
             "font-size: 16px; font-weight: bold; "
-            "border: 2px solid #1976D2; "
+            "border: 2px solid #267A70; "
             "border-radius: 8px; "
             "margin-top: 10px; "
             "padding-top: 10px; "
@@ -148,7 +148,7 @@ class DetalleParqueaderoModal(QDialog):
             "subcontrol-origin: margin; "
             "left: 15px; "
             "padding: 0 8px 0 8px; "
-            "color: #1976D2; "
+            "color: #267A70; "
             "}"
         )
 
@@ -163,9 +163,9 @@ class DetalleParqueaderoModal(QDialog):
 
         lbl_numero = QLabel(f"{format_numero_parqueadero(self.numero_parqueadero)}")
         lbl_numero.setStyleSheet(
-            "font-size: 22px; font-weight: bold; color: #1976D2; "
+            "font-size: 22px; font-weight: bold; color: #267A70; "
             "padding: 6px 12px; background-color: #E3F2FD; "
-            "border-radius: 6px; border: 2px solid #1976D2;"
+            "border-radius: 6px; border: 2px solid #267A70;"
         )
         layout.addWidget(lbl_numero, 0, 1)
 
@@ -256,7 +256,7 @@ class DetalleParqueaderoModal(QDialog):
         header_layout = QHBoxLayout()
         lbl_titulo = QLabel("📋 Historial de Asignaciones")
         lbl_titulo.setStyleSheet(
-            "font-size: 18px; font-weight: bold; color: #1976D2; "
+            "font-size: 18px; font-weight: bold; color: #267A70; "
             "padding: 10px; background-color: #E3F2FD; border-radius: 6px;"
         )
         header_layout.addWidget(lbl_titulo)
@@ -476,7 +476,7 @@ class DetalleParqueaderoModal(QDialog):
 
         elif tipo_espacio == "Moto":
             # Para motos (capacidad ilimitada prácticamente)
-            color_ocupacion = "#4CAF50" if motos_asignadas == 0 else "#2196F3"
+            color_ocupacion = "#4CAF50" if motos_asignadas == 0 else "#34B5A9"
             bg_ocupacion = "#E8F5E9" if motos_asignadas == 0 else "#E3F2FD"
             icono = "🟢" if motos_asignadas == 0 else "🔵"
             texto_ocupacion = f"{icono} {motos_asignadas} motos asignadas"
@@ -495,7 +495,7 @@ class DetalleParqueaderoModal(QDialog):
                 bg_ocupacion = "#E8F5E9"
                 icono = "🟢"
             else:
-                color_ocupacion = "#2196F3"
+                color_ocupacion = "#34B5A9"
                 bg_ocupacion = "#E3F2FD"
                 icono = "🔵"
             texto_ocupacion = f"{icono} {carros_asignados}🚗 {motos_asignadas}🏍️ {bicicletas_asignadas}🚲"
@@ -583,7 +583,7 @@ class DetalleParqueaderoModal(QDialog):
         icono = iconos_vehiculo.get(vehiculo["tipo_vehiculo"], "🚗")
         header = QLabel(f"{icono} {vehiculo['tipo_vehiculo']} {posicion}")
         header.setStyleSheet(
-            "font-size: 18px; font-weight: bold; color: #1976D2; "
+            "font-size: 18px; font-weight: bold; color: #267A70; "
             "padding: 8px; background-color: #E3F2FD; border-radius: 6px;"
         )
         header_layout.addWidget(header)
@@ -648,7 +648,7 @@ class DetalleParqueaderoModal(QDialog):
         # Nombre completo destacado
         funcionario_layout.addWidget(QLabel("Nombre:"), 0, 0)
         lbl_nombre = QLabel(f"{vehiculo['nombre']} {vehiculo['apellidos']}")
-        lbl_nombre.setStyleSheet("font-size: 15px; font-weight: bold; color: #1976D2;")
+        lbl_nombre.setStyleSheet("font-size: 15px; font-weight: bold; color: #267A70;")
         funcionario_layout.addWidget(lbl_nombre, 0, 1, 1, 3)
 
         # Cédula

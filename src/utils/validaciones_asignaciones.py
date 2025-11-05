@@ -156,9 +156,8 @@ class ValidadorAsignacion:
         if tiene_pico_placa_solidario:
             return True, ""
 
-        # Si es directivo con parqueadero exclusivo, ignorar restricción PAR/IMPAR
-        from ..config.settings import CARGOS_DIRECTIVOS
-        if tiene_parqueadero_exclusivo and cargo in CARGOS_DIRECTIVOS:
+        # Si tiene parqueadero exclusivo, ignorar restricción PAR/IMPAR (sin restricción de cargo)
+        if tiene_parqueadero_exclusivo:
             return True, ""
 
         # Si hay vehículos del mismo tipo, denegar

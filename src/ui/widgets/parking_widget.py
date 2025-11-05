@@ -62,7 +62,7 @@ class ParkingSpaceWidget(QFrame):
         numero_display = format_numero_parqueadero(self.numero)
         self.lbl_numero = QLabel(f"{icono_tipo} {numero_display}")
         self.lbl_numero.setStyleSheet(
-            "font-size: 13px; font-weight: bold; color: #1976D2; padding: 2px;"
+            "font-size: 13px; font-weight: bold; color: #267A70; padding: 2px;"
         )
         self.lbl_numero.setCursor(QCursor(Qt.PointingHandCursor))
         self.lbl_numero.mousePressEvent = self.on_numero_clicked

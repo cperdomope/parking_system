@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QGridLayout,
     QGroupBox,
@@ -43,13 +44,41 @@ class FuncionariosTab(QWidget):
         self.funcionario_model = FuncionarioModel(self.db)
 
         # Variables de paginación
-        self.filas_por_pagina = 5
+        self.filas_por_pagina = 4
         self.pagina_actual = 1
         self.total_funcionarios = 0
         self.funcionarios_completos = []  # Lista completa de funcionarios
 
         self.setup_ui()
         self.cargar_funcionarios()
+
+    def cargar_items_personalizados(self):
+        """Carga items personalizados desde el archivo JSON"""
+        import json
+        import os
+
+        try:
+            config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config")
+            config_file = os.path.join(config_dir, "custom_items.json")
+
+            if os.path.exists(config_file):
+                with open(config_file, "r", encoding="utf-8") as f:
+                    custom_items = json.load(f)
+
+                # Cargar cargos personalizados
+                if "cargos" in custom_items:
+                    for cargo in custom_items["cargos"]:
+                        if cargo and cargo.strip():
+                            self.combo_cargo.addItem(cargo)
+
+                # Cargar direcciones personalizadas
+                if "direcciones" in custom_items:
+                    for direccion in custom_items["direcciones"]:
+                        if direccion and direccion.strip():
+                            self.combo_direccion.addItem(direccion)
+
+        except Exception as e:
+            print(f"Error al cargar items personalizados: {e}")
 
     def crear_label_obligatorio(self, texto):
         """Crea un QLabel con asterisco rojo para campos obligatorios"""
@@ -66,177 +95,165 @@ class FuncionariosTab(QWidget):
         form_layout = QGridLayout()
         form_layout.setSpacing(10)  # Espaciado uniforme
 
-        # ===== FILA 0: Cédula, Nombre, Apellidos, Celular, No.Tarjeta Prox =====
+        # ===== FILA 0: Cédula, Nombre, Apellidos, Celular (distribuidos uniformemente) =====
         form_layout.addWidget(self.crear_label_obligatorio("Cédula:"), 0, 0)
         self.txt_cedula = QLineEdit()
         cedula_validator = QRegExpValidator(QRegExp("^[0-9]{7,10}$"))
         self.txt_cedula.setValidator(cedula_validator)
         self.txt_cedula.setPlaceholderText("Solo números")
         self.txt_cedula.setMaxLength(10)
-        form_layout.addWidget(self.txt_cedula, 0, 1)
+        form_layout.addWidget(self.txt_cedula, 0, 1, 1, 2)  # Span 2 columnas
 
-        form_layout.addWidget(self.crear_label_obligatorio("Nombre:"), 0, 2)
+        form_layout.addWidget(self.crear_label_obligatorio("Nombre:"), 0, 3)
         self.txt_nombre = QLineEdit()
         nombre_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
         self.txt_nombre.setValidator(nombre_validator)
         self.txt_nombre.setPlaceholderText("Escriba su nombre")
-        form_layout.addWidget(self.txt_nombre, 0, 3)
+        form_layout.addWidget(self.txt_nombre, 0, 4, 1, 2)  # Span 2 columnas
 
-        form_layout.addWidget(self.crear_label_obligatorio("Apellidos:"), 0, 4)
+        form_layout.addWidget(self.crear_label_obligatorio("Apellidos:"), 0, 6)
         self.txt_apellidos = QLineEdit()
         apellidos_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
         self.txt_apellidos.setValidator(apellidos_validator)
         self.txt_apellidos.setPlaceholderText("Digite su apellido")
-        form_layout.addWidget(self.txt_apellidos, 0, 5)
+        form_layout.addWidget(self.txt_apellidos, 0, 7, 1, 2)  # Span 2 columnas
 
-        form_layout.addWidget(self.crear_label_obligatorio("Celular:"), 0, 6)
+        form_layout.addWidget(self.crear_label_obligatorio("Celular:"), 0, 9)
         self.txt_celular = QLineEdit()
         celular_validator = QRegExpValidator(QRegExp("^[0-9]{10}$"))
         self.txt_celular.setValidator(celular_validator)
         self.txt_celular.setPlaceholderText("10 dígitos numéricos (ej: 3001234567)")
         self.txt_celular.setMaxLength(10)
-        form_layout.addWidget(self.txt_celular, 0, 7)
+        form_layout.addWidget(self.txt_celular, 0, 10, 1, 2)  # Span 2 columnas
 
-        form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 0, 8)
+        # ===== FILA 1: Dirección/Grupo, Cargo, Tipo de Excepción, No.Tarjeta Prox (distribuidos uniformemente) =====
+        form_layout.addWidget(self.crear_label_obligatorio("Dirección/Grupo:"), 1, 0)
+
+        # Container para Dirección/Grupo con botón de agregar
+        direccion_container = QWidget()
+        direccion_layout = QHBoxLayout(direccion_container)
+        direccion_layout.setContentsMargins(0, 0, 0, 0)
+        direccion_layout.setSpacing(5)
+
+        self.combo_direccion = QComboBox()
+        self.combo_direccion.addItem("-- Seleccione --", "")
+        self.combo_direccion.addItems(DIRECCIONES_DISPONIBLES)
+        # Configurar tooltips para cada item del combo de direcciones
+        self.combo_direccion.setItemData(0, "Seleccione una dirección o grupo organizacional", Qt.ToolTipRole)
+        for i in range(1, self.combo_direccion.count()):
+            texto_direccion = self.combo_direccion.itemText(i)
+            self.combo_direccion.setItemData(i, texto_direccion, Qt.ToolTipRole)
+        self.combo_direccion.setMinimumWidth(180)
+        self.combo_direccion.view().setMinimumWidth(400)
+        self.combo_direccion.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        direccion_layout.addWidget(self.combo_direccion)
+
+        # Botón para agregar nueva dirección
+        btn_add_direccion = QPushButton("+")
+        btn_add_direccion.setFixedSize(20, 26)
+        btn_add_direccion.setToolTip("Agregar nueva Dirección/Grupo")
+        btn_add_direccion.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                font-size: 18px;
+                border: none;
+                border-radius: 4px;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #21618c;
+            }
+            """
+        )
+        btn_add_direccion.clicked.connect(lambda: self.agregar_item_combo("Dirección/Grupo", self.combo_direccion))
+        direccion_layout.addWidget(btn_add_direccion)
+
+        form_layout.addWidget(direccion_container, 1, 1, 1, 2)  # Span 2 columnas
+
+        form_layout.addWidget(self.crear_label_obligatorio("Cargo:"), 1, 3)
+
+        # Container para Cargo con botón de agregar
+        cargo_container = QWidget()
+        cargo_layout = QHBoxLayout(cargo_container)
+        cargo_layout.setContentsMargins(0, 0, 0, 0)
+        cargo_layout.setSpacing(5)
+
+        self.combo_cargo = QComboBox()
+        self.combo_cargo.addItem("-- Seleccione --", "")
+        self.combo_cargo.addItems(CARGOS_DISPONIBLES)
+        cargo_layout.addWidget(self.combo_cargo)
+
+        # Botón para agregar nuevo cargo
+        btn_add_cargo = QPushButton("+")
+        btn_add_cargo.setFixedSize(20, 26)
+        btn_add_cargo.setToolTip("Agregar nuevo Cargo")
+        btn_add_cargo.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                font-size: 18px;
+                border: none;
+                border-radius: 4px;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #21618c;
+            }
+            """
+        )
+        btn_add_cargo.clicked.connect(lambda: self.agregar_item_combo("Cargo", self.combo_cargo))
+        cargo_layout.addWidget(btn_add_cargo)
+
+        form_layout.addWidget(cargo_container, 1, 4, 1, 2)  # Span 2 columnas
+
+        # Cargar items personalizados (cargos y direcciones guardados previamente)
+        self.cargar_items_personalizados()
+
+        # ===== ComboBox: Tipo de Excepción =====
+        form_layout.addWidget(QLabel("Tipo de Excepción:"), 1, 6)
+        self.combo_tipo_excepcion = QComboBox()
+        self.combo_tipo_excepcion.addItem("-- Ninguna --", "ninguna")
+        self.combo_tipo_excepcion.addItem("Pico y Placa Solidario", "pico_placa_solidario")
+        self.combo_tipo_excepcion.addItem("Funcionario con Discapacidad", "discapacidad")
+        self.combo_tipo_excepcion.addItem("Exclusivo Directivo (4 carros)", "exclusivo_directivo")
+        self.combo_tipo_excepcion.addItem("Carro Híbrido (Incentivo Ambiental)", "carro_hibrido")
+        self.combo_tipo_excepcion.setMinimumWidth(150)
+
+        # Configurar tooltips para cada opción
+        self.combo_tipo_excepcion.setItemData(0, "Funcionario regular sin excepciones", Qt.ToolTipRole)
+        self.combo_tipo_excepcion.setItemData(1, "Permite usar el parqueadero en días que normalmente no le corresponderían (ignora PAR/IMPAR)", Qt.ToolTipRole)
+        self.combo_tipo_excepcion.setItemData(2, "Marca al funcionario con condición de discapacidad. Tiene prioridad para espacios especiales", Qt.ToolTipRole)
+        self.combo_tipo_excepcion.setItemData(3, "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero. Disponible para cualquier cargo", Qt.ToolTipRole)
+        self.combo_tipo_excepcion.setItemData(4, "Carro híbrido: Puede usar el parqueadero TODOS LOS DÍAS (parqueadero exclusivo - incentivo ambiental)", Qt.ToolTipRole)
+
+        # Permitir ajuste de ancho del dropdown
+        self.combo_tipo_excepcion.view().setMinimumWidth(450)
+        self.combo_tipo_excepcion.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+
+        form_layout.addWidget(self.combo_tipo_excepcion, 1, 7, 1, 2)  # Span 2 columnas
+
+        # No.Tarjeta Prox en la misma fila 1
+        form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 1, 9)
         self.txt_tarjeta = QLineEdit()
         tarjeta_validator = QRegExpValidator(QRegExp("^[a-zA-Z0-9]{1,15}$"))
         self.txt_tarjeta.setValidator(tarjeta_validator)
         self.txt_tarjeta.setPlaceholderText("Alfanumérico, máx 15 caracteres")
         self.txt_tarjeta.setMaxLength(15)
-        form_layout.addWidget(self.txt_tarjeta, 0, 9)
+        form_layout.addWidget(self.txt_tarjeta, 1, 10, 1, 2)  # Span 2 columnas
 
-        # ===== FILA 1: Dirección/Grupo, Cargo, Checkboxes =====
-        form_layout.addWidget(self.crear_label_obligatorio("Dirección/Grupo:"), 1, 0)
-        self.combo_direccion = QComboBox()
-        self.combo_direccion.addItem("-- Seleccione --", "")
-        self.combo_direccion.addItems(DIRECCIONES_DISPONIBLES)
-        form_layout.addWidget(self.combo_direccion, 1, 1)
-
-        form_layout.addWidget(self.crear_label_obligatorio("Cargo:"), 1, 2)
-        self.combo_cargo = QComboBox()
-        self.combo_cargo.addItem("-- Seleccione --", "")
-        self.combo_cargo.addItems(CARGOS_DISPONIBLES)
-        form_layout.addWidget(self.combo_cargo, 1, 3)
-
-        # ===== CHECKBOXES EN FILA 2 (columnas 2-5) =====
-        checkboxes_layout = QHBoxLayout()
-
-        # Checkbox: Pico y Placa Solidario
-        self.chk_pico_placa_solidario = QCheckBox("Pico y Placa Solidario")
-        self.chk_pico_placa_solidario.setToolTip(
-            "Permite al funcionario usar el parqueadero en días que normalmente no le corresponderían.\n"
-            "Ignora restricciones de PAR/IMPAR."
-        )
-        self.chk_pico_placa_solidario.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #2980b9;
-                padding: 5px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #3498db;
-                border: 2px solid #2980b9;
-            }
-        """
-        )
-        self.chk_pico_placa_solidario.stateChanged.connect(self.on_pico_placa_changed_main)
-
-        # Checkbox: Discapacidad
-        self.chk_discapacidad = QCheckBox("Funcionario con Discapacidad")
-        self.chk_discapacidad.setToolTip(
-            "Marca al funcionario con condición de discapacidad.\nTiene prioridad para espacios especiales."
-        )
-        self.chk_discapacidad.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #27ae60;
-                padding: 5px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #2ecc71;
-                border: 2px solid #27ae60;
-            }
-        """
-        )
-        self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed_main)
-
-        # Checkbox: Exclusivo Directivo (hasta 4 carros)
-        self.chk_exclusivo_directivo = QCheckBox("Exclusivo Directivo (4 carros)")
-        self.chk_exclusivo_directivo.setToolTip(
-            "Solo para cargos: Director, Coordinador, Asesor.\n"
-            "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero.\n"
-            "Ignora restricciones PAR/IMPAR completamente."
-        )
-        self.chk_exclusivo_directivo.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #8e44ad;
-                padding: 5px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #9b59b6;
-                border: 2px solid #8e44ad;
-            }
-        """
-        )
-        self.chk_exclusivo_directivo.stateChanged.connect(self.on_exclusivo_directivo_changed_main)
-
-        # Checkbox: Carro Híbrido (incentivo ambiental)
-        self.chk_carro_hibrido = QCheckBox("Carro Híbrido (Incentivo Ambiental)")
-        self.chk_carro_hibrido.setToolTip(
-            "Marca esta casilla si el funcionario tiene carro híbrido.\n"
-            "BENEFICIOS:\n"
-            "• Puede usar el parqueadero TODOS LOS DÍAS (ignora pico y placa)\n"
-            "• Parqueadero EXCLUSIVO (estado Completo inmediato - color rojo)\n"
-            "• Incentivo para la contribución al medio ambiente"
-        )
-        self.chk_carro_hibrido.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #27ae60;
-                padding: 5px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #2ecc71;
-                border: 2px solid #27ae60;
-            }
-        """
-        )
-        self.chk_carro_hibrido.stateChanged.connect(self.on_carro_hibrido_changed_main)
-
-        # Agregar los cuatro checkboxes al layout horizontal
-        checkboxes_layout.addWidget(self.chk_pico_placa_solidario)
-        checkboxes_layout.addWidget(self.chk_discapacidad)
-        checkboxes_layout.addWidget(self.chk_exclusivo_directivo)
-        checkboxes_layout.addWidget(self.chk_carro_hibrido)
-
-        # Agregar el layout horizontal en fila 1, columnas 4-9 (después de Cargo)
-        form_layout.addLayout(checkboxes_layout, 1, 4, 1, 6)
-
-        # ===== FILA 2: BOTONES CENTRADOS =====
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()  # Espaciado izquierdo para centrar
-
+        # ===== FILA 2: Botones =====
+        # Botones centrados en fila 2
         self.btn_guardar_funcionario = QPushButton("Guardar")
         self.btn_guardar_funcionario.clicked.connect(self.guardar_funcionario)
         self.btn_guardar_funcionario.setProperty("class", "success")
@@ -286,12 +303,9 @@ class FuncionariosTab(QWidget):
         """
         )
 
-        btn_layout.addWidget(self.btn_guardar_funcionario)
-        btn_layout.addWidget(self.btn_limpiar_funcionario)
-        btn_layout.addStretch()  # Espaciado derecho para centrar
-
-        # Botones centrados en fila 2
-        form_layout.addLayout(btn_layout, 2, 0, 1, 10)
+        # Agregar botones en fila 2, columnas 4 y 5
+        form_layout.addWidget(self.btn_guardar_funcionario, 2, 4)
+        form_layout.addWidget(self.btn_limpiar_funcionario, 2, 5)
 
         form_group.setLayout(form_layout)
         layout.addWidget(form_group)
@@ -329,12 +343,11 @@ class FuncionariosTab(QWidget):
             }
         """)
 
-        search_label = QLabel("Buscar por Cédula:")
+        search_label = QLabel("Buscar Por:")
         search_label.setStyleSheet("font-weight: bold; font-size: 12px;")
 
         self.txt_buscar_cedula = QLineEdit()
-        self.txt_buscar_cedula.setPlaceholderText("Ingrese la cédula para filtrar...")
-        self.txt_buscar_cedula.setMaxLength(10)
+        self.txt_buscar_cedula.setPlaceholderText("Cédula, nombre, apellido")
         self.txt_buscar_cedula.textChanged.connect(self.filtrar_funcionarios)
         self.txt_buscar_cedula.setStyleSheet("""
             QLineEdit {
@@ -383,8 +396,40 @@ class FuncionariosTab(QWidget):
         tabla_group = QGroupBox("Lista de Funcionarios")
         tabla_layout = QVBoxLayout()
 
+        # Botón Importar Data encima de la tabla
+        btn_importar_container = QHBoxLayout()
+        btn_importar_container.addStretch()
+
+        self.btn_importar_excel = QPushButton("📊 Importar")
+        self.btn_importar_excel.setMinimumWidth(120)
+        self.btn_importar_excel.setMinimumHeight(35)
+        self.btn_importar_excel.setToolTip("Importar data desde Excel (.xlsx o .xls)")
+        self.btn_importar_excel.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #16a085;
+                color: white;
+                font-weight: bold;
+                font-size: 13px;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: #1abc9c;
+            }
+            QPushButton:pressed {
+                background-color: #138d75;
+            }
+        """
+        )
+        self.btn_importar_excel.clicked.connect(self.importar_desde_excel)
+        btn_importar_container.addWidget(self.btn_importar_excel)
+        btn_importar_container.addStretch()
+        tabla_layout.addLayout(btn_importar_container)
+
         self.tabla_funcionarios = QTableWidget()
-        self.tabla_funcionarios.setColumnCount(13)
+        self.tabla_funcionarios.setColumnCount(15)
         self.tabla_funcionarios.setHorizontalHeaderLabels(
             [
                 "Cédula",
@@ -398,6 +443,8 @@ class FuncionariosTab(QWidget):
                 "Compartir",
                 "Solidario",
                 "Discap.",
+                "Híbrido",
+                "Exclusivo",
                 "Estado",
                 "Acciones",
             ]
@@ -421,19 +468,21 @@ class FuncionariosTab(QWidget):
         self.tabla_funcionarios.setColumnWidth(8, 80)  # Compartir
         self.tabla_funcionarios.setColumnWidth(9, 80)  # Solidario
         self.tabla_funcionarios.setColumnWidth(10, 70)  # Discapacidad
-        self.tabla_funcionarios.setColumnWidth(11, 90)  # Estado
-        self.tabla_funcionarios.setColumnWidth(12, 110)  # Acciones (reducido de 240 a 110)
+        self.tabla_funcionarios.setColumnWidth(11, 70)  # Híbrido
+        self.tabla_funcionarios.setColumnWidth(12, 85)  # Exclusivo
+        self.tabla_funcionarios.setColumnWidth(13, 90)  # Estado
+        self.tabla_funcionarios.setColumnWidth(14, 110)  # Acciones
 
-        # Configurar altura de filas reducida para evitar superposición con botones de paginación
-        altura_fila_reducida = 50  # Reducido de 60px a 50px para mejor ajuste
-        self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(altura_fila_reducida)
+        # Configurar altura de filas para mejor visualización
+        altura_fila = 50
+        self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(altura_fila)
 
-        # Establecer altura mínima y máxima para mostrar exactamente 5 filas sin scroll
-        # Cálculo: altura_encabezado (45px) + (5 filas × 50px) + margen (20px) = 315px
+        # Establecer altura para mostrar exactamente 4 filas + scroll horizontal visible
+        # Cálculo: altura_encabezado (45px) + (4 filas × 50px) + scroll horizontal (20px) = 265px
         altura_encabezado = 45
-        num_filas_visibles = 5
-        margen_seguridad = 20
-        altura_total = altura_encabezado + (num_filas_visibles * altura_fila_reducida) + margen_seguridad
+        num_filas_visibles = 4
+        espacio_scroll = 20
+        altura_total = altura_encabezado + (num_filas_visibles * altura_fila) + espacio_scroll
         self.tabla_funcionarios.setMinimumHeight(altura_total)
         self.tabla_funcionarios.setMaximumHeight(altura_total)
 
@@ -441,12 +490,12 @@ class FuncionariosTab(QWidget):
         self.tabla_funcionarios.horizontalHeader().setStyleSheet(
             """
             QHeaderView::section {
-                background-color: #3498db;
+                background-color: #34B5A9;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
                 border: none;
-                border-right: 1px solid #2980b9;
+                border-right: 1px solid #2D9B8F;
             }
         """
         )
@@ -473,6 +522,10 @@ class FuncionariosTab(QWidget):
             }
         """
         )
+
+        # Configurar scroll horizontal para que siempre esté visible
+        self.tabla_funcionarios.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.tabla_funcionarios.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         tabla_layout.addWidget(self.tabla_funcionarios)
 
@@ -744,36 +797,38 @@ class FuncionariosTab(QWidget):
             self.txt_tarjeta.setFocus()
             return
 
-        # Determinar los valores de los campos según el checkbox marcado
-        if self.chk_carro_hibrido.isChecked():
+        # Determinar los valores de los campos según el tipo de excepción seleccionado
+        tipo_excepcion = self.combo_tipo_excepcion.currentData()
+
+        if tipo_excepcion == "carro_hibrido":
             # Carro híbrido (incentivo ambiental)
             permite_compartir = False
             pico_placa_solidario = False
             discapacidad = False
             tiene_parqueadero_exclusivo = False
             tiene_carro_hibrido = True
-        elif self.chk_exclusivo_directivo.isChecked():
+        elif tipo_excepcion == "exclusivo_directivo":
             # Exclusivo directivo (hasta 4 vehículos)
             permite_compartir = False
             pico_placa_solidario = False
             discapacidad = False
             tiene_parqueadero_exclusivo = True
             tiene_carro_hibrido = False
-        elif self.chk_pico_placa_solidario.isChecked():
+        elif tipo_excepcion == "pico_placa_solidario":
             # Pico y placa solidario
             permite_compartir = True
             pico_placa_solidario = True
             discapacidad = False
             tiene_parqueadero_exclusivo = False
             tiene_carro_hibrido = False
-        elif self.chk_discapacidad.isChecked():
+        elif tipo_excepcion == "discapacidad":
             # Funcionario con discapacidad
             permite_compartir = True
             pico_placa_solidario = False
             discapacidad = True
             tiene_parqueadero_exclusivo = False
             tiene_carro_hibrido = False
-        else:
+        else:  # "ninguna" o cualquier otro valor
             # Ninguno marcado (funcionario regular que comparte)
             permite_compartir = True
             pico_placa_solidario = False
@@ -821,6 +876,92 @@ class FuncionariosTab(QWidget):
             else:
                 QMessageBox.critical(self, "🚫 Error", mensaje)
 
+    def agregar_item_combo(self, tipo_campo, combo_widget):
+        """
+        Abre un modal para agregar un nuevo item al ComboBox especificado
+
+        Args:
+            tipo_campo: Nombre del campo ("Cargo" o "Dirección/Grupo")
+            combo_widget: El QComboBox al que se agregará el item
+        """
+        import json
+        import os
+        from PyQt5.QtWidgets import QInputDialog
+
+        # Solicitar el nuevo item mediante un diálogo
+        texto, ok = QInputDialog.getText(
+            self,
+            f"Agregar {tipo_campo}",
+            f"Ingrese el nuevo {tipo_campo}:",
+            QLineEdit.Normal,
+            ""
+        )
+
+        if ok and texto.strip():
+            nuevo_item = texto.strip()
+
+            # Verificar si el item ya existe (sin distinguir mayúsculas/minúsculas)
+            items_existentes = [combo_widget.itemText(i).lower() for i in range(combo_widget.count())]
+
+            if nuevo_item.lower() in items_existentes:
+                QMessageBox.warning(
+                    self,
+                    "⚠️ Item Duplicado",
+                    f"El {tipo_campo} '{nuevo_item}' ya existe en la lista."
+                )
+                return
+
+            # Agregar el nuevo item al ComboBox (justo antes del final)
+            combo_widget.addItem(nuevo_item)
+
+            # Seleccionar el nuevo item automáticamente
+            index = combo_widget.findText(nuevo_item)
+            if index >= 0:
+                combo_widget.setCurrentIndex(index)
+
+            # Guardar el nuevo item de forma permanente
+            try:
+                # Obtener la ruta del archivo de configuración
+                config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config")
+                config_file = os.path.join(config_dir, "custom_items.json")
+
+                # Cargar items personalizados existentes
+                custom_items = {}
+                if os.path.exists(config_file):
+                    with open(config_file, "r", encoding="utf-8") as f:
+                        custom_items = json.load(f)
+
+                # Determinar la clave según el tipo de campo
+                key = "cargos" if tipo_campo == "Cargo" else "direcciones"
+
+                # Agregar el nuevo item a la lista
+                if key not in custom_items:
+                    custom_items[key] = []
+
+                if nuevo_item not in custom_items[key]:
+                    custom_items[key].append(nuevo_item)
+
+                # Guardar en el archivo
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump(custom_items, f, ensure_ascii=False, indent=4)
+
+                # Mostrar confirmación
+                QMessageBox.information(
+                    self,
+                    "✅ Item Agregado",
+                    f"El {tipo_campo} '{nuevo_item}' ha sido agregado exitosamente.\n\n"
+                    f"Este cambio es permanente y estará disponible en futuras sesiones."
+                )
+
+            except Exception as e:
+                QMessageBox.warning(
+                    self,
+                    "⚠️ Advertencia",
+                    f"El {tipo_campo} '{nuevo_item}' ha sido agregado temporalmente,\n"
+                    f"pero no se pudo guardar de forma permanente.\n\n"
+                    f"Error: {str(e)}"
+                )
+
     def limpiar_formulario(self):
         """Limpia el formulario de funcionarios"""
         self.txt_cedula.clear()
@@ -830,11 +971,8 @@ class FuncionariosTab(QWidget):
         self.combo_cargo.setCurrentIndex(0)
         self.txt_celular.clear()
         self.txt_tarjeta.clear()
-        # Limpiar checkboxes (ninguno marcado por defecto)
-        self.chk_pico_placa_solidario.setChecked(False)
-        self.chk_discapacidad.setChecked(False)
-        self.chk_exclusivo_directivo.setChecked(False)
-        self.chk_carro_hibrido.setChecked(False)
+        # Limpiar tipo de excepción (volver a "Ninguna")
+        self.combo_tipo_excepcion.setCurrentIndex(0)
 
     def cargar_funcionarios(self):
         """Carga la lista de funcionarios en la tabla con paginación, respetando el filtro de estado"""
@@ -950,7 +1088,25 @@ class FuncionariosTab(QWidget):
                 discap_item.setForeground(QBrush(QColor("#155724")))
             self.tabla_funcionarios.setItem(i, 10, discap_item)
 
-            # Columna 11: Estado (Activo/Inactivo)
+            # Columna 11: Carro Híbrido
+            tiene_hibrido = func.get("tiene_carro_hibrido", False)
+            hibrido_item = QTableWidgetItem("🌿 Sí" if tiene_hibrido else "❌")
+            hibrido_item.setTextAlignment(0x0004 | 0x0080)  # Centro
+            if tiene_hibrido:
+                hibrido_item.setBackground(QBrush(QColor("#d4edda")))
+                hibrido_item.setForeground(QBrush(QColor("#27ae60")))
+            self.tabla_funcionarios.setItem(i, 11, hibrido_item)
+
+            # Columna 12: Exclusivo Directivo
+            tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+            exclusivo_item = QTableWidgetItem("🏢 Sí" if tiene_exclusivo else "❌")
+            exclusivo_item.setTextAlignment(0x0004 | 0x0080)  # Centro
+            if tiene_exclusivo:
+                exclusivo_item.setBackground(QBrush(QColor("#e8daef")))
+                exclusivo_item.setForeground(QBrush(QColor("#8e44ad")))
+            self.tabla_funcionarios.setItem(i, 12, exclusivo_item)
+
+            # Columna 13: Estado (Activo/Inactivo)
             activo = func.get("activo", True)
             estado_text = "Activo" if activo else "Inactivo"
             estado_item = QTableWidgetItem(estado_text)
@@ -967,58 +1123,60 @@ class FuncionariosTab(QWidget):
                 estado_item.setForeground(QBrush(QColor("#721c24")))
                 estado_item.setFont(QFont("Arial", 9, QFont.Bold))
 
-            self.tabla_funcionarios.setItem(i, 11, estado_item)
+            self.tabla_funcionarios.setItem(i, 13, estado_item)
 
-            # Botones de acciones (Editar, Ver, Eliminar/Reactivar)
+            # Botones de acciones (Editar, Ver, Eliminar/Reactivar) - Solo íconos sin fondo
             btn_layout = QHBoxLayout()
             btn_widget = QWidget()
             btn_widget.funcionario_id = func.get("id")  # Almacenar ID para búsquedas rápidas
-            btn_layout.setSpacing(1)
-            btn_layout.setContentsMargins(3, 5, 3, 5)
+            btn_layout.setSpacing(8)  # Mayor espaciado entre botones
+            btn_layout.setContentsMargins(5, 3, 5, 3)
 
-            # Botón Editar - Con fondo azul claro para que sea visible
-            btn_editar = QPushButton("✏")
-            btn_editar.setFixedSize(30, 30)
+            # Botón Editar - Ícono con color fuerte para mejor visibilidad
+            btn_editar = QPushButton("✏️")
+            btn_editar.setFixedSize(32, 32)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #3498db;
+                    background-color: rgba(52, 152, 219, 0.25);
                     border: none;
-                    border-radius: 4px;
-                    font-size: 14px;
+                    font-size: 18px;
                     padding: 0px;
-                    color: white;
+                    border-radius: 5px;
+                    color: #2c3e50;
                 }
                 QPushButton:hover {
-                    background-color: #2980b9;
+                    background-color: rgba(52, 152, 219, 0.4);
+                    border-radius: 5px;
                 }
                 QPushButton:pressed {
-                    background-color: #21618c;
+                    background-color: rgba(52, 152, 219, 0.6);
+                    border-radius: 5px;
                 }
             """
             )
             btn_editar.clicked.connect(lambda _, fid=func.get("id"): self.editar_funcionario(fid))
 
-            # Botón Ver
-            btn_ver = QPushButton("👁")
-            btn_ver.setFixedSize(30, 30)
+            # Botón Ver - Solo ícono sin fondo
+            btn_ver = QPushButton("👁️")
+            btn_ver.setFixedSize(28, 28)
             btn_ver.setToolTip("Ver detalles del funcionario")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #95a5a6;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-size: 14px;
+                    font-size: 16px;
                     padding: 0px;
-                    color: white;
                 }
                 QPushButton:hover {
-                    background-color: #7f8c8d;
+                    background-color: rgba(149, 165, 166, 0.15);
+                    border-radius: 4px;
                 }
                 QPushButton:pressed {
-                    background-color: #5d6d7e;
+                    background-color: rgba(149, 165, 166, 0.25);
+                    border-radius: 4px;
                 }
             """
             )
@@ -1026,25 +1184,25 @@ class FuncionariosTab(QWidget):
 
             # Botón Eliminar o Reactivar según el estado
             if activo:
-                # Si está activo, mostrar botón Eliminar
-                btn_eliminar = QPushButton("🗑")
-                btn_eliminar.setFixedSize(30, 30)
+                # Si está activo, mostrar botón Eliminar - Solo ícono sin fondo
+                btn_eliminar = QPushButton("🗑️")
+                btn_eliminar.setFixedSize(28, 28)
                 btn_eliminar.setToolTip("Desactivar funcionario")
                 btn_eliminar.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #e74c3c;
+                        background-color: transparent;
                         border: none;
-                        border-radius: 4px;
-                        font-size: 14px;
+                        font-size: 16px;
                         padding: 0px;
-                        color: white;
                     }
                     QPushButton:hover {
-                        background-color: #c0392b;
+                        background-color: rgba(231, 76, 60, 0.15);
+                        border-radius: 4px;
                     }
                     QPushButton:pressed {
-                        background-color: #a93226;
+                        background-color: rgba(231, 76, 60, 0.25);
+                        border-radius: 4px;
                     }
                 """
                 )
@@ -1054,25 +1212,25 @@ class FuncionariosTab(QWidget):
                 btn_layout.addWidget(btn_ver)
                 btn_layout.addWidget(btn_eliminar)
             else:
-                # Si está inactivo, mostrar botón Reactivar
+                # Si está inactivo, mostrar botón Reactivar - Solo ícono sin fondo
                 btn_reactivar = QPushButton("🔄")
-                btn_reactivar.setFixedSize(30, 30)
+                btn_reactivar.setFixedSize(28, 28)
                 btn_reactivar.setToolTip("Reactivar funcionario")
                 btn_reactivar.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #27ae60;
+                        background-color: transparent;
                         border: none;
-                        border-radius: 4px;
-                        font-size: 14px;
+                        font-size: 16px;
                         padding: 0px;
-                        color: white;
                     }
                     QPushButton:hover {
-                        background-color: #229954;
+                        background-color: rgba(39, 174, 96, 0.15);
+                        border-radius: 4px;
                     }
                     QPushButton:pressed {
-                        background-color: #1e8449;
+                        background-color: rgba(39, 174, 96, 0.25);
+                        border-radius: 4px;
                     }
                 """
                 )
@@ -1083,7 +1241,7 @@ class FuncionariosTab(QWidget):
                 btn_layout.addWidget(btn_reactivar)
 
             btn_widget.setLayout(btn_layout)
-            self.tabla_funcionarios.setCellWidget(i, 12, btn_widget)
+            self.tabla_funcionarios.setCellWidget(i, 14, btn_widget)
 
         # Actualizar controles de paginación
         self.actualizar_controles_paginacion()
@@ -1296,7 +1454,7 @@ class FuncionariosTab(QWidget):
             # Buscar y remover la fila que contiene este funcionario
             for row in range(self.tabla_funcionarios.rowCount()):
                 # Buscar el widget de acciones que tiene el funcionario_id almacenado
-                widget_acciones = self.tabla_funcionarios.cellWidget(row, 12)  # Columna 12 es Acciones
+                widget_acciones = self.tabla_funcionarios.cellWidget(row, 14)  # Columna 14 es Acciones
                 if widget_acciones and hasattr(widget_acciones, 'funcionario_id'):
                     if widget_acciones.funcionario_id == funcionario_id:
                         # Encontramos la fila correcta, removerla inmediatamente
@@ -1334,11 +1492,14 @@ class FuncionariosTab(QWidget):
         else:  # "todos"
             funcionarios_filtrados = todos_funcionarios
 
-        # Aplicar filtro de cédula si hay texto de búsqueda
+        # Aplicar filtro de búsqueda si hay texto (busca en cédula, nombre y apellidos)
         if texto_busqueda:
+            texto_busqueda_lower = texto_busqueda.lower()
             funcionarios_filtrados = [
                 func for func in funcionarios_filtrados
-                if texto_busqueda in func.get("cedula", "")
+                if (texto_busqueda_lower in func.get("cedula", "").lower()
+                    or texto_busqueda_lower in func.get("nombre", "").lower()
+                    or texto_busqueda_lower in func.get("apellidos", "").lower())
             ]
 
         # Guardar temporalmente la lista completa
@@ -1431,7 +1592,25 @@ class FuncionariosTab(QWidget):
                 discap_item.setForeground(QBrush(QColor("#155724")))
             self.tabla_funcionarios.setItem(i, 10, discap_item)
 
-            # Columna 11: Estado (Activo/Inactivo)
+            # Columna 11: Carro Híbrido
+            tiene_hibrido = func.get("tiene_carro_hibrido", False)
+            hibrido_item = QTableWidgetItem("🌿 Sí" if tiene_hibrido else "❌")
+            hibrido_item.setTextAlignment(0x0004 | 0x0080)  # Centro
+            if tiene_hibrido:
+                hibrido_item.setBackground(QBrush(QColor("#d4edda")))
+                hibrido_item.setForeground(QBrush(QColor("#27ae60")))
+            self.tabla_funcionarios.setItem(i, 11, hibrido_item)
+
+            # Columna 12: Exclusivo Directivo
+            tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+            exclusivo_item = QTableWidgetItem("🏢 Sí" if tiene_exclusivo else "❌")
+            exclusivo_item.setTextAlignment(0x0004 | 0x0080)  # Centro
+            if tiene_exclusivo:
+                exclusivo_item.setBackground(QBrush(QColor("#e8daef")))
+                exclusivo_item.setForeground(QBrush(QColor("#8e44ad")))
+            self.tabla_funcionarios.setItem(i, 12, exclusivo_item)
+
+            # Columna 13: Estado (Activo/Inactivo)
             activo = func.get("activo", True)
             estado_text = "Activo" if activo else "Inactivo"
             estado_item = QTableWidgetItem(estado_text)
@@ -1446,58 +1625,60 @@ class FuncionariosTab(QWidget):
                 estado_item.setForeground(QBrush(QColor("#721c24")))
                 estado_item.setFont(QFont("Arial", 9, QFont.Bold))
 
-            self.tabla_funcionarios.setItem(i, 11, estado_item)
+            self.tabla_funcionarios.setItem(i, 13, estado_item)
 
-            # Botones de acciones (Editar, Ver, Eliminar/Reactivar)
+            # Botones de acciones (Editar, Ver, Eliminar/Reactivar) - Solo íconos sin fondo
             btn_layout = QHBoxLayout()
             btn_widget = QWidget()
             btn_widget.funcionario_id = func.get("id")  # Almacenar ID para búsquedas rápidas
-            btn_layout.setSpacing(1)
-            btn_layout.setContentsMargins(3, 5, 3, 5)
+            btn_layout.setSpacing(8)  # Mayor espaciado entre botones
+            btn_layout.setContentsMargins(5, 3, 5, 3)
 
-            # Botón Editar - Con fondo azul claro para que sea visible
-            btn_editar = QPushButton("✏")
-            btn_editar.setFixedSize(30, 30)
+            # Botón Editar - Ícono con color fuerte para mejor visibilidad
+            btn_editar = QPushButton("✏️")
+            btn_editar.setFixedSize(32, 32)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #3498db;
+                    background-color: rgba(52, 152, 219, 0.25);
                     border: none;
-                    border-radius: 4px;
-                    font-size: 14px;
+                    font-size: 18px;
                     padding: 0px;
-                    color: white;
+                    border-radius: 5px;
+                    color: #2c3e50;
                 }
                 QPushButton:hover {
-                    background-color: #2980b9;
+                    background-color: rgba(52, 152, 219, 0.4);
+                    border-radius: 5px;
                 }
                 QPushButton:pressed {
-                    background-color: #21618c;
+                    background-color: rgba(52, 152, 219, 0.6);
+                    border-radius: 5px;
                 }
             """
             )
             btn_editar.clicked.connect(lambda _, fid=func.get("id"): self.editar_funcionario(fid))
 
-            # Botón Ver
-            btn_ver = QPushButton("👁")
-            btn_ver.setFixedSize(30, 30)
+            # Botón Ver - Solo ícono sin fondo
+            btn_ver = QPushButton("👁️")
+            btn_ver.setFixedSize(28, 28)
             btn_ver.setToolTip("Ver detalles del funcionario")
             btn_ver.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #95a5a6;
+                    background-color: transparent;
                     border: none;
-                    border-radius: 4px;
-                    font-size: 14px;
+                    font-size: 16px;
                     padding: 0px;
-                    color: white;
                 }
                 QPushButton:hover {
-                    background-color: #7f8c8d;
+                    background-color: rgba(149, 165, 166, 0.15);
+                    border-radius: 4px;
                 }
                 QPushButton:pressed {
-                    background-color: #5d6d7e;
+                    background-color: rgba(149, 165, 166, 0.25);
+                    border-radius: 4px;
                 }
             """
             )
@@ -1505,25 +1686,25 @@ class FuncionariosTab(QWidget):
 
             # Botón Eliminar o Reactivar según el estado
             if activo:
-                # Si está activo, mostrar botón Eliminar
-                btn_eliminar = QPushButton("🗑")
-                btn_eliminar.setFixedSize(30, 30)
+                # Si está activo, mostrar botón Eliminar - Solo ícono sin fondo
+                btn_eliminar = QPushButton("🗑️")
+                btn_eliminar.setFixedSize(28, 28)
                 btn_eliminar.setToolTip("Desactivar funcionario")
                 btn_eliminar.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #e74c3c;
+                        background-color: transparent;
                         border: none;
-                        border-radius: 4px;
-                        font-size: 14px;
+                        font-size: 16px;
                         padding: 0px;
-                        color: white;
                     }
                     QPushButton:hover {
-                        background-color: #c0392b;
+                        background-color: rgba(231, 76, 60, 0.15);
+                        border-radius: 4px;
                     }
                     QPushButton:pressed {
-                        background-color: #a93226;
+                        background-color: rgba(231, 76, 60, 0.25);
+                        border-radius: 4px;
                     }
                 """
                 )
@@ -1533,25 +1714,25 @@ class FuncionariosTab(QWidget):
                 btn_layout.addWidget(btn_ver)
                 btn_layout.addWidget(btn_eliminar)
             else:
-                # Si está inactivo, mostrar botón Reactivar
+                # Si está inactivo, mostrar botón Reactivar - Solo ícono sin fondo
                 btn_reactivar = QPushButton("🔄")
-                btn_reactivar.setFixedSize(30, 30)
+                btn_reactivar.setFixedSize(28, 28)
                 btn_reactivar.setToolTip("Reactivar funcionario")
                 btn_reactivar.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #27ae60;
+                        background-color: transparent;
                         border: none;
-                        border-radius: 4px;
-                        font-size: 14px;
+                        font-size: 16px;
                         padding: 0px;
-                        color: white;
                     }
                     QPushButton:hover {
-                        background-color: #229954;
+                        background-color: rgba(39, 174, 96, 0.15);
+                        border-radius: 4px;
                     }
                     QPushButton:pressed {
-                        background-color: #1e8449;
+                        background-color: rgba(39, 174, 96, 0.25);
+                        border-radius: 4px;
                     }
                 """
                 )
@@ -1562,7 +1743,7 @@ class FuncionariosTab(QWidget):
                 btn_layout.addWidget(btn_reactivar)
 
             btn_widget.setLayout(btn_layout)
-            self.tabla_funcionarios.setCellWidget(i, 12, btn_widget)
+            self.tabla_funcionarios.setCellWidget(i, 14, btn_widget)
 
         # Restaurar lista original
         self.funcionarios_completos = lista_original
@@ -1588,6 +1769,216 @@ class FuncionariosTab(QWidget):
         self.pagina_actual = 1
         self.cargar_funcionarios()
         self.lbl_resultados.setText("")
+
+    def importar_desde_excel(self):
+        """Importa funcionarios masivamente desde un archivo Excel (.xlsx o .xls)"""
+        try:
+            # Verificar si pandas y openpyxl están instalados
+            try:
+                import pandas as pd
+            except ImportError:
+                QMessageBox.critical(
+                    self,
+                    "Error de Dependencias",
+                    "La librería 'pandas' no está instalada.\n\n"
+                    "Para usar esta función, ejecute:\n"
+                    "pip install pandas openpyxl xlrd"
+                )
+                return
+
+            # Abrir diálogo para seleccionar archivo
+            archivo, _ = QFileDialog.getOpenFileName(
+                self,
+                "Seleccionar archivo Excel de funcionarios",
+                "",
+                "Archivos Excel (*.xlsx *.xls);;Todos los archivos (*.*)"
+            )
+
+            if not archivo:
+                return  # Usuario canceló
+
+            # Leer el archivo Excel
+            try:
+                df = pd.read_excel(archivo)
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error al Leer Archivo",
+                    f"No se pudo leer el archivo Excel.\n\nError: {str(e)}\n\n"
+                    "Asegúrese de que el archivo no esté abierto en otra aplicación."
+                )
+                return
+
+            # Validar columnas requeridas
+            columnas_requeridas = ["Cedula", "Nombre", "Apellidos", "Direccion", "Cargo", "Celular"]
+            columnas_opcionales = ["Tarjeta_Prox", "Tipo_Excepcion"]
+
+            columnas_faltantes = [col for col in columnas_requeridas if col not in df.columns]
+            if columnas_faltantes:
+                QMessageBox.critical(
+                    self,
+                    "Error en Estructura del Archivo",
+                    f"El archivo Excel no tiene las columnas requeridas.\n\n"
+                    f"Columnas faltantes: {', '.join(columnas_faltantes)}\n\n"
+                    f"Columnas requeridas:\n{', '.join(columnas_requeridas)}\n\n"
+                    f"Columnas opcionales:\n{', '.join(columnas_opcionales)}"
+                )
+                return
+
+            # Reemplazar valores NaN por vacío
+            df = df.fillna("")
+
+            # Validar que hay datos
+            if len(df) == 0:
+                QMessageBox.warning(self, "Archivo Vacío", "El archivo Excel no contiene datos para importar.")
+                return
+
+            # Confirmar importación
+            reply = QMessageBox.question(
+                self,
+                "Confirmar Importación",
+                f"Se encontraron {len(df)} registros en el archivo.\n\n"
+                "¿Desea proceder con la importación?\n\n"
+                "Los registros duplicados (misma cédula) serán omitidos.",
+                QMessageBox.Yes | QMessageBox.No
+            )
+
+            if reply == QMessageBox.No:
+                return
+
+            # Procesar cada fila
+            importados = 0
+            omitidos = 0
+            errores = []
+
+            for index, row in df.iterrows():
+                try:
+                    # Extraer datos básicos
+                    cedula = str(row["Cedula"]).strip()
+                    nombre = str(row["Nombre"]).strip()
+                    apellidos = str(row["Apellidos"]).strip()
+                    direccion = str(row["Direccion"]).strip()
+                    cargo = str(row["Cargo"]).strip()
+                    celular = str(row["Celular"]).strip()
+                    tarjeta = str(row.get("Tarjeta_Prox", "")).strip()
+                    tipo_excepcion = str(row.get("Tipo_Excepcion", "ninguna")).strip().lower()
+
+                    # Validaciones básicas
+                    if not cedula or not nombre or not apellidos:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Cédula, Nombre o Apellidos vacíos")
+                        continue
+
+                    # Validar formato de cédula (7-10 dígitos)
+                    if not cedula.isdigit() or len(cedula) < 7 or len(cedula) > 10:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Cédula inválida '{cedula}' (debe ser 7-10 dígitos)")
+                        continue
+
+                    # Validar formato de celular (10 dígitos)
+                    if celular and (not celular.isdigit() or len(celular) != 10):
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Celular inválido '{celular}' (debe ser 10 dígitos)")
+                        continue
+
+                    # Validar que Cargo sea válido
+                    if cargo not in CARGOS_DISPONIBLES:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Cargo inválido '{cargo}' (no existe en el sistema)")
+                        continue
+
+                    # Validar que Dirección sea válida
+                    if direccion not in DIRECCIONES_DISPONIBLES:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Dirección inválida '{direccion}' (no existe en el sistema)")
+                        continue
+
+                    # Procesar tipo de excepción y establecer banderas
+                    if tipo_excepcion == "carro_hibrido":
+                        permite_compartir = False
+                        pico_placa_solidario = False
+                        discapacidad = False
+                        tiene_parqueadero_exclusivo = False
+                        tiene_carro_hibrido = True
+                    elif tipo_excepcion == "exclusivo_directivo":
+                        permite_compartir = False
+                        pico_placa_solidario = False
+                        discapacidad = False
+                        tiene_parqueadero_exclusivo = True
+                        tiene_carro_hibrido = False
+                    elif tipo_excepcion == "pico_placa_solidario":
+                        permite_compartir = True
+                        pico_placa_solidario = True
+                        discapacidad = False
+                        tiene_parqueadero_exclusivo = False
+                        tiene_carro_hibrido = False
+                    elif tipo_excepcion == "discapacidad":
+                        permite_compartir = True
+                        pico_placa_solidario = False
+                        discapacidad = True
+                        tiene_parqueadero_exclusivo = False
+                        tiene_carro_hibrido = False
+                    else:  # "ninguna" o cualquier otro valor
+                        permite_compartir = True
+                        pico_placa_solidario = False
+                        discapacidad = False
+                        tiene_parqueadero_exclusivo = False
+                        tiene_carro_hibrido = False
+
+                    # Intentar crear funcionario
+                    exito, error_msg = self.funcionario_model.crear(
+                        cedula=cedula,
+                        nombre=nombre,
+                        apellidos=apellidos,
+                        direccion_grupo=direccion,
+                        cargo=cargo,
+                        celular=celular,
+                        tarjeta=tarjeta,
+                        permite_compartir=permite_compartir,
+                        pico_placa_solidario=pico_placa_solidario,
+                        discapacidad=discapacidad,
+                        tiene_parqueadero_exclusivo=tiene_parqueadero_exclusivo,
+                        tiene_carro_hibrido=tiene_carro_hibrido
+                    )
+
+                    if exito:
+                        importados += 1
+                    else:
+                        if "Duplicate entry" in error_msg:
+                            omitidos += 1
+                            errores.append(f"Fila {index + 2}: Cédula duplicada '{cedula}'")
+                        else:
+                            omitidos += 1
+                            errores.append(f"Fila {index + 2}: {error_msg}")
+
+                except Exception as e:
+                    omitidos += 1
+                    errores.append(f"Fila {index + 2}: Error inesperado - {str(e)}")
+
+            # Mostrar resultados
+            mensaje_resultado = f"✅ Importación Completada\n\n"
+            mensaje_resultado += f"Registros importados exitosamente: {importados}\n"
+            mensaje_resultado += f"Registros omitidos/con errores: {omitidos}\n"
+
+            if errores:
+                mensaje_resultado += f"\n⚠️ Detalles de errores (primeros 10):\n"
+                mensaje_resultado += "\n".join(errores[:10])
+                if len(errores) > 10:
+                    mensaje_resultado += f"\n\n... y {len(errores) - 10} errores más."
+
+            QMessageBox.information(self, "Importación Completada", mensaje_resultado)
+
+            # Recargar tabla si se importó al menos un funcionario
+            if importados > 0:
+                self.cargar_funcionarios()
+                self.funcionario_creado.emit()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error en Importación",
+                f"Ocurrió un error durante la importación:\n\n{str(e)}"
+            )
 
 
 class VerFuncionarioModal(QDialog):
@@ -1839,11 +2230,13 @@ class EditarFuncionarioModal(QDialog):
         self.txt_apellidos.setPlaceholderText("Solo letras y espacios")
         form_layout.addRow("Apellidos:", self.txt_apellidos)
 
+        # Dirección/Grupo (sin botón +, los items personalizados se cargan automáticamente)
         self.combo_direccion = QComboBox()
         self.combo_direccion.addItem("-- Seleccione --", "")
         self.combo_direccion.addItems(DIRECCIONES_DISPONIBLES)
         form_layout.addRow("Dirección/Grupo:", self.combo_direccion)
 
+        # Cargo (sin botón +, los items personalizados se cargan automáticamente)
         self.combo_cargo = QComboBox()
         self.combo_cargo.addItem("-- Seleccione --", "")
         self.combo_cargo.addItems(CARGOS_DISPONIBLES)
@@ -1865,74 +2258,32 @@ class EditarFuncionarioModal(QDialog):
         self.txt_tarjeta.setMaxLength(15)
         form_layout.addRow("No.Tarjeta Prox:", self.txt_tarjeta)
 
-        # ===== CHECKBOXES DE REGLAS DE NEGOCIO (Solo uno puede estar activo) =====
+        # ===== COMBOBOX DE TIPO DE EXCEPCIÓN =====
+        self.combo_tipo_excepcion = QComboBox()
+        self.combo_tipo_excepcion.addItem("-- Ninguna --", "ninguna")
+        self.combo_tipo_excepcion.addItem("🔄 Pico y Placa Solidario", "pico_placa_solidario")
+        self.combo_tipo_excepcion.addItem("♿ Funcionario con Discapacidad", "discapacidad")
+        self.combo_tipo_excepcion.addItem("🏢 Exclusivo Directivo (4 carros)", "exclusivo_directivo")
+        self.combo_tipo_excepcion.addItem("🌿 Carro Híbrido (Incentivo Ambiental)", "carro_hibrido")
 
-        # Checkbox: Pico y Placa Solidario
-        self.chk_pico_placa_solidario = QCheckBox("🔄 Pico y Placa Solidario")
-        self.chk_pico_placa_solidario.setToolTip(
-            "Permite al funcionario usar el parqueadero en días que normalmente no le corresponderían."
+        # Tooltips para cada opción
+        self.combo_tipo_excepcion.setItemData(
+            1, "Permite usar el parqueadero en días PAR/IMPAR sin restricción", Qt.ToolTipRole
         )
-        self.chk_pico_placa_solidario.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #2980b9;
-            }
-        """
+        self.combo_tipo_excepcion.setItemData(2, "Funcionario con condición de discapacidad", Qt.ToolTipRole)
+        self.combo_tipo_excepcion.setItemData(
+            3,
+            "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero. Disponible para cualquier cargo",
+            Qt.ToolTipRole,
         )
-        self.chk_pico_placa_solidario.stateChanged.connect(self.on_pico_placa_changed)
-        form_layout.addRow("", self.chk_pico_placa_solidario)
+        self.combo_tipo_excepcion.setItemData(
+            4, "Carro híbrido - Uso diario, parqueadero exclusivo (incentivo ambiental)", Qt.ToolTipRole
+        )
 
-        # Checkbox: Discapacidad
-        self.chk_discapacidad = QCheckBox("♿ Funcionario con Discapacidad")
-        self.chk_discapacidad.setToolTip("Marca al funcionario con condición de discapacidad.")
-        self.chk_discapacidad.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #27ae60;
-            }
-        """
-        )
-        self.chk_discapacidad.stateChanged.connect(self.on_discapacidad_changed)
-        form_layout.addRow("", self.chk_discapacidad)
+        # Expandir el ancho del dropdown para mostrar textos largos
+        self.combo_tipo_excepcion.view().setMinimumWidth(450)
 
-        # Checkbox: Exclusivo Directivo (hasta 4 carros)
-        self.chk_exclusivo_directivo = QCheckBox("🏢 Exclusivo Directivo (hasta 4 carros)")
-        self.chk_exclusivo_directivo.setToolTip(
-            "Solo para cargos: Director, Coordinador, Asesor.\n"
-            "Permite registrar hasta 4 vehículos (solo carros) en el mismo parqueadero."
-        )
-        self.chk_exclusivo_directivo.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #8e44ad;
-            }
-        """
-        )
-        self.chk_exclusivo_directivo.stateChanged.connect(self.on_exclusivo_directivo_changed)
-        form_layout.addRow("", self.chk_exclusivo_directivo)
-
-        # Checkbox: Carro Híbrido
-        self.chk_carro_hibrido = QCheckBox("🌿 Carro Híbrido (Incentivo Ambiental)")
-        self.chk_carro_hibrido.setToolTip(
-            "Marca esta casilla si el funcionario tiene carro híbrido.\n"
-            "Uso diario + parqueadero exclusivo (color rojo)"
-        )
-        self.chk_carro_hibrido.setStyleSheet(
-            """
-            QCheckBox {
-                font-weight: bold;
-                color: #27ae60;
-            }
-        """
-        )
-        self.chk_carro_hibrido.stateChanged.connect(self.on_carro_hibrido_changed)
-        form_layout.addRow("", self.chk_carro_hibrido)
-
-        # Conectar cambio de cargo para validaciones
-        self.combo_cargo.currentTextChanged.connect(self.on_cargo_changed_modal)
+        form_layout.addRow("Tipo de Excepción:", self.combo_tipo_excepcion)
 
         layout.addLayout(form_layout)
 
@@ -1943,6 +2294,37 @@ class EditarFuncionarioModal(QDialog):
 
         layout.addWidget(button_box)
         self.setLayout(layout)
+
+        # Cargar items personalizados (cargos y direcciones guardados previamente)
+        self.cargar_items_personalizados()
+
+    def cargar_items_personalizados(self):
+        """Carga items personalizados desde el archivo JSON"""
+        import json
+        import os
+
+        try:
+            config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config")
+            config_file = os.path.join(config_dir, "custom_items.json")
+
+            if os.path.exists(config_file):
+                with open(config_file, "r", encoding="utf-8") as f:
+                    custom_items = json.load(f)
+
+                # Cargar cargos personalizados
+                if "cargos" in custom_items:
+                    for cargo in custom_items["cargos"]:
+                        if cargo and cargo.strip():
+                            self.combo_cargo.addItem(cargo)
+
+                # Cargar direcciones personalizadas
+                if "direcciones" in custom_items:
+                    for direccion in custom_items["direcciones"]:
+                        if direccion and direccion.strip():
+                            self.combo_direccion.addItem(direccion)
+
+        except Exception as e:
+            print(f"Error al cargar items personalizados en modal: {e}")
 
     def on_pico_placa_changed(self, state):
         """Cuando se marca Pico y Placa, desmarca las otras opciones"""
@@ -2042,36 +2424,27 @@ class EditarFuncionarioModal(QDialog):
         self.txt_celular.setText(self.funcionario_data.get("celular", ""))
         self.txt_tarjeta.setText(self.funcionario_data.get("no_tarjeta_proximidad", "") or "")
 
-        # Cargar valores de checkboxes (solo uno puede estar marcado)
-        # Bloquear señales temporalmente para evitar conflictos
-        self.chk_pico_placa_solidario.blockSignals(True)
-        self.chk_discapacidad.blockSignals(True)
-        self.chk_exclusivo_directivo.blockSignals(True)
-        self.chk_carro_hibrido.blockSignals(True)
-
-        # Desmarcar todos primero
-        self.chk_pico_placa_solidario.setChecked(False)
-        self.chk_discapacidad.setChecked(False)
-        self.chk_exclusivo_directivo.setChecked(False)
-        self.chk_carro_hibrido.setChecked(False)
-
-        # Marcar solo el que corresponde (prioridad: carro híbrido > exclusivo directivo > otros)
+        # Cargar tipo de excepción en el ComboBox (solo uno puede estar activo)
+        # Prioridad: carro híbrido > exclusivo directivo > pico placa > discapacidad > ninguna
         if self.funcionario_data.get("tiene_carro_hibrido", False):
             # Carro híbrido tiene máxima prioridad
-            self.chk_carro_hibrido.setChecked(True)
+            index = self.combo_tipo_excepcion.findData("carro_hibrido")
+            self.combo_tipo_excepcion.setCurrentIndex(index if index >= 0 else 0)
         elif self.funcionario_data.get("tiene_parqueadero_exclusivo", False):
             # Exclusivo directivo
-            self.chk_exclusivo_directivo.setChecked(True)
+            index = self.combo_tipo_excepcion.findData("exclusivo_directivo")
+            self.combo_tipo_excepcion.setCurrentIndex(index if index >= 0 else 0)
         elif self.funcionario_data.get("pico_placa_solidario", False):
-            self.chk_pico_placa_solidario.setChecked(True)
+            # Pico y placa solidario
+            index = self.combo_tipo_excepcion.findData("pico_placa_solidario")
+            self.combo_tipo_excepcion.setCurrentIndex(index if index >= 0 else 0)
         elif self.funcionario_data.get("discapacidad", False):
-            self.chk_discapacidad.setChecked(True)
-
-        # Reactivar señales
-        self.chk_pico_placa_solidario.blockSignals(False)
-        self.chk_discapacidad.blockSignals(False)
-        self.chk_exclusivo_directivo.blockSignals(False)
-        self.chk_carro_hibrido.blockSignals(False)
+            # Discapacidad
+            index = self.combo_tipo_excepcion.findData("discapacidad")
+            self.combo_tipo_excepcion.setCurrentIndex(index if index >= 0 else 0)
+        else:
+            # Ninguna excepción (funcionario regular)
+            self.combo_tipo_excepcion.setCurrentIndex(0)  # "-- Ninguna --"
 
     def guardar_cambios(self):
         """Guarda los cambios del funcionario"""
@@ -2128,36 +2501,38 @@ class EditarFuncionarioModal(QDialog):
             QMessageBox.warning(self, "⚠️ Validación", "La tarjeta de proximidad debe tener al menos 3 caracteres")
             return
 
-        # Determinar los valores de los campos según el checkbox marcado
-        if self.chk_carro_hibrido.isChecked():
+        # Determinar los valores de los campos según el tipo de excepción seleccionado
+        tipo_excepcion = self.combo_tipo_excepcion.currentData()
+
+        if tipo_excepcion == "carro_hibrido":
             # Carro híbrido (incentivo ambiental)
             permite_compartir = False
             pico_placa_solidario = False
             discapacidad = False
             tiene_parqueadero_exclusivo = False
             tiene_carro_hibrido = True
-        elif self.chk_exclusivo_directivo.isChecked():
+        elif tipo_excepcion == "exclusivo_directivo":
             # Exclusivo directivo (hasta 4 vehículos)
             permite_compartir = False
             pico_placa_solidario = False
             discapacidad = False
             tiene_parqueadero_exclusivo = True
             tiene_carro_hibrido = False
-        elif self.chk_pico_placa_solidario.isChecked():
+        elif tipo_excepcion == "pico_placa_solidario":
             # Pico y placa solidario
             permite_compartir = True
             pico_placa_solidario = True
             discapacidad = False
             tiene_parqueadero_exclusivo = False
             tiene_carro_hibrido = False
-        elif self.chk_discapacidad.isChecked():
+        elif tipo_excepcion == "discapacidad":
             # Funcionario con discapacidad
             permite_compartir = True
             pico_placa_solidario = False
             discapacidad = True
             tiene_parqueadero_exclusivo = False
             tiene_carro_hibrido = False
-        else:
+        else:  # "ninguna" o cualquier otro valor
             # Ninguno marcado (funcionario regular que comparte)
             permite_compartir = True
             pico_placa_solidario = False
