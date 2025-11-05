@@ -1399,6 +1399,21 @@ class AsignacionesTab(QWidget):
         if vehiculos:
             print(f"📊 [DEBUG] Primeros 3: {[v.get('placa', 'N/A') for v in vehiculos[:3]]}")
 
+        # DEBUG: Verificar TODOS los vehículos activos (con y sin asignar)
+        query_all = """
+            SELECT v.placa, v.tipo_vehiculo,
+                   CASE WHEN a.id IS NULL THEN 'SIN_ASIGNAR' ELSE 'ASIGNADO' END as estado
+            FROM vehiculos v
+            LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+            WHERE v.activo = TRUE
+            ORDER BY v.id DESC
+            LIMIT 10
+        """
+        todos = self.db.fetch_all(query_all)
+        print(f"📊 [DEBUG] Últimos 10 vehículos en BD:")
+        for vh in todos:
+            print(f"   - {vh['placa']} ({vh['tipo_vehiculo']}): {vh['estado']}")
+
         self.combo_vehiculo_sin_asignar.clear()
         self.combo_vehiculo_sin_asignar.addItem("-- Seleccione vehículo --", None)
 
