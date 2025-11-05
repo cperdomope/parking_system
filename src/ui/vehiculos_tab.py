@@ -83,11 +83,13 @@ class GuardarVehiculoWorker(QThread):
             temp_db = TempDB(connection, cursor, self.db_config)
             vehiculo_model = VehiculoModel(temp_db)
 
+            print(f"🚗 [DEBUG] Guardando vehículo: {self.placa} ({self.tipo_vehiculo}) - Funcionario ID: {self.funcionario_id}")
             exito, mensaje = vehiculo_model.crear(
                 funcionario_id=self.funcionario_id,
                 tipo_vehiculo=self.tipo_vehiculo,
                 placa=self.placa
             )
+            print(f"🚗 [DEBUG] Resultado guardado: {'ÉXITO' if exito else 'FALLÓ'} - {mensaje[:100]}")
             self.finished.emit(exito, mensaje)
 
         except Exception as e:
