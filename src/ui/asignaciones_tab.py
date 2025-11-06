@@ -1395,9 +1395,9 @@ class AsignacionesTab(QWidget):
             ORDER BY v.tipo_vehiculo, f.apellidos, f.nombre
         """
         vehiculos = self.db.fetch_all(query)
-        print(f"📊 [DEBUG] Vehículos sin asignar obtenidos: {len(vehiculos)}")
+        print(f"[DEBUG] Vehiculos sin asignar obtenidos: {len(vehiculos)}")
         if vehiculos:
-            print(f"📊 [DEBUG] Primeros 3: {[v.get('placa', 'N/A') for v in vehiculos[:3]]}")
+            print(f"[DEBUG] Primeros 3: {[v.get('placa', 'N/A') for v in vehiculos[:3]]}")
 
         # DEBUG: Verificar TODOS los vehículos activos (con y sin asignar)
         query_all = """
@@ -1410,7 +1410,7 @@ class AsignacionesTab(QWidget):
             LIMIT 10
         """
         todos = self.db.fetch_all(query_all)
-        print(f"📊 [DEBUG] Últimos 10 vehículos en BD:")
+        print(f"[DEBUG] Ultimos 10 vehiculos en BD:")
         for vh in todos:
             print(f"   - {vh['placa']} ({vh['tipo_vehiculo']}): {vh['estado']}")
 
@@ -1932,13 +1932,13 @@ class AsignacionesTab(QWidget):
 
     def actualizar_vehiculos_sin_asignar(self):
         """Actualiza la lista de vehículos sin asignar cuando se actualicen los datos"""
-        print("🔄 [DEBUG] Señal recibida: actualizar_vehiculos_sin_asignar()")
+        print("[DEBUG] Senal recibida: actualizar_vehiculos_sin_asignar()")
         # FORZAR reconexión para ver commits de otros threads
-        print("🔄 [DEBUG] Forzando reconexión para ver datos frescos...")
+        print("[DEBUG] Forzando reconexion para ver datos frescos...")
         self.db.force_reconnect()
-        print("🔄 [DEBUG] Conexión refrescada, cargando vehículos...")
+        print("[DEBUG] Conexion refrescada, cargando vehiculos...")
         self.cargar_vehiculos_sin_asignar()
-        print(f"🔄 [DEBUG] ComboBox actualizado: {self.combo_vehiculo_sin_asignar.count()} items")
+        print(f"[DEBUG] ComboBox actualizado: {self.combo_vehiculo_sin_asignar.count()} items")
 
     def editar_asignacion(self, asignacion_data):
         """Abre el diálogo de edición para una asignación"""

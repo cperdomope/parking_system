@@ -83,13 +83,13 @@ class GuardarVehiculoWorker(QThread):
             temp_db = TempDB(connection, cursor, self.db_config)
             vehiculo_model = VehiculoModel(temp_db)
 
-            print(f"🚗 [DEBUG] Guardando vehículo: {self.placa} ({self.tipo_vehiculo}) - Funcionario ID: {self.funcionario_id}")
+            print(f"[DEBUG] Guardando vehiculo: {self.placa} ({self.tipo_vehiculo}) - Funcionario ID: {self.funcionario_id}")
             exito, mensaje = vehiculo_model.crear(
                 funcionario_id=self.funcionario_id,
                 tipo_vehiculo=self.tipo_vehiculo,
                 placa=self.placa
             )
-            print(f"🚗 [DEBUG] Resultado guardado: {'ÉXITO' if exito else 'FALLÓ'} - {mensaje[:100]}")
+            print(f"[DEBUG] Resultado guardado: {'EXITO' if exito else 'FALLO'} - {mensaje[:100]}")
             self.finished.emit(exito, mensaje)
 
         except Exception as e:
@@ -781,7 +781,7 @@ class VehiculosTab(QWidget):
             # El worker hizo commit en su propia conexión MySQL.
             # Por aislamiento de transacciones, esta conexión NO verá esos datos
             # hasta que se cierre y reabra (force_reconnect).
-            print("🔄 [DEBUG] Forzando reconexión para ver datos frescos...")
+            print("[DEBUG] Forzando reconexion para ver datos frescos...")
             self.db.force_reconnect()
 
             # Refrescar esta pestaña de forma asíncrona
@@ -790,9 +790,9 @@ class VehiculosTab(QWidget):
 
             # Emitir señal INMEDIATAMENTE (sin delay)
             # Ya no necesitamos QTimer porque force_reconnect() garantiza visibilidad
-            print("🔄 [DEBUG] Emitiendo señal vehiculo_creado inmediatamente...")
+            print("[DEBUG] Emitiendo senal vehiculo_creado inmediatamente...")
             self.vehiculo_creado.emit()
-            print("✅ [DEBUG] Señal vehiculo_creado emitida!")
+            print("[DEBUG] Senal vehiculo_creado emitida!")
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
