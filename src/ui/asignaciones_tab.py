@@ -1473,6 +1473,12 @@ class AsignacionesTab(QWidget):
 
                 # Para CARROS: buscar disponibles y parcialmente asignados con complemento
                 if tipo_vehiculo == "Carro":
+                    # VERIFICAR EXCEPCIONES DE PICO Y PLACA
+                    # Vehículos con excepciones SOLO pueden usar parqueaderos 100% DISPONIBLES
+                    pico_placa_solidario = vehiculo_data.get("pico_placa_solidario", False)
+                    discapacidad = vehiculo_data.get("discapacidad", False)
+                    es_hibrido = vehiculo_data.get("tipo_circulacion", "") == "HÍBRIDO"
+
                     # Verificar si el funcionario tiene parqueadero exclusivo directivo
                     query_check_exclusivo = """
                         SELECT tiene_parqueadero_exclusivo, cargo
@@ -1484,6 +1490,14 @@ class AsignacionesTab(QWidget):
                     # Si tiene parqueadero exclusivo, es directivo exclusivo (sin restricción de cargo)
                     es_directivo_exclusivo = tiene_exclusivo
 
+                    # REGLA CRÍTICA: Vehículos con CUALQUIER excepción NO comparten parqueadero
+                    tiene_excepcion_pico_placa = (
+                        pico_placa_solidario or
+                        discapacidad or
+                        es_hibrido or
+                        es_directivo_exclusivo
+                    )
+
                     # Obtener parqueaderos disponibles para carros
                     parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
                         sotano=sotano_seleccionado, tipo_vehiculo="Carro", estado="Disponible"
@@ -1491,7 +1505,8 @@ class AsignacionesTab(QWidget):
 
                     todos_parqueaderos = {p["id"]: p for p in parqueaderos_disponibles}
 
-                    if es_directivo_exclusivo:
+                    # APLICAR RESTRICCIONES SEGÚN EXCEPCIONES
+                    if tiene_excepcion_pico_placa and es_directivo_exclusivo:
                         # CASO ESPECIAL: Directivo con parqueadero exclusivo
                         # Buscar parqueaderos que ya tienen vehículos de este directivo
                         query_parqueaderos_directivo = """
@@ -1516,8 +1531,22 @@ class AsignacionesTab(QWidget):
                             todos_parqueaderos[park["id"]] = park
 
                         print(f"Directivo exclusivo: {len(parqueaderos_directivo)} parqueaderos propios con espacio")
+
+                    elif tiene_excepcion_pico_placa:
+                        # VEHÍCULOS CON EXCEPCIÓN (Híbrido, Discapacidad, Pico y Placa Solidario)
+                        # REGLA: SOLO parqueaderos 100% DISPONIBLES (NO parcialmente asignados)
+                        print(f"⚠️ Vehículo con excepción de pico y placa detectado:")
+                        if pico_placa_solidario:
+                            print("   - Pico y Placa Solidario")
+                        if discapacidad:
+                            print("   - Funcionario con Discapacidad")
+                        if es_hibrido:
+                            print("   - Vehículo Híbrido")
+                        print(f"   → Mostrando SOLO parqueaderos 100% disponibles: {len(todos_parqueaderos)}")
+                        # NO agregar parqueaderos parcialmente asignados
+
                     else:
-                        # Funcionarios regulares: también obtener parcialmente asignados con complemento PAR/IMPAR
+                        # Funcionarios regulares SIN excepción: pueden usar parcialmente asignados con complemento PAR/IMPAR
                         parqueaderos_complemento = self.parqueadero_model.obtener_disponibles(
                             vehiculo_data["tipo_circulacion"]
                         )
@@ -1543,6 +1572,7 @@ class AsignacionesTab(QWidget):
                                     parqueaderos_complemento_sotano.append(p)
 
                         todos_parqueaderos.update({p["id"]: p for p in parqueaderos_complemento_sotano})
+                        print(f"Funcionario regular: {len(parqueaderos_complemento_sotano)} parqueaderos con complemento PAR/IMPAR")
 
                 # Para MOTOS y BICICLETAS: solo buscar completamente disponibles
                 else:

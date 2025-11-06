@@ -449,7 +449,71 @@ class ParqueaderoModel:
             if not es_valido:
                 return (False, mensaje)
 
-            # 7. Mensajes informativos para casos especiales
+            # 5. VALIDACIÓN CRÍTICA: Vehículos con excepción de pico y placa NO pueden compartir parqueadero
+            # Excepciones: Pico y Placa Solidario, Discapacidad, Híbrido, Directivo Exclusivo
+            pico_placa_solidario = vehiculo_data.get("pico_placa_solidario", False)
+            discapacidad = vehiculo_data.get("discapacidad", False)
+            es_hibrido = vehiculo_data.get("tipo_circulacion", "") == "HÍBRIDO"
+            es_directivo_exclusivo = vehiculo_data.get("tiene_parqueadero_exclusivo", False)
+
+            tiene_excepcion = (
+                pico_placa_solidario or
+                discapacidad or
+                es_hibrido or
+                es_directivo_exclusivo
+            )
+
+            if tiene_excepcion and asignaciones_existentes > 0:
+                # Verificar si NO es directivo con sus propios vehículos
+                if es_directivo_exclusivo:
+                    # Permitir solo si TODOS los vehículos en el parqueadero son del MISMO funcionario
+                    query_check_mismo_funcionario = """
+                        SELECT COUNT(DISTINCT v.funcionario_id) as total_funcionarios
+                        FROM asignaciones a
+                        JOIN vehiculos v ON a.vehiculo_id = v.id
+                        WHERE a.parqueadero_id = %s AND a.activo = TRUE
+                    """
+                    check_result = self.db.fetch_one(query_check_mismo_funcionario, (parqueadero_id,))
+                    total_funcionarios = check_result.get("total_funcionarios", 0) if check_result else 0
+
+                    if total_funcionarios > 0:
+                        # Verificar que sea el MISMO funcionario
+                        query_check_owner = """
+                            SELECT v.funcionario_id
+                            FROM asignaciones a
+                            JOIN vehiculos v ON a.vehiculo_id = v.id
+                            WHERE a.parqueadero_id = %s AND a.activo = TRUE
+                            LIMIT 1
+                        """
+                        owner_result = self.db.fetch_one(query_check_owner, (parqueadero_id,))
+                        funcionario_en_parqueadero = owner_result.get("funcionario_id") if owner_result else None
+
+                        if funcionario_en_parqueadero != vehiculo_data["funcionario_id"]:
+                            return (
+                                False,
+                                f"🚫 Este parqueadero ya está asignado a otro directivo.\n\n"
+                                f"Los directivos exclusivos solo pueden compartir parqueaderos con sus propios vehículos."
+                            )
+                else:
+                    # Para otras excepciones (Híbrido, Discapacidad, Pico y Placa Solidario)
+                    # NO pueden usar parqueaderos parcialmente asignados
+                    excepciones_str = []
+                    if pico_placa_solidario:
+                        excepciones_str.append("Pico y Placa Solidario")
+                    if discapacidad:
+                        excepciones_str.append("Funcionario con Discapacidad")
+                    if es_hibrido:
+                        excepciones_str.append("Vehículo Híbrido")
+
+                    return (
+                        False,
+                        f"🚫 Este vehículo tiene excepción de pico y placa ({', '.join(excepciones_str)}).\n\n"
+                        f"⚠️ Los vehículos con excepciones SOLO pueden asignarse a parqueaderos 100% DISPONIBLES.\n"
+                        f"No pueden compartir con otros vehículos.\n\n"
+                        f"Por favor, seleccione un parqueadero que esté completamente desocupado."
+                    )
+
+            # 6. Mensajes informativos para casos especiales
             msg_info = ValidadorAsignacion.obtener_mensajes_informativos(vehiculo_data)
 
             # ==================== LLAMAR AL PROCEDIMIENTO ALMACENADO ====================
