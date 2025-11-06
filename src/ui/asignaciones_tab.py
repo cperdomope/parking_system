@@ -1499,9 +1499,38 @@ class AsignacionesTab(QWidget):
                     )
 
                     # Obtener parqueaderos disponibles para carros
-                    parqueaderos_disponibles = self.parqueadero_model.obtener_todos(
+                    parqueaderos_disponibles_raw = self.parqueadero_model.obtener_todos(
                         sotano=sotano_seleccionado, tipo_vehiculo="Carro", estado="Disponible"
                     )
+
+                    # FILTRAR parqueaderos que tengan vehículos con excepción (motos/bicicletas)
+                    # Si el parqueadero tiene un vehículo con excepción, NO debe mostrarse a vehículos regulares
+                    parqueaderos_disponibles = []
+                    for p in parqueaderos_disponibles_raw:
+                        # Verificar si hay motos/bicicletas con excepción en este parqueadero
+                        query_check_excepcion_motos = """
+                            SELECT COUNT(*) as total_con_excepcion
+                            FROM asignaciones a
+                            JOIN vehiculos v ON a.vehiculo_id = v.id
+                            JOIN funcionarios f ON v.funcionario_id = f.id
+                            WHERE a.parqueadero_id = %s
+                            AND a.activo = TRUE
+                            AND v.tipo_vehiculo IN ('Moto', 'Bicicleta')
+                            AND (
+                                f.pico_placa_solidario = TRUE OR
+                                f.discapacidad = TRUE OR
+                                v.tipo_circulacion = 'HÍBRIDO' OR
+                                f.tiene_parqueadero_exclusivo = TRUE
+                            )
+                        """
+                        check_result = self.db.fetch_one(query_check_excepcion_motos, (p["id"],))
+                        total_con_excepcion = check_result.get("total_con_excepcion", 0) if check_result else 0
+
+                        # Si NO tiene motos/bicicletas con excepción, agregar
+                        if total_con_excepcion == 0:
+                            parqueaderos_disponibles.append(p)
+                        else:
+                            print(f"   ⚠️ Parqueadero {p.get('numero_parqueadero')} (Disponible) excluido: tiene moto/bicicleta con excepción")
 
                     todos_parqueaderos = {p["id"]: p for p in parqueaderos_disponibles}
 
@@ -1534,7 +1563,7 @@ class AsignacionesTab(QWidget):
 
                     elif tiene_excepcion_pico_placa:
                         # VEHÍCULOS CON EXCEPCIÓN (Híbrido, Discapacidad, Pico y Placa Solidario)
-                        # REGLA: SOLO parqueaderos 100% DISPONIBLES (NO parcialmente asignados)
+                        # REGLA: SOLO parqueaderos 100% VACÍOS (sin motos/bicicletas tampoco)
                         print(f"⚠️ Vehículo con excepción de pico y placa detectado:")
                         if pico_placa_solidario:
                             print("   - Pico y Placa Solidario")
@@ -1542,7 +1571,27 @@ class AsignacionesTab(QWidget):
                             print("   - Funcionario con Discapacidad")
                         if es_hibrido:
                             print("   - Vehículo Híbrido")
-                        print(f"   → Mostrando SOLO parqueaderos 100% disponibles: {len(todos_parqueaderos)}")
+
+                        # FILTRAR parqueaderos que tengan CUALQUIER vehículo (motos/bicicletas)
+                        parqueaderos_completamente_vacios = []
+                        for p in parqueaderos_disponibles:
+                            query_count_total = """
+                                SELECT COUNT(*) as total_vehiculos
+                                FROM asignaciones a
+                                WHERE a.parqueadero_id = %s AND a.activo = TRUE
+                            """
+                            count_result = self.db.fetch_one(query_count_total, (p["id"],))
+                            total_vehiculos = count_result.get("total_vehiculos", 0) if count_result else 0
+
+                            # Solo agregar si NO tiene NINGÚN vehículo asignado
+                            if total_vehiculos == 0:
+                                parqueaderos_completamente_vacios.append(p)
+                            else:
+                                print(f"   ⚠️ Parqueadero {p.get('numero_parqueadero')} excluido: tiene {total_vehiculos} vehículo(s) asignado(s)")
+
+                        # Reemplazar todos_parqueaderos con los completamente vacíos
+                        todos_parqueaderos = {p["id"]: p for p in parqueaderos_completamente_vacios}
+                        print(f"   → Mostrando SOLO parqueaderos 100% VACÍOS: {len(todos_parqueaderos)}")
                         # NO agregar parqueaderos parcialmente asignados
 
                     else:
@@ -1555,7 +1604,7 @@ class AsignacionesTab(QWidget):
                         parqueaderos_complemento_sotano = []
                         for p in parqueaderos_complemento:
                             if p.get("sotano", "Sótano-1") == sotano_seleccionado:
-                                # VALIDACIÓN ADICIONAL: Contar cuántos carros hay asignados
+                                # VALIDACIÓN 1: Contar cuántos carros hay asignados
                                 query_count_carros = """
                                     SELECT COUNT(*) as total_carros
                                     FROM asignaciones a
@@ -1567,9 +1616,38 @@ class AsignacionesTab(QWidget):
                                 count_result = self.db.fetch_one(query_count_carros, (p["id"],))
                                 total_carros = count_result.get("total_carros", 0) if count_result else 0
 
-                                # Solo agregar si tiene EXACTAMENTE 1 carro (no 2 o más)
+                                # Solo continuar si tiene EXACTAMENTE 1 carro (no 2 o más)
                                 if total_carros == 1:
-                                    parqueaderos_complemento_sotano.append(p)
+                                    # VALIDACIÓN 2 (CRÍTICA): Verificar que el carro asignado NO tenga excepción
+                                    # Si el parqueadero tiene un vehículo con excepción, NO debe mostrarse a nadie más
+                                    query_check_excepcion = """
+                                        SELECT v.tipo_circulacion,
+                                               f.pico_placa_solidario,
+                                               f.discapacidad,
+                                               f.tiene_parqueadero_exclusivo
+                                        FROM asignaciones a
+                                        JOIN vehiculos v ON a.vehiculo_id = v.id
+                                        JOIN funcionarios f ON v.funcionario_id = f.id
+                                        WHERE a.parqueadero_id = %s
+                                        AND a.activo = TRUE
+                                        AND v.tipo_vehiculo = 'Carro'
+                                        LIMIT 1
+                                    """
+                                    vehiculo_en_parqueadero = self.db.fetch_one(query_check_excepcion, (p["id"],))
+
+                                    if vehiculo_en_parqueadero:
+                                        tiene_excepcion_en_parqueadero = (
+                                            vehiculo_en_parqueadero.get("pico_placa_solidario", False) or
+                                            vehiculo_en_parqueadero.get("discapacidad", False) or
+                                            vehiculo_en_parqueadero.get("tipo_circulacion") == "HÍBRIDO" or
+                                            vehiculo_en_parqueadero.get("tiene_parqueadero_exclusivo", False)
+                                        )
+
+                                        # Si el vehículo en el parqueadero tiene excepción, NO agregar este parqueadero
+                                        if not tiene_excepcion_en_parqueadero:
+                                            parqueaderos_complemento_sotano.append(p)
+                                        else:
+                                            print(f"   ⚠️ Parqueadero {p.get('numero_parqueadero')} excluido: tiene vehículo con excepción")
 
                         todos_parqueaderos.update({p["id"]: p for p in parqueaderos_complemento_sotano})
                         print(f"Funcionario regular: {len(parqueaderos_complemento_sotano)} parqueaderos con complemento PAR/IMPAR")
