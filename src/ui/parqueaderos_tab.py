@@ -467,6 +467,8 @@ class ParqueaderosTab(QWidget):
 
     def actualizar_parqueaderos(self):
         """Actualiza la vista de parqueaderos"""
-        self.cargar_filtros_iniciales()
+        # Forzar reconexión para ver commits frescos de otros threads
+        self.db.force_reconnect()
 
+        self.cargar_filtros_iniciales()
         self.cargar_parqueaderos()

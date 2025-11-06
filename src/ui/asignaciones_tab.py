@@ -1653,6 +1653,9 @@ class AsignacionesTab(QWidget):
     def cargar_asignaciones(self):
         """Carga las asignaciones actuales en la tabla"""
         try:
+            # Forzar reconexión para ver commits frescos de otros threads
+            self.db.force_reconnect()
+
             # Verificar si existe la columna sotano
             check_query = "SHOW COLUMNS FROM parqueaderos LIKE 'sotano'"
             column_exists = self.db.fetch_one(check_query) is not None
@@ -1930,8 +1933,9 @@ class AsignacionesTab(QWidget):
     def actualizar_vehiculos_sin_asignar(self):
         """Actualiza la lista de vehículos sin asignar cuando se actualicen los datos"""
         print("🔄 [DEBUG] Señal recibida: actualizar_vehiculos_sin_asignar()")
-        # Asegurar que la conexión vea los datos más recientes
-        self.db.ensure_connection()
+        # FORZAR reconexión para ver commits de otros threads
+        print("🔄 [DEBUG] Forzando reconexión para ver datos frescos...")
+        self.db.force_reconnect()
         print("🔄 [DEBUG] Conexión refrescada, cargando vehículos...")
         self.cargar_vehiculos_sin_asignar()
         print(f"🔄 [DEBUG] ComboBox actualizado: {self.combo_vehiculo_sin_asignar.count()} items")

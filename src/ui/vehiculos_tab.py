@@ -777,20 +777,22 @@ class VehiculosTab(QWidget):
             self.txt_placa.clear()
             self.combo_funcionario.setCurrentIndex(0)
 
-            # CRÍTICO: Asegurar que la conexión del hilo principal vea los datos recién comprometidos
-            # El worker usó su propia conexión MySQL, por lo que el hilo principal necesita
-            # reconectar o refrescar para ver los cambios comprometidos
-            self.db.ensure_connection()
+            # CRÍTICO: FORZAR reconexión para ver commits del worker
+            # El worker hizo commit en su propia conexión MySQL.
+            # Por aislamiento de transacciones, esta conexión NO verá esos datos
+            # hasta que se cierre y reabra (force_reconnect).
+            print("🔄 [DEBUG] Forzando reconexión para ver datos frescos...")
+            self.db.force_reconnect()
 
             # Refrescar esta pestaña de forma asíncrona
             self.cargar_vehiculos_async()
             self.cargar_combo_funcionarios()
 
-            # Emitir señal con delay de 1000ms (1 segundo) para garantizar que otras pestañas vean los datos
-            # Este delay es necesario porque MySQL puede tardar en propagar commits entre conexiones
-            # CRÍTICO: 300ms NO era suficiente - aumentado a 1000ms para garantizar visibilidad
-            print("🔄 [DEBUG] Programando emisión de señal vehiculo_creado en 1000ms...")
-            QTimer.singleShot(1000, lambda: self._emit_vehiculo_creado())
+            # Emitir señal INMEDIATAMENTE (sin delay)
+            # Ya no necesitamos QTimer porque force_reconnect() garantiza visibilidad
+            print("🔄 [DEBUG] Emitiendo señal vehiculo_creado inmediatamente...")
+            self.vehiculo_creado.emit()
+            print("✅ [DEBUG] Señal vehiculo_creado emitida!")
         else:
             # Los mensajes ya vienen formateados desde el modelo
             QMessageBox.warning(self, "🚫 Validación", mensaje)
@@ -798,12 +800,6 @@ class VehiculosTab(QWidget):
         # Limpiar worker
         self.guardar_worker.deleteLater()
         self.guardar_worker = None
-
-    def _emit_vehiculo_creado(self):
-        """Helper para emitir señal con debug"""
-        print("✅ [DEBUG] Emitiendo señal vehiculo_creado ahora...")
-        self.vehiculo_creado.emit()
-        print("✅ [DEBUG] Señal vehiculo_creado emitida!")
 
     def cargar_vehiculos(self):
         """Carga todos los vehículos en la tabla con botones de acción (Síncrono - solo para init)"""

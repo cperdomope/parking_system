@@ -366,6 +366,8 @@ class DashboardWidget(QWidget):
 
     def actualizar_dashboard(self):
         """Slot público para actualizar el dashboard desde otras pestañas."""
+        # Forzar reconexión para ver commits frescos de otros threads
+        self.db.force_reconnect()
         self.load_initial_data()
 
     def showEvent(self, event):

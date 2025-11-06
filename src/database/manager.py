@@ -62,6 +62,29 @@ class DatabaseManager:
             return self.connect()
         return True
 
+    def force_reconnect(self):
+        """
+        Fuerza el cierre y reapertura de la conexión para ver commits recientes.
+
+        CRÍTICO: Necesario cuando workers con sus propias conexiones hacen commits.
+        MySQL mantiene aislamiento entre conexiones, por lo que esta conexión
+        no verá commits de otras conexiones hasta que se refresque.
+
+        Uso típico: Después de operaciones async que modifican datos en otros threads.
+        """
+        try:
+            # Cerrar conexión actual si existe
+            if self.connection and self.connection.is_connected():
+                self.cursor.close()
+                self.connection.close()
+                logger.debug("Conexión cerrada para forzar refresh")
+
+            # Abrir nueva conexión
+            return self.connect()
+        except Exception as e:
+            logger.error(f"Error en force_reconnect: {e}")
+            return False
+
     def execute_query(self, query: str, params: tuple = None) -> tuple:
         """
         Ejecuta una consulta que modifica datos (INSERT, UPDATE, DELETE)

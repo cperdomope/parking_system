@@ -1474,6 +1474,8 @@ class FuncionariosTab(QWidget):
 
     def actualizar_funcionarios(self):
         """Actualiza la lista de funcionarios"""
+        # Forzar reconexión para ver commits frescos de otros threads
+        self.db.force_reconnect()
         self.cargar_funcionarios()
 
     def filtrar_funcionarios(self):
