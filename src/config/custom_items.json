@@ -1,5 +1,9 @@
 {
     "direcciones": [
-        "Analista de Datos"
+        "Analista de Datos",
+        "Grupo Prueba"
+    ],
+    "cargos": [
+        "Cargo Prueba"
     ]
 }

@@ -295,14 +295,26 @@ class EliminarVehiculoModal(QDialog):
 
     vehiculo_eliminado = pyqtSignal()
 
-    def __init__(self, vehiculo_id: int, vehiculo_model: VehiculoModel, parent=None):
+    def __init__(self, vehiculo_id: int, vehiculo_model: VehiculoModel, parent=None, vehiculo_data: dict = None):
+        import time
+        t_start = time.time()
+
         super().__init__(parent)
         self.vehiculo_id = vehiculo_id
         self.vehiculo_model = vehiculo_model
-        self.vehiculo_actual = None
+        self.vehiculo_actual = vehiculo_data  # Usar datos pasados si están disponibles
 
+        t1 = time.time()
         self.setup_ui()
-        self.cargar_datos_vehiculo()
+
+        # Solo cargar desde BD si NO se pasaron los datos
+        if self.vehiculo_actual is None:
+            t2 = time.time()
+            self.cargar_datos_vehiculo()
+        else:
+            t3 = time.time()
+            self.mostrar_datos_vehiculo()
+
 
     def setup_ui(self):
         """Configura la interfaz del modal"""
@@ -404,7 +416,7 @@ class EliminarVehiculoModal(QDialog):
         self.setLayout(layout)
 
     def cargar_datos_vehiculo(self):
-        """Carga los datos del vehículo a eliminar"""
+        """Carga los datos del vehículo desde la base de datos (LEGACY - solo si no se pasaron datos)"""
         self.vehiculo_actual = self.vehiculo_model.obtener_por_id(self.vehiculo_id)
 
         if not self.vehiculo_actual:
@@ -412,27 +424,65 @@ class EliminarVehiculoModal(QDialog):
             self.reject()
             return
 
+        self.mostrar_datos_vehiculo()
+
+    def mostrar_datos_vehiculo(self):
+        """Muestra los datos del vehículo en el modal (OPTIMIZADO - sin consulta BD)"""
+        if not self.vehiculo_actual:
+            QMessageBox.critical(self, "Error", "No hay datos del vehículo para mostrar")
+            self.reject()
+            return
+
+        # Extraer datos con valores por defecto para evitar KeyError
+        nombre = self.vehiculo_actual.get('nombre', '')
+        apellidos = self.vehiculo_actual.get('apellidos', '')
+        cedula = self.vehiculo_actual.get('cedula', '')
+        tipo_vehiculo = self.vehiculo_actual.get('tipo_vehiculo', '')
+        placa = self.vehiculo_actual.get('placa', '')
+        tipo_circulacion = self.vehiculo_actual.get('tipo_circulacion', 'N/A')
+        numero_parqueadero = self.vehiculo_actual.get('numero_parqueadero', None)
+
+        # Para compatibilidad con datos de tabla (funcionario viene concatenado)
+        if 'funcionario' in self.vehiculo_actual and not nombre:
+            # Si viene de la tabla, el funcionario es el nombre completo
+            funcionario_completo = self.vehiculo_actual.get('funcionario', '')
+        else:
+            funcionario_completo = f"{nombre} {apellidos}"
+
         # Mostrar información del vehículo
         info_text = f"""
-Funcionario: {self.vehiculo_actual['nombre']} {self.vehiculo_actual['apellidos']}
-Cédula: {self.vehiculo_actual['cedula']}
-Tipo: {self.vehiculo_actual['tipo_vehiculo']}
-Placa: {self.vehiculo_actual['placa']}
-Circulación: {self.vehiculo_actual['tipo_circulacion']}
-Parqueadero: {self.vehiculo_actual.get('numero_parqueadero', 'Sin asignar')}
+Funcionario: {funcionario_completo}
+Cédula: {cedula if cedula else 'N/A'}
+Tipo: {tipo_vehiculo}
+Placa: {placa}
+Circulación: {tipo_circulacion}
+Parqueadero: {numero_parqueadero if numero_parqueadero else 'Sin asignar'}
         """
         self.lbl_info_vehiculo.setText(info_text.strip())
 
     def confirmar_eliminacion(self):
         """Ejecuta la eliminación lógica del vehículo"""
+        from PyQt5.QtCore import QTimer
+        import time
+        t_start = time.time()
+
+        t_eliminar = time.time()
         exito, mensaje = self.vehiculo_model.eliminar(self.vehiculo_id)
 
         if exito:
-            QMessageBox.information(self, "✅ Vehículo Eliminado", mensaje)
-            self.vehiculo_eliminado.emit()
+            # Guardar mensaje para mostrarlo después de cerrar el modal
+            self.mensaje_exito = mensaje
+
+            # OPTIMIZACIÓN CRÍTICA: Cerrar el modal ANTES de emitir la señal
+            # Esto evita bloquear la UI mientras se recargan los datos
+            t_accept = time.time()
             self.accept()
+
+            # Emitir señal DESPUÉS de cerrar el modal usando QTimer (asíncrono)
+            QTimer.singleShot(0, lambda: self.vehiculo_eliminado.emit())
         else:
             QMessageBox.critical(self, "🚫 Error de Eliminación", mensaje)
+
 
 
 class VerVehiculoModal(QDialog):

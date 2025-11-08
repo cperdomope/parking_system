@@ -18,7 +18,6 @@ Uso:
     from parking_system.config import settings
     print(settings.APP_NAME)
     print(settings.DB_HOST)
-    print(settings.DEBUG)
 
 Requisitos:
     - python-dotenv: pip install python-dotenv
@@ -223,7 +222,6 @@ ACCOUNT_LOCKOUT_TIME = _get_int("ACCOUNT_LOCKOUT_TIME", 30)  # minutos
 
 # Validar que SECRET_KEY no sea la default en producción
 if not DEBUG and "CAMBIAR-EN-PRODUCCION" in SECRET_KEY:
-    print("[WARNING] ⚠️  SECRET_KEY usando valor por defecto en producción!")
     print("  Generar nueva clave: python -c \"import secrets; print(secrets.token_hex(32))\"")
 
 
@@ -576,7 +574,6 @@ def print_config_summary(hide_sensitive: bool = True):
     print("=" * 70)
 
     print(f"\n[APP] {APP_NAME} v{APP_VERSION}")
-    print(f"[APP] Debug: {DEBUG}")
     print(f"[APP] Log Level: {LOG_LEVEL}")
 
     if hide_sensitive:

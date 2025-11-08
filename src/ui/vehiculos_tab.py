@@ -3,11 +3,11 @@
 Módulo de la pestaña Vehículos del sistema de gestión de parqueadero
 """
 
-from PyQt5.QtCore import pyqtSignal, Qt, QThread, pyqtSlot, QTimer
+from PyQt5.QtCore import pyqtSignal, Qt, QThread, pyqtSlot
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (
     QComboBox,
-    QGridLayout,
+    QDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -26,6 +26,10 @@ from ..models.funcionario import FuncionarioModel
 from ..models.vehiculo import VehiculoModel
 from .modales_vehiculos import EditarVehiculoModal, EliminarVehiculoModal
 from ..utils.formatters import format_numero_parqueadero
+
+# Nuevas utilidades de refactorización
+from .styles import UIStyles
+from .utils import UIDialogs, TableUtils, ButtonFactory
 
 
 # ============================================================================
@@ -47,7 +51,6 @@ class GuardarVehiculoWorker(QThread):
     def run(self):
         """Ejecuta el guardado en background con conexión propia"""
         import mysql.connector
-        from ..utils.validaciones_vehiculos import ValidadorVehiculos
 
         connection = None
         try:
@@ -83,13 +86,11 @@ class GuardarVehiculoWorker(QThread):
             temp_db = TempDB(connection, cursor, self.db_config)
             vehiculo_model = VehiculoModel(temp_db)
 
-            print(f"[DEBUG] Guardando vehiculo: {self.placa} ({self.tipo_vehiculo}) - Funcionario ID: {self.funcionario_id}")
             exito, mensaje = vehiculo_model.crear(
                 funcionario_id=self.funcionario_id,
                 tipo_vehiculo=self.tipo_vehiculo,
                 placa=self.placa
             )
-            print(f"[DEBUG] Resultado guardado: {'EXITO' if exito else 'FALLO'} - {mensaje[:100]}")
             self.finished.emit(exito, mensaje)
 
         except Exception as e:
@@ -123,6 +124,7 @@ class CargarVehiculosWorker(QThread):
                 SELECT
                     v.id,
                     CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
+                    f.cedula,
                     v.tipo_vehiculo,
                     v.placa,
                     v.ultimo_digito,
@@ -139,7 +141,7 @@ class CargarVehiculosWorker(QThread):
             vehiculos = cursor.fetchall()
             self.finished.emit(vehiculos)
 
-        except Exception as e:
+        except Exception:
             self.finished.emit([])
         finally:
             if connection and connection.is_connected():
@@ -217,7 +219,7 @@ class CargarComboFuncionariosWorker(QThread):
 
             self.finished.emit(resultado)
 
-        except Exception as e:
+        except Exception:
             self.finished.emit([])
         finally:
             if connection and connection.is_connected():
@@ -240,7 +242,6 @@ class VehiculosTab(QWidget):
         self.vehiculos_filtrados = []  # Lista filtrada actual
         self.pagina_actual = 1  # Página actual de paginación
         self.filas_por_pagina = 6  # Máximo 6 filas por página
-        self.ultimo_mensaje_validacion = None  # Guarda el último mensaje de validación para mostrarlo si el usuario intenta guardar
 
         # Guardar configuración de DB para workers (cada worker necesita su propia conexión)
         self.db_config = {
@@ -284,33 +285,7 @@ class VehiculosTab(QWidget):
         self.combo_funcionario = QComboBox()
         self.combo_funcionario.setFixedWidth(280)
         self.combo_funcionario.setFixedHeight(40)
-        self.combo_funcionario.setStyleSheet(
-            """
-            QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 8px;
-                font-size: 12px;
-                background-color: white;
-            }
-            QComboBox:focus {
-                border-color: #3498db;
-            }
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 20px;
-                border-left: 1px solid #b0bec5;
-                background-color: #E0E0E0;
-            }
-            QComboBox::drop-down:hover {
-                background-color: #34B5A9;
-            }
-            QComboBox::down-arrow {
-                image: url(:/qt-project.org/styles/commonstyle/images/arrowdown-16.png);
-            }
-        """
-        )
+        self.combo_funcionario.setStyleSheet(UIStyles.COMBOBOX)
         inputs_layout.addWidget(self.combo_funcionario)
 
         # Tipo de Vehículo (Label + Combo)
@@ -322,33 +297,7 @@ class VehiculosTab(QWidget):
         self.combo_tipo_vehiculo.addItems(["Carro", "Moto", "Bicicleta"])
         self.combo_tipo_vehiculo.setFixedWidth(180)
         self.combo_tipo_vehiculo.setFixedHeight(40)
-        self.combo_tipo_vehiculo.setStyleSheet(
-            """
-            QComboBox {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 8px;
-                font-size: 12px;
-                background-color: white;
-            }
-            QComboBox:focus {
-                border-color: #3498db;
-            }
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 20px;
-                border-left: 1px solid #b0bec5;
-                background-color: #E0E0E0;
-            }
-            QComboBox::drop-down:hover {
-                background-color: #34B5A9;
-            }
-            QComboBox::down-arrow {
-                image: url(:/qt-project.org/styles/commonstyle/images/arrowdown-16.png);
-            }
-        """
-        )
+        self.combo_tipo_vehiculo.setStyleSheet(UIStyles.COMBOBOX)
         inputs_layout.addWidget(self.combo_tipo_vehiculo)
 
         # Placa (Label + Input)
@@ -360,55 +309,18 @@ class VehiculosTab(QWidget):
         self.txt_placa.setPlaceholderText("Ej: ABC123")
         self.txt_placa.setFixedWidth(150)
         self.txt_placa.setFixedHeight(40)
-        self.txt_placa.setStyleSheet(
-            """
-            QLineEdit {
-                border: 2px solid #bdc3c7;
-                border-radius: 6px;
-                padding: 8px;
-                font-size: 12px;
-                background-color: white;
-            }
-            QLineEdit:focus {
-                border-color: #3498db;
-            }
-        """
-        )
+        self.txt_placa.setStyleSheet(UIStyles.LINEEDIT)
         inputs_layout.addWidget(self.txt_placa)
 
         # Botón Guardar en la misma fila
-        self.btn_guardar_vehiculo = QPushButton("💾 Guardar")
+        self.btn_guardar_vehiculo = ButtonFactory.create_success_button("Guardar")
         self.btn_guardar_vehiculo.clicked.connect(self.guardar_vehiculo)
-        self.btn_guardar_vehiculo.setProperty("class", "success")
         self.btn_guardar_vehiculo.setFixedHeight(40)
         self.btn_guardar_vehiculo.setFixedWidth(150)
-        self.btn_guardar_vehiculo.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #27ae60;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-                border: none;
-                border-radius: 8px;
-            }
-            QPushButton:hover {
-                background-color: #229954;
-            }
-            QPushButton:pressed {
-                background-color: #1e8449;
-            }
-        """
-        )
         inputs_layout.addWidget(self.btn_guardar_vehiculo)
 
         inputs_layout.addStretch()
         form_layout.addLayout(inputs_layout)
-
-        # Conectar eventos
-        self.txt_placa.textChanged.connect(self.validar_en_tiempo_real)
-        self.combo_funcionario.currentIndexChanged.connect(self.validar_en_tiempo_real)
-        self.combo_tipo_vehiculo.currentTextChanged.connect(self.validar_en_tiempo_real)
 
         form_group.setLayout(form_layout)
         layout.addWidget(form_group)
@@ -478,29 +390,14 @@ class VehiculosTab(QWidget):
         tabla_layout.addLayout(buscar_layout)
 
         self.tabla_vehiculos = QTableWidget()
-        self.tabla_vehiculos.setColumnCount(7)
-        self.tabla_vehiculos.setHorizontalHeaderLabels(
-            ["Funcionario", "Tipo", "Placa", "Último Dígito", "Circulación", "Parqueadero", "Acciones"]
-        )
 
-        # Configuración visual profesional
-        self.tabla_vehiculos.setAlternatingRowColors(True)
-        self.tabla_vehiculos.setSelectionBehavior(QTableWidget.SelectRows)
-        self.tabla_vehiculos.setSelectionMode(QTableWidget.SingleSelection)
-        self.tabla_vehiculos.verticalHeader().setVisible(False)
-
-        # Establecer anchos de columna fijos para distribución equitativa
-        self.tabla_vehiculos.setColumnWidth(0, 200)  # Funcionario
-        self.tabla_vehiculos.setColumnWidth(1, 100)  # Tipo
-        self.tabla_vehiculos.setColumnWidth(2, 100)  # Placa
-        self.tabla_vehiculos.setColumnWidth(3, 120)  # Último Dígito
-        self.tabla_vehiculos.setColumnWidth(4, 110)  # Circulación
-        self.tabla_vehiculos.setColumnWidth(5, 130)  # Parqueadero
-        self.tabla_vehiculos.setColumnWidth(6, 240)  # Acciones
+        # Configurar tabla usando TableUtils
+        columns = ["Funcionario", "Tipo", "Placa", "Último Dígito", "Circulación", "Parqueadero", "Acciones"]
+        widths = [200, 100, 100, 120, 110, 130, 240]
+        TableUtils.setup_table(self.tabla_vehiculos, columns, widths, row_height=50, stretch_last=False)
 
         # Configurar altura de filas fija
         altura_fila = 50
-        self.tabla_vehiculos.verticalHeader().setDefaultSectionSize(altura_fila)
 
         # Calcular altura exacta para 6 filas + encabezado (sin scroll vertical)
         # Aumentar margen para asegurar que la última fila se vea completa
@@ -514,48 +411,8 @@ class VehiculosTab(QWidget):
         self.tabla_vehiculos.setVerticalScrollBarPolicy(QtCore.ScrollBarAlwaysOff)
         self.tabla_vehiculos.setHorizontalScrollBarPolicy(QtCore.ScrollBarAsNeeded)
 
-        # Estilo de encabezados - Color corporativo
-        self.tabla_vehiculos.horizontalHeader().setStyleSheet(
-            """
-            QHeaderView::section {
-                background-color: #34B5A9;
-                color: white;
-                font-weight: bold;
-                padding: 10px;
-                border: none;
-                border-right: 1px solid #2D9B8F;
-                text-align: center;
-            }
-        """
-        )
-
-        # Estilo general de la tabla
-        self.tabla_vehiculos.setStyleSheet(
-            """
-            QTableWidget {
-                background-color: white;
-                gridline-color: #bdc3c7;
-                border: 1px solid #bdc3c7;
-                border-radius: 5px;
-                font-size: 11px;
-            }
-            QTableWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #ecf0f1;
-                text-align: center;
-            }
-            QTableWidget::item:selected {
-                background-color: #e8f6f3;
-                color: #2c3e50;
-            }
-            QTableWidget::item:hover {
-                background-color: #f8f9fa;
-            }
-            QTableWidget::item:alternate {
-                background-color: #f8f9fa;
-            }
-        """
-        )
+        # Aplicar estilo centralizado
+        TableUtils.apply_default_style(self.tabla_vehiculos, header_bg="#34B5A9")
 
         tabla_layout.addWidget(self.tabla_vehiculos)
 
@@ -565,60 +422,14 @@ class VehiculosTab(QWidget):
         paginacion_layout.setContentsMargins(0, 5, 0, 0)
 
         # Botón Primera Página
-        self.btn_primera_pagina = QPushButton("⏮️ Primera")
+        self.btn_primera_pagina = ButtonFactory.create_pagination_button("⏮️ Primera")
         self.btn_primera_pagina.setFixedHeight(35)
-        self.btn_primera_pagina.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-                font-size: 11px;
-                padding: 5px 12px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:pressed {
-                background-color: #21618c;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """
-        )
         self.btn_primera_pagina.clicked.connect(self.ir_primera_pagina)
         paginacion_layout.addWidget(self.btn_primera_pagina)
 
         # Botón Página Anterior
-        self.btn_pagina_anterior = QPushButton("◀️ Anterior")
+        self.btn_pagina_anterior = ButtonFactory.create_pagination_button("◀️ Anterior")
         self.btn_pagina_anterior.setFixedHeight(35)
-        self.btn_pagina_anterior.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-                font-size: 11px;
-                padding: 5px 12px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:pressed {
-                background-color: #21618c;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """
-        )
         self.btn_pagina_anterior.clicked.connect(self.ir_pagina_anterior)
         paginacion_layout.addWidget(self.btn_pagina_anterior)
 
@@ -629,60 +440,14 @@ class VehiculosTab(QWidget):
         paginacion_layout.addWidget(self.lbl_info_pagina)
 
         # Botón Página Siguiente
-        self.btn_pagina_siguiente = QPushButton("Siguiente ▶️")
+        self.btn_pagina_siguiente = ButtonFactory.create_pagination_button("Siguiente ▶️")
         self.btn_pagina_siguiente.setFixedHeight(35)
-        self.btn_pagina_siguiente.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-                font-size: 11px;
-                padding: 5px 12px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:pressed {
-                background-color: #21618c;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """
-        )
         self.btn_pagina_siguiente.clicked.connect(self.ir_pagina_siguiente)
         paginacion_layout.addWidget(self.btn_pagina_siguiente)
 
         # Botón Última Página
-        self.btn_ultima_pagina = QPushButton("Última ⏭️")
+        self.btn_ultima_pagina = ButtonFactory.create_pagination_button("Última ⏭️")
         self.btn_ultima_pagina.setFixedHeight(35)
-        self.btn_ultima_pagina.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-                font-size: 11px;
-                padding: 5px 12px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:pressed {
-                background-color: #21618c;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """
-        )
         self.btn_ultima_pagina.clicked.connect(self.ir_ultima_pagina)
         paginacion_layout.addWidget(self.btn_ultima_pagina)
 
@@ -721,43 +486,128 @@ class VehiculosTab(QWidget):
             self.combo_funcionario.addItem(texto, funcionario_id)
 
         # Limpiar worker
-        self.cargar_combo_worker.deleteLater()
-        self.cargar_combo_worker = None
+        if self.cargar_combo_worker:
+            self.cargar_combo_worker.deleteLater()
+            self.cargar_combo_worker = None
 
     def guardar_vehiculo(self):
         """Guarda un nuevo vehículo con validaciones de reglas de negocio (Optimizado - Asíncrono)"""
+        # Validación 1: Funcionario seleccionado
         if self.combo_funcionario.currentData() is None:
-            QMessageBox.warning(
+            UIDialogs.show_warning(
                 self,
-                "🚗 Seleccionar Funcionario",
-                "🚫 Debe seleccionar un funcionario del listado\n\n"
-                "💡 Solución: Escoja un funcionario del combo desplegable",
+                "Seleccionar Funcionario",
+                "Debe seleccionar un funcionario del listado.\n\n"
+                "Solución: Escoja un funcionario del combo desplegable.",
             )
             return
 
+        funcionario_id = self.combo_funcionario.currentData()
         tipo_vehiculo = self.combo_tipo_vehiculo.currentText()
-        placa = self.txt_placa.text().strip()
+        placa = self.txt_placa.text().strip().upper()
 
-        # Validación de placa para carros
-        if tipo_vehiculo == "Carro" and not placa:
-            QMessageBox.warning(
+        # Validación 2: Tipo de vehículo seleccionado
+        if not tipo_vehiculo:
+            UIDialogs.show_warning(
                 self,
-                "🚗 Placa Requerida",
-                "🚫 La placa es obligatoria para carros\n\n"
-                "📝 Formato válido: ABC123, XYZ789\n"
-                "💡 La placa determina el tipo de circulación (PAR/IMPAR)",
+                "Seleccionar Tipo de Vehículo",
+                "Debe seleccionar el tipo de vehículo.\n\n"
+                "Solución: Escoja Carro, Moto o Bicicleta del combo desplegable.",
             )
             return
 
-        # Deshabilitar botón mientras se guarda
+        # Validación 3: Bicicletas NO deben tener placa
+        if tipo_vehiculo == "Bicicleta" and placa:
+            UIDialogs.show_warning(
+                self,
+                "Placa No Permitida",
+                "Las bicicletas NO requieren placa.\n\n"
+                "Solución: Deje el campo de placa vacío.",
+            )
+            return
+
+        # Validación 4: Placa requerida para Carros y Motos
+        if tipo_vehiculo in ("Carro", "Moto") and not placa:
+            UIDialogs.show_warning(
+                self,
+                "Placa Requerida",
+                f"La placa es obligatoria para vehículos tipo {tipo_vehiculo}.\n\n"
+                "Formatos válidos:\n"
+                "  • Carro: ABC123 (6 caracteres)\n"
+                "  • Moto: XYZ12 o XYZ12A (5-6 caracteres)\n\n"
+                "Solución: Ingrese la placa del vehículo.",
+            )
+            return
+
+        # Validación 5: Formato de placa para Carros (3 letras + 3 números)
+        if tipo_vehiculo == "Carro" and placa:
+            if len(placa) != 6:
+                UIDialogs.show_warning(
+                    self,
+                    "Formato de Placa Inválido",
+                    "La placa de Carro debe tener exactamente 6 caracteres.\n\n"
+                    "Formato válido: ABC123 (3 letras + 3 números)\n\n"
+                    "Solución: Verifique la placa del vehículo.",
+                )
+                return
+
+            # Validar patrón: 3 letras + 3 números
+            if not (placa[:3].isalpha() and placa[3:].isdigit()):
+                UIDialogs.show_warning(
+                    self,
+                    "Formato de Placa Inválido",
+                    "La placa de Carro debe seguir el patrón:\n"
+                    "3 letras + 3 números\n\n"
+                    "Ejemplo: ABC123\n\n"
+                    "Solución: Verifique que sean 3 letras seguidas de 3 números.",
+                )
+                return
+
+        # Validación para Motos (3 letras + 2 números ó 3 letras + 2 números + 1 letra)
+        if tipo_vehiculo == "Moto" and placa:
+            valido = False
+
+            # Patrón 1: XYZ12 (3 letras + 2 números)
+            if len(placa) == 5 and placa[:3].isalpha() and placa[3:].isdigit():
+                valido = True
+
+            # Patrón 2: XYZ12A (3 letras + 2 números + 1 letra)
+            elif len(placa) == 6 and placa[:3].isalpha() and placa[3:5].isdigit() and placa[5].isalpha():
+                valido = True
+
+            if not valido:
+                UIDialogs.show_warning(
+                    self,
+                    "Formato de Placa Inválido",
+                    "La placa de Moto debe seguir uno de estos patrones:\n\n"
+                    "  • XYZ12 (3 letras + 2 números)\n"
+                    "  • XYZ12A (3 letras + 2 números + 1 letra)\n\n"
+                    "Solución: Verifique el formato de la placa.",
+                )
+                return
+
+        # Validación 6: Reglas de negocio (límites de vehículos, combinaciones permitidas)
+        es_valido, mensaje = self.vehiculo_model.validar_vehiculo_antes_registro(
+            funcionario_id, tipo_vehiculo, placa
+        )
+
+        if not es_valido:
+            UIDialogs.show_warning(
+                self,
+                "No se puede registrar el vehículo",
+                mensaje
+            )
+            return
+
+        # Todas las validaciones pasaron, proceder a guardar
         self.btn_guardar_vehiculo.setEnabled(False)
-        self.btn_guardar_vehiculo.setText("⏳ Guardando...")
+        self.btn_guardar_vehiculo.setText("Guardando...")
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
         # Crear y ejecutar worker thread para guardar
         self.guardar_worker = GuardarVehiculoWorker(
             self.db_config,
-            self.combo_funcionario.currentData(),
+            funcionario_id,
             tipo_vehiculo,
             placa
         )
@@ -770,10 +620,10 @@ class VehiculosTab(QWidget):
         # Restaurar cursor y botón
         QApplication.restoreOverrideCursor()
         self.btn_guardar_vehiculo.setEnabled(True)
-        self.btn_guardar_vehiculo.setText("💾 Guardar")
+        self.btn_guardar_vehiculo.setText("Guardar")
 
         if exito:
-            QMessageBox.information(self, "✅ Vehículo Registrado", mensaje)
+            UIDialogs.show_success(self, "Vehículo Registrado", mensaje)
             self.txt_placa.clear()
             self.combo_funcionario.setCurrentIndex(0)
 
@@ -781,7 +631,6 @@ class VehiculosTab(QWidget):
             # El worker hizo commit en su propia conexión MySQL.
             # Por aislamiento de transacciones, esta conexión NO verá esos datos
             # hasta que se cierre y reabra (force_reconnect).
-            print("[DEBUG] Forzando reconexion para ver datos frescos...")
             self.db.force_reconnect()
 
             # Refrescar esta pestaña de forma asíncrona
@@ -790,16 +639,15 @@ class VehiculosTab(QWidget):
 
             # Emitir señal INMEDIATAMENTE (sin delay)
             # Ya no necesitamos QTimer porque force_reconnect() garantiza visibilidad
-            print("[DEBUG] Emitiendo senal vehiculo_creado inmediatamente...")
             self.vehiculo_creado.emit()
-            print("[DEBUG] Senal vehiculo_creado emitida!")
         else:
             # Los mensajes ya vienen formateados desde el modelo
-            QMessageBox.warning(self, "🚫 Validación", mensaje)
+            UIDialogs.show_warning(self, "Error al Guardar", mensaje)
 
         # Limpiar worker
-        self.guardar_worker.deleteLater()
-        self.guardar_worker = None
+        if self.guardar_worker:
+            self.guardar_worker.deleteLater()
+            self.guardar_worker = None
 
     def cargar_vehiculos(self):
         """Carga todos los vehículos en la tabla con botones de acción (Síncrono - solo para init)"""
@@ -807,6 +655,7 @@ class VehiculosTab(QWidget):
             SELECT
                 v.id,
                 CONCAT(f.nombre, ' ', f.apellidos) as funcionario,
+                f.cedula,
                 v.tipo_vehiculo,
                 v.placa,
                 v.ultimo_digito,
@@ -849,8 +698,9 @@ class VehiculosTab(QWidget):
         self.mostrar_vehiculos(vehiculos)
 
         # Limpiar worker
-        self.cargar_vehiculos_worker.deleteLater()
-        self.cargar_vehiculos_worker = None
+        if self.cargar_vehiculos_worker:
+            self.cargar_vehiculos_worker.deleteLater()
+            self.cargar_vehiculos_worker = None
 
     def mostrar_vehiculos(self, vehiculos):
         """Muestra los vehículos en la tabla con paginación"""
@@ -993,7 +843,7 @@ class VehiculosTab(QWidget):
                 }
             """
             )
-            btn_eliminar.clicked.connect(lambda checked, vid=vehiculo["id"]: self.abrir_modal_eliminar(vid))
+            btn_eliminar.clicked.connect(lambda checked, v=vehiculo: self.abrir_modal_eliminar_optimizado(v))
 
             btn_layout_acciones.addWidget(btn_editar)
             btn_layout_acciones.addSpacing(2)
@@ -1052,219 +902,6 @@ class VehiculosTab(QWidget):
         """Actualiza la tabla de vehículos (Optimizado - Asíncrono)"""
         self.cargar_vehiculos_async()
 
-    def validar_en_tiempo_real(self):
-        """Valida el vehículo en tiempo real con retroalimentación visual por color del botón"""
-        # Si no hay funcionario seleccionado, botón gris neutral
-        if self.combo_funcionario.currentData() is None:
-            self.btn_guardar_vehiculo.setEnabled(False)
-            self.btn_guardar_vehiculo.setText("💾 Guardar")
-            self.btn_guardar_vehiculo.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #95a5a6;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 14px;
-                    border: none;
-                    border-radius: 8px;
-                }
-            """
-            )
-            return
-
-        funcionario_id = self.combo_funcionario.currentData()
-        tipo_vehiculo = self.combo_tipo_vehiculo.currentText()
-        placa = self.txt_placa.text().strip().upper()
-
-        # Para carros, validar solo si la placa tiene al menos 5 caracteres (formato mínimo: ABC12)
-        if tipo_vehiculo == "Carro" and placa and len(placa) < 5:
-            # Placa incompleta, botón amarillo indicando que falta información
-            self.btn_guardar_vehiculo.setEnabled(True)
-            self.btn_guardar_vehiculo.setText("⚠️ Completar placa")
-            self.btn_guardar_vehiculo.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #f39c12;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 14px;
-                    border: none;
-                    border-radius: 8px;
-                }
-                QPushButton:hover {
-                    background-color: #e67e22;
-                }
-            """
-            )
-            return
-
-        # Solo validar si hay datos suficientes
-        if tipo_vehiculo and (tipo_vehiculo != "Carro" or placa):
-            es_valido, mensaje = self.vehiculo_model.validar_vehiculo_antes_registro(
-                funcionario_id, tipo_vehiculo, placa
-            )
-
-            if not es_valido:
-                # Guardar el mensaje de error para mostrarlo cuando intente guardar
-                self.ultimo_mensaje_validacion = mensaje
-
-                # Botón ROJO - No válido según reglas de negocio
-                self.btn_guardar_vehiculo.setEnabled(False)
-                self.btn_guardar_vehiculo.setText("🚫 No permitido")
-                self.btn_guardar_vehiculo.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #e74c3c;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 14px;
-                        border: none;
-                        border-radius: 8px;
-                    }
-                """
-                )
-            else:
-                # Limpiar mensaje de error guardado
-                self.ultimo_mensaje_validacion = None
-
-                # Botón VERDE - Válido y listo para guardar
-                self.btn_guardar_vehiculo.setEnabled(True)
-                self.btn_guardar_vehiculo.setText("✅ Guardar")
-                self.btn_guardar_vehiculo.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #27ae60;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 14px;
-                        border: none;
-                        border-radius: 8px;
-                    }
-                    QPushButton:hover {
-                        background-color: #229954;
-                    }
-                    QPushButton:pressed {
-                        background-color: #1e8449;
-                    }
-                """
-                )
-        else:
-            # Botón gris - Esperando selección de tipo de vehículo
-            self.ultimo_mensaje_validacion = None
-            self.btn_guardar_vehiculo.setEnabled(False)
-            self.btn_guardar_vehiculo.setText("💾 Seleccione tipo")
-            self.btn_guardar_vehiculo.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #95a5a6;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 14px;
-                    border: none;
-                    border-radius: 8px;
-                }
-            """
-            )
-
-    def mostrar_mensaje_validacion_fallida(self, mensaje_base: str, placa: str, tipo_vehiculo: str, funcionario_id: int):
-        """Muestra un mensaje breve y preciso explicando por qué el registro está bloqueado"""
-        # Obtener vehículos existentes
-        vehiculos = self.vehiculo_model.obtener_por_funcionario(funcionario_id)
-        cant_vehiculos = len(vehiculos)
-
-        # Analizar placa para determinar tipo de circulación
-        ultimo_digito = ""
-        tipo_circulacion = "N/A"
-
-        if tipo_vehiculo == "Carro" and placa:
-            for char in reversed(placa):
-                if char.isdigit():
-                    ultimo_digito = char
-                    break
-
-            if ultimo_digito:
-                digito_int = int(ultimo_digito)
-                tipo_circulacion = "PAR" if digito_int % 2 == 0 else "IMPAR"
-
-        # Construir mensaje breve y preciso
-        titulo = "🚫 Registro No Permitido"
-
-        # Determinar razón específica
-        razon = ""
-
-        if cant_vehiculos >= 3:
-            razon = f"<b>Límite alcanzado:</b> Tiene {cant_vehiculos} vehículos registrados.<br>Funcionarios regulares: máximo 3 vehículos según combinaciones válidas."
-
-        elif tipo_vehiculo == "Carro":
-            tiene_carro = any(v.get('tipo_vehiculo') == 'Carro' for v in vehiculos)
-
-            if tiene_carro:
-                vehiculo_carro = next(v for v in vehiculos if v.get('tipo_vehiculo') == 'Carro')
-                placa_existente = vehiculo_carro.get('placa', 'N/A')
-                circulacion_existente = vehiculo_carro.get('tipo_circulacion', 'N/A')
-
-                razon = f"""
-<b>Ya tiene un carro registrado:</b> Placa {placa_existente} ({circulacion_existente})<br>
-<b>Restricción:</b> Funcionarios regulares solo pueden tener 1 carro.<br>
-<b>Puede registrar:</b> Moto o Bicicleta.
-                """.strip()
-
-        elif "placa ya registrada" in mensaje_base.lower() or "duplicada" in mensaje_base.lower():
-            razon = f"<b>Placa duplicada:</b> La placa {placa} ya está registrada en el sistema."
-
-        else:
-            razon = mensaje_base
-
-        mensaje_html = f"""
-<div style='font-family: Arial; color: #2c3e50; padding: 10px;'>
-    <p style='font-size: 13px; margin-bottom: 10px;'>
-        <b>🚗 Vehículo:</b> {tipo_vehiculo} {f'- Placa {placa} ({tipo_circulacion})' if tipo_vehiculo == "Carro" and placa else ''}
-    </p>
-
-    <hr style='border: 1px solid #e74c3c; margin: 10px 0;'>
-
-    <p style='font-size: 12px; line-height: 1.6;'>
-        {razon}
-    </p>
-</div>
-        """.strip()
-
-        # Mostrar mensaje compacto
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle(titulo)
-        msg_box.setTextFormat(Qt.RichText)
-        msg_box.setText(mensaje_html)
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.setDefaultButton(QMessageBox.Ok)
-
-        # Estilo compacto
-        msg_box.setStyleSheet("""
-            QMessageBox {
-                background-color: white;
-            }
-            QLabel {
-                color: #2c3e50;
-                font-size: 11px;
-                min-width: 400px;
-                max-width: 450px;
-            }
-            QPushButton {
-                background-color: #e74c3c;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 8px 20px;
-                font-weight: bold;
-                min-width: 80px;
-            }
-            QPushButton:hover {
-                background-color: #c0392b;
-            }
-        """)
-
-        msg_box.exec_()
-
     def abrir_modal_editar(self, vehiculo_id: int):
         """Abre el modal para editar un vehículo
 
@@ -1282,7 +919,7 @@ class VehiculosTab(QWidget):
             modal.exec_()
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al abrir el modal de edición: {str(e)}")
+            UIDialogs.show_error(self, "Error", f"Error al abrir el modal de edicion: {str(e)}")
 
     def abrir_modal_ver(self, vehiculo_id: int):
         """Abre el modal para ver los detalles de un vehículo
@@ -1297,10 +934,45 @@ class VehiculosTab(QWidget):
             modal.exec_()
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al abrir el modal de visualización: {str(e)}")
+            UIDialogs.show_error(self, "Error", f"Error al abrir el modal de visualizacion: {str(e)}")
+
+    def abrir_modal_eliminar_optimizado(self, vehiculo_data: dict):
+        """Abre el modal para eliminar un vehículo (OPTIMIZADO - sin consulta adicional)
+
+        Args:
+            vehiculo_data (dict): Datos completos del vehículo desde la tabla
+        """
+        import time
+        try:
+
+            # Crear modal pasando los datos directamente (SIN consulta a BD)
+            t_modal = time.time()
+            modal = EliminarVehiculoModal(
+                vehiculo_id=vehiculo_data["id"],
+                vehiculo_model=self.vehiculo_model,
+                parent=self,
+                vehiculo_data=vehiculo_data  # Pasar datos directamente
+            )
+
+            # Conectar señal para actualizar tabla cuando se elimine (Optimizado - Asíncrono)
+            t_connect = time.time()
+            modal.vehiculo_eliminado.connect(self.cargar_vehiculos_async)
+            modal.vehiculo_eliminado.connect(self.vehiculo_creado.emit)  # Para sincronizar otros módulos
+            modal.vehiculo_eliminado.connect(self.cargar_combo_funcionarios)  # Actualizar combo
+
+            t_exec = time.time()
+            resultado = modal.exec_()
+
+            # Mostrar mensaje de éxito DESPUÉS de cerrar el modal (evita diálogos simultáneos)
+            if resultado == QDialog.Accepted and hasattr(modal, 'mensaje_exito'):
+                UIDialogs.show_success(self, "✅ Vehículo Eliminado", modal.mensaje_exito)
+
+
+        except Exception as e:
+            UIDialogs.show_error(self, "Error", f"Error al abrir el modal de eliminacion: {str(e)}")
 
     def abrir_modal_eliminar(self, vehiculo_id: int):
-        """Abre el modal para eliminar un vehículo
+        """Abre el modal para eliminar un vehículo (LEGACY - mantener por compatibilidad)
 
         Args:
             vehiculo_id (int): ID del vehículo a eliminar
@@ -1313,10 +985,14 @@ class VehiculosTab(QWidget):
             modal.vehiculo_eliminado.connect(self.vehiculo_creado.emit)  # Para sincronizar otros módulos
             modal.vehiculo_eliminado.connect(self.cargar_combo_funcionarios)  # Actualizar combo
 
-            modal.exec_()
+            resultado = modal.exec_()
+
+            # Mostrar mensaje de éxito DESPUÉS de cerrar el modal (evita diálogos simultáneos)
+            if resultado == QDialog.Accepted and hasattr(modal, 'mensaje_exito'):
+                UIDialogs.show_success(self, "✅ Vehículo Eliminado", modal.mensaje_exito)
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al abrir el modal de eliminación: {str(e)}")
+            UIDialogs.show_error(self, "Error", f"Error al abrir el modal de eliminacion: {str(e)}")
 
     def obtener_vehiculo_seleccionado(self) -> int:
         """Obtiene el ID del vehículo seleccionado en la tabla

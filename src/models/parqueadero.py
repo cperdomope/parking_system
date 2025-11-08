@@ -552,15 +552,12 @@ class ParqueaderoModel:
 
         except Error as e:
             self.db.connection.rollback()
+            # Limpiar el mensaje de error (remover código MySQL)
             error_msg = str(e)
-
-            # Mejorar mensajes de error del procedimiento almacenado
-            if "no permite compartir" in error_msg.lower():
-                return (False, f"🚫 {error_msg}")
-            elif "mismo tipo" in error_msg.lower() or "pico" in error_msg.lower():
-                return (False, f"🚫 {error_msg}")
-            else:
-                return (False, f"🚫 Error en asignación: {error_msg}")
+            # Remover el código de error tipo "1644 (45000): " del inicio
+            if ": " in error_msg:
+                error_msg = error_msg.split(": ", 1)[1]
+            return (False, error_msg)
 
     def liberar_asignacion(self, vehiculo_id: int) -> bool:
         """Libera la asignación de un vehículo y actualiza el estado del parqueadero"""

@@ -354,7 +354,7 @@ BEGIN
         -- VALIDACIÓN 1: Si el funcionario NO permite compartir y ya hay vehículos en el parqueadero
         -- IMPORTANTE: Solo validar si NO es directivo exclusivo
         IF v_permite_compartir = FALSE AND v_count_asignaciones_existentes > 0 AND v_tiene_parqueadero_exclusivo = FALSE THEN
-            SET v_mensaje = CONCAT('El funcionario ', v_cargo, ' no permite compartir parqueadero y este espacio ya está ocupado');
+            SET v_mensaje = 'Funcionario con excepción NO permite compartir. Seleccione un parqueadero sin vehículos.';
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
         END IF;
 
@@ -371,7 +371,7 @@ BEGIN
 
             -- Solo bloquear si el ocupante tiene exclusivo Y es un funcionario DIFERENTE
             IF (v_ocupante_permite_compartir = FALSE OR v_ocupante_tiene_exclusivo = TRUE) AND @ocupante_funcionario_id != v_funcionario_id THEN
-                SET v_mensaje = 'Este parqueadero está ocupado por un funcionario con parqueadero exclusivo';
+                SET v_mensaje = 'Parqueadero ocupado por funcionario con excepción. Seleccione otro disponible.';
                 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
             END IF;
         END IF;
@@ -425,22 +425,31 @@ BEGIN
             v_estado_calcular
         );
 
-    ELSEIF v_tiene_parqueadero_exclusivo = TRUE AND v_tipo_vehiculo = 'Carro' THEN
-        -- Para Exclusivo Directivo con CARROS: calcular según cantidad
+    ELSEIF v_tipo_vehiculo = 'Carro' THEN
+        -- Para TODOS los CARROS (exclusivos y regulares): calcular estado según cantidad
         -- Contar cuántos CARROS habrá DESPUÉS de insertar este
         SELECT COUNT(*) + 1 INTO v_count_vehiculos_funcionario
         FROM asignaciones a
         JOIN vehiculos v ON a.vehiculo_id = v.id
         WHERE a.parqueadero_id = p_parqueadero_id
         AND a.activo = TRUE
-        AND v.funcionario_id = v_funcionario_id
         AND v.tipo_vehiculo = 'Carro';
 
         -- Determinar el estado según la cantidad de CARROS
-        IF v_count_vehiculos_funcionario < 4 THEN
-            SET v_estado_calcular = 'Parcialmente_Asignado';
+        IF v_tiene_parqueadero_exclusivo = TRUE THEN
+            -- Para directivos exclusivos: límite de 4 carros
+            IF v_count_vehiculos_funcionario < 4 THEN
+                SET v_estado_calcular = 'Parcialmente_Asignado';
+            ELSE
+                SET v_estado_calcular = 'Completo';
+            END IF;
         ELSE
-            SET v_estado_calcular = 'Completo';
+            -- Para funcionarios regulares: límite de 2 carros
+            IF v_count_vehiculos_funcionario = 1 THEN
+                SET v_estado_calcular = 'Parcialmente_Asignado';
+            ELSE
+                SET v_estado_calcular = 'Completo';
+            END IF;
         END IF;
 
         -- Insertar asignación con estado manual
@@ -458,7 +467,7 @@ BEGIN
             v_estado_calcular
         );
     ELSE
-        -- Para funcionarios regulares, insertar sin estado manual (se calcula automáticamente por trigger)
+        -- Para otros casos (no debería llegar aquí, pero por seguridad)
         INSERT INTO asignaciones (
             vehiculo_id,
             parqueadero_id,

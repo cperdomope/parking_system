@@ -3,10 +3,9 @@
 Módulo de la pestaña Funcionarios del sistema de gestión de parqueadero
 """
 
-from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
-from PyQt5.QtGui import QBrush, QColor, QFont, QRegExpValidator
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QBrush, QColor, QFont
 from PyQt5.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -29,6 +28,10 @@ from ..config.settings import CARGOS_DISPONIBLES, DIRECCIONES_DISPONIBLES
 from ..database.manager import DatabaseManager
 from ..models.funcionario import FuncionarioModel
 from ..utils.formatters import format_numero_parqueadero
+
+# Nuevas utilidades de refactorización
+from .utils import InputValidators
+from .utils.button_factory import ButtonFactory
 
 
 class FuncionariosTab(QWidget):
@@ -98,30 +101,26 @@ class FuncionariosTab(QWidget):
         # ===== FILA 0: Cédula, Nombre, Apellidos, Celular (distribuidos uniformemente) =====
         form_layout.addWidget(self.crear_label_obligatorio("Cédula:"), 0, 0)
         self.txt_cedula = QLineEdit()
-        cedula_validator = QRegExpValidator(QRegExp("^[0-9]{7,10}$"))
-        self.txt_cedula.setValidator(cedula_validator)
+        self.txt_cedula.setValidator(InputValidators.CEDULA)
         self.txt_cedula.setPlaceholderText("Solo números")
         self.txt_cedula.setMaxLength(10)
         form_layout.addWidget(self.txt_cedula, 0, 1, 1, 2)  # Span 2 columnas
 
         form_layout.addWidget(self.crear_label_obligatorio("Nombre:"), 0, 3)
         self.txt_nombre = QLineEdit()
-        nombre_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
-        self.txt_nombre.setValidator(nombre_validator)
+        self.txt_nombre.setValidator(InputValidators.NOMBRE)
         self.txt_nombre.setPlaceholderText("Escriba su nombre")
         form_layout.addWidget(self.txt_nombre, 0, 4, 1, 2)  # Span 2 columnas
 
         form_layout.addWidget(self.crear_label_obligatorio("Apellidos:"), 0, 6)
         self.txt_apellidos = QLineEdit()
-        apellidos_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
-        self.txt_apellidos.setValidator(apellidos_validator)
+        self.txt_apellidos.setValidator(InputValidators.APELLIDOS)
         self.txt_apellidos.setPlaceholderText("Digite su apellido")
         form_layout.addWidget(self.txt_apellidos, 0, 7, 1, 2)  # Span 2 columnas
 
         form_layout.addWidget(self.crear_label_obligatorio("Celular:"), 0, 9)
         self.txt_celular = QLineEdit()
-        celular_validator = QRegExpValidator(QRegExp("^[0-9]{10}$"))
-        self.txt_celular.setValidator(celular_validator)
+        self.txt_celular.setValidator(InputValidators.CELULAR)
         self.txt_celular.setPlaceholderText("10 dígitos numéricos (ej: 3001234567)")
         self.txt_celular.setMaxLength(10)
         form_layout.addWidget(self.txt_celular, 0, 10, 1, 2)  # Span 2 columnas
@@ -246,8 +245,7 @@ class FuncionariosTab(QWidget):
         # No.Tarjeta Prox en la misma fila 1
         form_layout.addWidget(QLabel("No.Tarjeta Prox:"), 1, 9)
         self.txt_tarjeta = QLineEdit()
-        tarjeta_validator = QRegExpValidator(QRegExp("^[a-zA-Z0-9]{1,15}$"))
-        self.txt_tarjeta.setValidator(tarjeta_validator)
+        self.txt_tarjeta.setValidator(InputValidators.TARJETA_CLARO)
         self.txt_tarjeta.setPlaceholderText("Alfanumérico, máx 15 caracteres")
         self.txt_tarjeta.setMaxLength(15)
         form_layout.addWidget(self.txt_tarjeta, 1, 10, 1, 2)  # Span 2 columnas
@@ -531,87 +529,35 @@ class FuncionariosTab(QWidget):
 
         # Controles de paginación
         paginacion_layout = QHBoxLayout()
+        paginacion_layout.setSpacing(8)
+        paginacion_layout.setContentsMargins(0, 5, 0, 0)
 
-        self.btn_primera_pagina = QPushButton("<<")
-        self.btn_primera_pagina.setToolTip("Primera página")
-        self.btn_primera_pagina.setFixedSize(40, 30)
+        # Botón Primera Página
+        self.btn_primera_pagina = ButtonFactory.create_pagination_button("⏮️ Primera")
+        self.btn_primera_pagina.setFixedHeight(35)
         self.btn_primera_pagina.clicked.connect(self.ir_a_primera_pagina)
-        self.btn_primera_pagina.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                font-weight: bold;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-            }
-        """)
 
-        self.btn_anterior = QPushButton("<")
-        self.btn_anterior.setToolTip("Página anterior")
-        self.btn_anterior.setFixedSize(40, 30)
+        # Botón Página Anterior
+        self.btn_anterior = ButtonFactory.create_pagination_button("◀️ Anterior")
+        self.btn_anterior.setFixedHeight(35)
         self.btn_anterior.clicked.connect(self.pagina_anterior)
-        self.btn_anterior.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                font-weight: bold;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-            }
-        """)
 
+        # Label de información de página
         self.lbl_pagina = QLabel("Página 1 de 1")
+        self.lbl_pagina.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 12px;")
         self.lbl_pagina.setAlignment(Qt.AlignCenter)
-        self.lbl_pagina.setStyleSheet("font-weight: bold; font-size: 12px; padding: 0 10px;")
 
-        self.btn_siguiente = QPushButton(">")
-        self.btn_siguiente.setToolTip("Página siguiente")
-        self.btn_siguiente.setFixedSize(40, 30)
+        # Botón Página Siguiente
+        self.btn_siguiente = ButtonFactory.create_pagination_button("Siguiente ▶️")
+        self.btn_siguiente.setFixedHeight(35)
         self.btn_siguiente.clicked.connect(self.pagina_siguiente)
-        self.btn_siguiente.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                font-weight: bold;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-            }
-        """)
 
-        self.btn_ultima_pagina = QPushButton(">>")
-        self.btn_ultima_pagina.setToolTip("Última página")
-        self.btn_ultima_pagina.setFixedSize(40, 30)
+        # Botón Última Página
+        self.btn_ultima_pagina = ButtonFactory.create_pagination_button("Última ⏭️")
+        self.btn_ultima_pagina.setFixedHeight(35)
         self.btn_ultima_pagina.clicked.connect(self.ir_a_ultima_pagina)
-        self.btn_ultima_pagina.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                font-weight: bold;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-            }
-        """)
 
+        # Label total de registros
         self.lbl_total_registros = QLabel("Total: 0 funcionarios")
         self.lbl_total_registros.setStyleSheet("font-size: 11px; color: #7f8c8d; font-style: italic;")
 
@@ -1958,12 +1904,12 @@ class FuncionariosTab(QWidget):
                     errores.append(f"Fila {index + 2}: Error inesperado - {str(e)}")
 
             # Mostrar resultados
-            mensaje_resultado = f"✅ Importación Completada\n\n"
+            mensaje_resultado = "✅ Importación Completada\n\n"
             mensaje_resultado += f"Registros importados exitosamente: {importados}\n"
             mensaje_resultado += f"Registros omitidos/con errores: {omitidos}\n"
 
             if errores:
-                mensaje_resultado += f"\n⚠️ Detalles de errores (primeros 10):\n"
+                mensaje_resultado += "\n⚠️ Detalles de errores (primeros 10):\n"
                 mensaje_resultado += "\n".join(errores[:10])
                 if len(errores) > 10:
                     mensaje_resultado += f"\n\n... y {len(errores) - 10} errores más."
@@ -2211,24 +2157,18 @@ class EditarFuncionarioModal(QDialog):
         form_layout = QFormLayout()
 
         self.txt_cedula = QLineEdit()
-        # Validador para cédula en modal de edición: solo números, entre 7 y 10 dígitos
-        cedula_validator = QRegExpValidator(QRegExp("^[0-9]{7,10}$"))
-        self.txt_cedula.setValidator(cedula_validator)
+        self.txt_cedula.setValidator(InputValidators.CEDULA)
         self.txt_cedula.setPlaceholderText("Ingrese 7-10 dígitos numéricos")
         self.txt_cedula.setMaxLength(10)
         form_layout.addRow("Cédula:", self.txt_cedula)
 
         self.txt_nombre = QLineEdit()
-        # Validador para nombre: solo letras, espacios y tildes
-        nombre_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
-        self.txt_nombre.setValidator(nombre_validator)
+        self.txt_nombre.setValidator(InputValidators.NOMBRE)
         self.txt_nombre.setPlaceholderText("Solo letras y espacios")
         form_layout.addRow("Nombre:", self.txt_nombre)
 
         self.txt_apellidos = QLineEdit()
-        # Validador para apellidos: solo letras, espacios y tildes
-        apellidos_validator = QRegExpValidator(QRegExp("^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$"))
-        self.txt_apellidos.setValidator(apellidos_validator)
+        self.txt_apellidos.setValidator(InputValidators.APELLIDOS)
         self.txt_apellidos.setPlaceholderText("Solo letras y espacios")
         form_layout.addRow("Apellidos:", self.txt_apellidos)
 
@@ -2245,17 +2185,13 @@ class EditarFuncionarioModal(QDialog):
         form_layout.addRow("Cargo:", self.combo_cargo)
 
         self.txt_celular = QLineEdit()
-        # Validador para celular: exactamente 10 números
-        celular_validator = QRegExpValidator(QRegExp("^[0-9]{10}$"))
-        self.txt_celular.setValidator(celular_validator)
+        self.txt_celular.setValidator(InputValidators.CELULAR)
         self.txt_celular.setPlaceholderText("10 dígitos numéricos (ej: 3001234567)")
         self.txt_celular.setMaxLength(10)
         form_layout.addRow("Celular:", self.txt_celular)
 
         self.txt_tarjeta = QLineEdit()
-        # Validador para tarjeta: números y letras, máximo 15 caracteres
-        tarjeta_validator = QRegExpValidator(QRegExp("^[a-zA-Z0-9]{1,15}$"))
-        self.txt_tarjeta.setValidator(tarjeta_validator)
+        self.txt_tarjeta.setValidator(InputValidators.TARJETA_CLARO)
         self.txt_tarjeta.setPlaceholderText("Alfanumérico, máx 15 caracteres")
         self.txt_tarjeta.setMaxLength(15)
         form_layout.addRow("No.Tarjeta Prox:", self.txt_tarjeta)

@@ -336,7 +336,6 @@ class ParqueaderosTab(QWidget):
         for sotano in sotanos_disponibles:
             self.combo_filtro_sotano.addItem(sotano, sotano)
 
-        print(f"Sotanos cargados en parqueaderos: {sotanos_disponibles}")
 
     def aplicar_filtros(self):
         """Aplica todos los filtros seleccionados"""

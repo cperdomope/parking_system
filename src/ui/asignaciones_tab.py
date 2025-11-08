@@ -29,6 +29,9 @@ from ..models.parqueadero import ParqueaderoModel
 from ..models.vehiculo import VehiculoModel
 from ..utils.formatters import format_numero_parqueadero
 
+# Nuevas utilidades de refactorización
+from .utils import UIDialogs
+
 
 class EditarAsignacionDialog(QDialog):
     """Diálogo para editar una asignación existente"""
@@ -460,8 +463,8 @@ class EditarAsignacionDialog(QDialog):
             ):
 
                 if not nuevo_sotano or not nuevo_parqueadero_id:
-                    QMessageBox.warning(
-                        self, "⚠️ Datos Incompletos", "Debe seleccionar tanto el sótano como el parqueadero."
+                    UIDialogs.show_warning(
+                        self, "Datos Incompletos", "Debe seleccionar tanto el sotano como el parqueadero."
                     )
                     return
 
@@ -471,7 +474,7 @@ class EditarAsignacionDialog(QDialog):
                 # Primero liberar la asignación actual
                 success_liberar = self.parqueadero_model.liberar_asignacion(vehiculo_id)
                 if not success_liberar:
-                    QMessageBox.critical(self, "❌ Error", "No se pudo liberar la asignación actual.")
+                    UIDialogs.show_error(self, "Error", "No se pudo liberar la asignacion actual.")
                     return
 
                 # Luego crear nueva asignación
@@ -479,7 +482,7 @@ class EditarAsignacionDialog(QDialog):
                     vehiculo_id, nuevo_parqueadero_id, nuevas_observaciones
                 )
                 if not exito:
-                    QMessageBox.critical(self, "❌ Error", f"No se pudo crear la nueva asignación: {mensaje}")
+                    UIDialogs.show_error(self, "Error", f"No se pudo crear la nueva asignacion: {mensaje}")
                     return
 
                 cambios_realizados = True
@@ -496,18 +499,18 @@ class EditarAsignacionDialog(QDialog):
                     """
                     success, error = self.db.execute_query(update_query, (nuevas_observaciones, vehiculo_id))
                     if not success:
-                        QMessageBox.critical(self, "❌ Error", f"No se pudieron actualizar las observaciones: {error}")
+                        UIDialogs.show_error(self, "Error", f"No se pudieron actualizar las observaciones: {error}")
                         return
                     cambios_realizados = True
 
             if cambios_realizados:
-                QMessageBox.information(self, "✅ Éxito", "Los cambios se han guardado correctamente.")
+                UIDialogs.show_success(self, "Exito", "Los cambios se han guardado correctamente.")
                 self.accept()
             else:
-                QMessageBox.information(self, "ℹ️ Sin Cambios", "No se detectaron cambios para guardar.")
+                UIDialogs.show_success(self, "Sin Cambios", "No se detectaron cambios para guardar.")
 
         except Exception as e:
-            QMessageBox.critical(self, "❌ Error", f"Error al guardar cambios: {str(e)}")
+            UIDialogs.show_error(self, "Error", f"Error al guardar cambios: {str(e)}")
 
 
 class VerAsignacionModal(QDialog):
@@ -1395,9 +1398,6 @@ class AsignacionesTab(QWidget):
             ORDER BY v.tipo_vehiculo, f.apellidos, f.nombre
         """
         vehiculos = self.db.fetch_all(query)
-        print(f"[DEBUG] Vehiculos sin asignar obtenidos: {len(vehiculos)}")
-        if vehiculos:
-            print(f"[DEBUG] Primeros 3: {[v.get('placa', 'N/A') for v in vehiculos[:3]]}")
 
         # DEBUG: Verificar TODOS los vehículos activos (con y sin asignar)
         query_all = """
@@ -1410,9 +1410,8 @@ class AsignacionesTab(QWidget):
             LIMIT 10
         """
         todos = self.db.fetch_all(query_all)
-        print(f"[DEBUG] Ultimos 10 vehiculos en BD:")
         for vh in todos:
-            print(f"   - {vh['placa']} ({vh['tipo_vehiculo']}): {vh['estado']}")
+            pass  # Debug loop - mantener para compatibilidad
 
         self.combo_vehiculo_sin_asignar.clear()
         self.combo_vehiculo_sin_asignar.addItem("-- Seleccione vehículo --", None)
@@ -1448,7 +1447,6 @@ class AsignacionesTab(QWidget):
             for sotano in sotanos:
                 self.combo_sotano.addItem(sotano, sotano)
 
-            print(f"Sotanos cargados en asignaciones: {sotanos}")
         except Exception as e:
             print(f"Error al cargar sótanos: {e}")
             # Valores por defecto
@@ -1531,18 +1529,15 @@ class AsignacionesTab(QWidget):
                             park["estado_display"] = f"Parcial ({park['vehiculos_asignados']}/4)"
                             todos_parqueaderos[park["id"]] = park
 
-                        print(f"Directivo exclusivo: {len(parqueaderos_directivo)} parqueaderos propios con espacio")
-
                     elif tiene_excepcion_pico_placa:
                         # VEHÍCULOS CON EXCEPCIÓN (Híbrido, Discapacidad, Pico y Placa Solidario)
                         # REGLA: SOLO parqueaderos SIN CARROS (pueden tener motos/bicicletas)
-                        print(f"⚠️ Vehículo con excepción de pico y placa detectado:")
                         if pico_placa_solidario:
-                            print("   - Pico y Placa Solidario")
+                            pass  # Excepción detectada
                         if discapacidad:
-                            print("   - Funcionario con Discapacidad")
+                            pass  # Excepción detectada
                         if es_hibrido:
-                            print("   - Vehículo Híbrido")
+                            pass  # Excepción detectada
 
                         # FILTRAR parqueaderos que tengan CARROS
                         parqueaderos_sin_carros = []
@@ -1562,11 +1557,10 @@ class AsignacionesTab(QWidget):
                             if total_carros == 0:
                                 parqueaderos_sin_carros.append(p)
                             else:
-                                print(f"   ⚠️ Parqueadero {p.get('numero_parqueadero')} excluido: tiene {total_carros} carro(s) asignado(s)")
+                                pass  # Parqueadero con carros, no agregar
 
                         # Reemplazar todos_parqueaderos con los que no tienen carros
                         todos_parqueaderos = {p["id"]: p for p in parqueaderos_sin_carros}
-                        print(f"   → Mostrando SOLO parqueaderos SIN CARROS: {len(todos_parqueaderos)}")
                         # NO agregar parqueaderos parcialmente asignados con carros
 
                     else:
@@ -1622,10 +1616,9 @@ class AsignacionesTab(QWidget):
                                         if not tiene_excepcion_en_parqueadero:
                                             parqueaderos_complemento_sotano.append(p)
                                         else:
-                                            print(f"   ⚠️ Parqueadero {p.get('numero_parqueadero')} excluido: tiene vehículo con excepción")
+                                            pass  # Parqueadero con vehiculo con excepcion, no agregar
 
                         todos_parqueaderos.update({p["id"]: p for p in parqueaderos_complemento_sotano})
-                        print(f"Funcionario regular: {len(parqueaderos_complemento_sotano)} parqueaderos con complemento PAR/IMPAR")
 
                 # Para MOTOS y BICICLETAS: solo buscar completamente disponibles
                 else:
@@ -1640,8 +1633,6 @@ class AsignacionesTab(QWidget):
                     estado_str = park.get("estado_display", park["estado"]).replace("_", " ")
                     texto = f"{format_numero_parqueadero(park['numero_parqueadero'])} ({estado_str})"
                     self.combo_parqueadero_disponible.addItem(texto, park["id"])
-
-                print(f"Parqueaderos cargados para {tipo_vehiculo} en {sotano_seleccionado}: {len(todos_parqueaderos)}")
 
         except Exception as e:
             print(f"Error al cargar parqueaderos por sótano: {e}")
@@ -1685,27 +1676,22 @@ class AsignacionesTab(QWidget):
         sotano_seleccionado = self.combo_sotano.currentData()
         observaciones = self.txt_observaciones.toPlainText().strip()
 
-        print("DEBUG - Realizar asignación:")
         print(f"  Vehículo data: {vehiculo_data}")
-        print(f"  Parqueadero ID: {parqueadero_id}")
         print(f"  Sótano: {sotano_seleccionado}")
 
         if not vehiculo_data or not parqueadero_id or not sotano_seleccionado:
-            QMessageBox.warning(
+            UIDialogs.show_warning(
                 self,
-                "🌡️ Asignación de Parqueadero",
-                "🚫 Debe seleccionar un vehículo, un sótano y un parqueadero\n\n"
-                "🚗 Solo los carros requieren asignación de parqueadero\n"
-                "🏍️ Motos y bicicletas no ocupan espacios de parqueadero",
+                "Asignacion de Parqueadero",
+                "Debe seleccionar un vehiculo, un sotano y un parqueadero\n\n"
+                "Solo los carros requieren asignacion de parqueadero\n"
+                "Motos y bicicletas no ocupan espacios de parqueadero",
             )
             return
 
         # ========== OBTENER DATOS DEL FUNCIONARIO ==========
         pico_placa_solidario = vehiculo_data.get("pico_placa_solidario", False)
         discapacidad = vehiculo_data.get("discapacidad", False)
-        tiene_parqueadero_exclusivo = vehiculo_data.get("tiene_parqueadero_exclusivo", False)
-        funcionario_nombre = f"{vehiculo_data.get('nombre', '')} {vehiculo_data.get('apellidos', '')}"
-        cargo = vehiculo_data.get("cargo", "")
 
         # Realizar asignación usando el modelo (validaciones adicionales en modelo)
         exito, mensaje = self.parqueadero_model.asignar_vehiculo(vehiculo_data["id"], parqueadero_id, observaciones)
@@ -1724,14 +1710,14 @@ class AsignacionesTab(QWidget):
 
             # Limpiar campos después de asignación exitosa
             self.txt_observaciones.clear()
-            QMessageBox.information(self, "✅ Asignación Exitosa", mensaje_final)
+            UIDialogs.show_success(self, "Asignacion Exitosa", mensaje_final)
             self.cargar_vehiculos_sin_asignar()
             self.cargar_asignaciones()
             self.cargar_parqueaderos_por_sotano()  # Actualizar parqueaderos disponibles del sótano
             # Emitir señal para actualizar otros módulos
             self.asignacion_actualizada.emit()
         else:
-            QMessageBox.critical(self, "🚫 Error en Asignación", mensaje)
+            UIDialogs.show_error(self, "Error en Asignacion", mensaje)
 
     def cargar_asignaciones(self):
         """Carga las asignaciones actuales en la tabla"""
@@ -1994,34 +1980,30 @@ class AsignacionesTab(QWidget):
             modal = VerAsignacionModal(asignacion_data, self)
             modal.exec_()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al abrir el modal de visualización: {str(e)}")
+            UIDialogs.show_error(self, "Error", f"Error al abrir el modal de visualizacion: {str(e)}")
 
     def liberar_asignacion(self, vehiculo_id: int):
         """Libera la asignación de un vehículo"""
-        reply = QMessageBox.question(
-            self, "Confirmar", "¿Está seguro de liberar esta asignación?", QMessageBox.Yes | QMessageBox.No
+        reply = UIDialogs.show_question(
+            self, "Confirmar", "Esta seguro de liberar esta asignacion?"
         )
 
         if reply == QMessageBox.Yes:
             if self.parqueadero_model.liberar_asignacion(vehiculo_id):
-                QMessageBox.information(self, "Éxito", "Asignación liberada correctamente")
+                UIDialogs.show_success(self, "Exito", "Asignacion liberada correctamente")
                 self.cargar_asignaciones()
                 self.cargar_vehiculos_sin_asignar()
                 self.cargar_parqueaderos_por_sotano()  # Actualizar parqueaderos disponibles
                 # Emitir señal para actualizar otros módulos
                 self.asignacion_actualizada.emit()
             else:
-                QMessageBox.critical(self, "Error", "No se pudo liberar la asignación")
+                UIDialogs.show_error(self, "Error", "No se pudo liberar la asignacion")
 
     def actualizar_vehiculos_sin_asignar(self):
         """Actualiza la lista de vehículos sin asignar cuando se actualicen los datos"""
-        print("[DEBUG] Senal recibida: actualizar_vehiculos_sin_asignar()")
         # FORZAR reconexión para ver commits de otros threads
-        print("[DEBUG] Forzando reconexion para ver datos frescos...")
         self.db.force_reconnect()
-        print("[DEBUG] Conexion refrescada, cargando vehiculos...")
         self.cargar_vehiculos_sin_asignar()
-        print(f"[DEBUG] ComboBox actualizado: {self.combo_vehiculo_sin_asignar.count()} items")
 
     def editar_asignacion(self, asignacion_data):
         """Abre el diálogo de edición para una asignación"""
@@ -2035,7 +2017,7 @@ class AsignacionesTab(QWidget):
                 self.asignacion_actualizada.emit()
 
         except Exception as e:
-            QMessageBox.critical(self, "❌ Error", f"Error al abrir editor: {str(e)}")
+            UIDialogs.show_error(self, "Error", f"Error al abrir editor: {str(e)}")
 
     def actualizar_asignaciones(self):
         """Actualiza completamente la pestaña de asignaciones"""
