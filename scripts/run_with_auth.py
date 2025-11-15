@@ -47,9 +47,9 @@ Versión: 2.0.3
     
     print("[INFO] Iniciando sistema CON autenticación (modo producción)...")
     print("[INFO] Mostrando ventana de login...")
-    
+
     app = AuthenticatedApp()
-    sys.exit(app.run())
+    sys.exit(app.start())
 
 
 if __name__ == '__main__':
