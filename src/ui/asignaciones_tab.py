@@ -1984,11 +1984,16 @@ class AsignacionesTab(QWidget):
 
     def liberar_asignacion(self, vehiculo_id: int):
         """Libera la asignación de un vehículo"""
-        reply = UIDialogs.show_question(
-            self, "Confirmar", "Esta seguro de liberar esta asignacion?"
-        )
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setWindowTitle("Liberar Asignación")
+        msg_box.setText("¿Está seguro de que desea liberar esta asignación?")
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.button(QMessageBox.Yes).setText("Sí")
+        msg_box.button(QMessageBox.No).setText("No")
+        msg_box.setDefaultButton(QMessageBox.No)
 
-        if reply == QMessageBox.Yes:
+        if msg_box.exec_() == QMessageBox.Yes:
             if self.parqueadero_model.liberar_asignacion(vehiculo_id):
                 UIDialogs.show_success(self, "Exito", "Asignacion liberada correctamente")
                 self.cargar_asignaciones()

@@ -90,9 +90,9 @@ class AuthManager:
 
             # Consultar usuario y hash de contraseña
             query = """
-            SELECT id, usuario, password_hash, rol, activo
+            SELECT id, username, password_hash, rol, activo
             FROM usuarios
-            WHERE usuario = %s AND activo = TRUE
+            WHERE username = %s AND activo = TRUE
             """
 
             result = self.db.fetch_one(query, (usuario,))
@@ -107,11 +107,11 @@ class AuthManager:
             password_hash = result["password_hash"]
 
             # Verificar contraseña con bcrypt
-            if bcrypt.checkpw(contraseña.encode('utf-8'), bytes(password_hash)):
+            if bcrypt.checkpw(contraseña.encode('utf-8'), password_hash.encode('utf-8')):
                 # Login exitoso
                 self.current_user = {
                     "id": result["id"],
-                    "usuario": result["usuario"],
+                    "username": result["username"],
                     "rol": result["rol"],
                     "activo": result["activo"],
                 }
@@ -165,7 +165,7 @@ class AuthManager:
         Cierra la sesión del usuario actual
         """
         if self.current_user:
-            logger.info(f"LOGOUT | User: {self.current_user['usuario']}")
+            logger.info(f"LOGOUT | User: {self.current_user['username']}")
         self.current_user = None
 
     def get_current_user(self) -> Optional[Dict]:

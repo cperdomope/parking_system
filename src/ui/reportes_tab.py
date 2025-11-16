@@ -344,11 +344,12 @@ class ReportesTab(QWidget):
             QTabBar::tab {
                 background-color: #ecf0f1;
                 color: #2c3e50;
-                padding: 10px 20px;
+                padding: 10px 30px;
                 margin-right: 2px;
                 border-top-left-radius: 5px;
                 border-top-right-radius: 5px;
                 font-weight: bold;
+                min-width: 165px;
             }
             QTabBar::tab:selected {
                 background-color: #3498db;
@@ -406,7 +407,22 @@ class ReportesTab(QWidget):
                 "Pico y Placa Solidario",
             ]
         )
-        self.tabla_general.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar anchos de columnas apropiados
+        self.tabla_general.setColumnWidth(0, 100)  # Cédula
+        self.tabla_general.setColumnWidth(1, 180)  # Nombre Completo
+        self.tabla_general.setColumnWidth(2, 150)  # Cargo
+        self.tabla_general.setColumnWidth(3, 150)  # Dirección/Grupo
+        self.tabla_general.setColumnWidth(4, 110)  # Celular
+        self.tabla_general.setColumnWidth(5, 120)  # Tipo Vehículo
+        self.tabla_general.setColumnWidth(6, 90)   # Placa
+        self.tabla_general.setColumnWidth(7, 100)  # Circulación
+        self.tabla_general.setColumnWidth(8, 120)  # N° Parqueadero
+        self.tabla_general.setColumnWidth(9, 110)  # Estado Parq.
+        self.tabla_general.setColumnWidth(10, 170) # Pico y Placa Solidario
+        self.tabla_general.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabla_general.horizontalHeader().setStretchLastSection(False)
+        self.tabla_general.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tabla_general.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tabla_general.setAlternatingRowColors(True)
         self.tabla_general.setStyleSheet(
             """
@@ -460,7 +476,21 @@ class ReportesTab(QWidget):
                 "Fecha Registro",
             ]
         )
-        self.tabla_funcionarios.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar anchos de columnas apropiados
+        self.tabla_funcionarios.setColumnWidth(0, 60)   # ID
+        self.tabla_funcionarios.setColumnWidth(1, 100)  # Cédula
+        self.tabla_funcionarios.setColumnWidth(2, 130)  # Nombre
+        self.tabla_funcionarios.setColumnWidth(3, 130)  # Apellidos
+        self.tabla_funcionarios.setColumnWidth(4, 150)  # Dirección/Grupo
+        self.tabla_funcionarios.setColumnWidth(5, 150)  # Cargo
+        self.tabla_funcionarios.setColumnWidth(6, 110)  # Celular
+        self.tabla_funcionarios.setColumnWidth(7, 120)  # Tarjeta Prox.
+        self.tabla_funcionarios.setColumnWidth(8, 90)   # Vehículos
+        self.tabla_funcionarios.setColumnWidth(9, 130)  # Fecha Registro
+        self.tabla_funcionarios.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabla_funcionarios.horizontalHeader().setStretchLastSection(False)
+        self.tabla_funcionarios.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tabla_funcionarios.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tabla_funcionarios.setAlternatingRowColors(True)
         self.tabla_funcionarios.setStyleSheet(
             """
@@ -513,7 +543,20 @@ class ReportesTab(QWidget):
                 "Fecha Registro",
             ]
         )
-        self.tabla_vehiculos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar anchos de columnas apropiados
+        self.tabla_vehiculos.setColumnWidth(0, 60)   # ID
+        self.tabla_vehiculos.setColumnWidth(1, 90)   # Placa
+        self.tabla_vehiculos.setColumnWidth(2, 120)  # Tipo Vehículo
+        self.tabla_vehiculos.setColumnWidth(3, 110)  # Circulación
+        self.tabla_vehiculos.setColumnWidth(4, 180)  # Propietario
+        self.tabla_vehiculos.setColumnWidth(5, 100)  # Cédula
+        self.tabla_vehiculos.setColumnWidth(6, 150)  # Estado Asignación
+        self.tabla_vehiculos.setColumnWidth(7, 120)  # N° Parqueadero
+        self.tabla_vehiculos.setColumnWidth(8, 130)  # Fecha Registro
+        self.tabla_vehiculos.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabla_vehiculos.horizontalHeader().setStretchLastSection(False)
+        self.tabla_vehiculos.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tabla_vehiculos.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tabla_vehiculos.setAlternatingRowColors(True)
         self.tabla_vehiculos.setStyleSheet(
             """
@@ -565,7 +608,19 @@ class ReportesTab(QWidget):
                 "Observaciones",
             ]
         )
-        self.tabla_parqueaderos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar anchos de columnas apropiados
+        self.tabla_parqueaderos.setColumnWidth(0, 120)  # N° Parqueadero
+        self.tabla_parqueaderos.setColumnWidth(1, 80)   # Sótano
+        self.tabla_parqueaderos.setColumnWidth(2, 120)  # Tipo Vehículo
+        self.tabla_parqueaderos.setColumnWidth(3, 100)  # Estado
+        self.tabla_parqueaderos.setColumnWidth(4, 150)  # Vehículos Asignados
+        self.tabla_parqueaderos.setColumnWidth(5, 130)  # Circulación PAR
+        self.tabla_parqueaderos.setColumnWidth(6, 130)  # Circulación IMPAR
+        self.tabla_parqueaderos.setColumnWidth(7, 200)  # Observaciones
+        self.tabla_parqueaderos.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabla_parqueaderos.horizontalHeader().setStretchLastSection(False)
+        self.tabla_parqueaderos.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tabla_parqueaderos.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tabla_parqueaderos.setAlternatingRowColors(True)
         self.tabla_parqueaderos.setStyleSheet(
             """
@@ -619,7 +674,21 @@ class ReportesTab(QWidget):
                 "Observaciones",
             ]
         )
-        self.tabla_asignaciones.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar anchos de columnas apropiados
+        self.tabla_asignaciones.setColumnWidth(0, 100)  # ID Asignación
+        self.tabla_asignaciones.setColumnWidth(1, 120)  # N° Parqueadero
+        self.tabla_asignaciones.setColumnWidth(2, 90)   # Placa
+        self.tabla_asignaciones.setColumnWidth(3, 120)  # Tipo Vehículo
+        self.tabla_asignaciones.setColumnWidth(4, 180)  # Propietario
+        self.tabla_asignaciones.setColumnWidth(5, 100)  # Cédula
+        self.tabla_asignaciones.setColumnWidth(6, 110)  # Circulación
+        self.tabla_asignaciones.setColumnWidth(7, 140)  # Fecha Asignación
+        self.tabla_asignaciones.setColumnWidth(8, 90)   # Estado
+        self.tabla_asignaciones.setColumnWidth(9, 200)  # Observaciones
+        self.tabla_asignaciones.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabla_asignaciones.horizontalHeader().setStretchLastSection(False)
+        self.tabla_asignaciones.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tabla_asignaciones.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tabla_asignaciones.setAlternatingRowColors(True)
         self.tabla_asignaciones.setStyleSheet(
             """
@@ -675,7 +744,21 @@ class ReportesTab(QWidget):
                 "Observaciones",
             ]
         )
-        self.tabla_excepciones.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar anchos de columnas apropiados
+        self.tabla_excepciones.setColumnWidth(0, 100)  # Cédula
+        self.tabla_excepciones.setColumnWidth(1, 180)  # Nombre Completo
+        self.tabla_excepciones.setColumnWidth(2, 150)  # Cargo
+        self.tabla_excepciones.setColumnWidth(3, 170)  # Pico y Placa Solidario
+        self.tabla_excepciones.setColumnWidth(4, 120)  # Discapacidad
+        self.tabla_excepciones.setColumnWidth(5, 150)  # Exclusivo Directivo
+        self.tabla_excepciones.setColumnWidth(6, 120)  # Carro Híbrido
+        self.tabla_excepciones.setColumnWidth(7, 90)   # Placa
+        self.tabla_excepciones.setColumnWidth(8, 120)  # N° Parqueadero
+        self.tabla_excepciones.setColumnWidth(9, 200)  # Observaciones
+        self.tabla_excepciones.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabla_excepciones.horizontalHeader().setStretchLastSection(False)
+        self.tabla_excepciones.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tabla_excepciones.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tabla_excepciones.setAlternatingRowColors(True)
         self.tabla_excepciones.setStyleSheet(
             """
@@ -1218,10 +1301,10 @@ class ReportesTab(QWidget):
                     f.cedula,
                     CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
                     f.cargo,
-                    CASE WHEN f.pico_placa_solidario = 1 THEN '✅ Sí' ELSE '❌ No' END as pico_placa_solidario,
-                    CASE WHEN f.discapacidad = 1 THEN '✅ Sí' ELSE '❌ No' END as discapacidad,
-                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
-                    CASE WHEN f.tiene_carro_hibrido = 1 THEN '✅ Sí' ELSE '❌ No' END as carro_hibrido,
+                    CASE WHEN f.pico_placa_solidario = 1 THEN 'SI' ELSE 'NO' END as pico_placa_solidario,
+                    CASE WHEN f.discapacidad = 1 THEN 'SI' ELSE 'NO' END as discapacidad,
+                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'SI' ELSE 'NO' END as parqueadero_exclusivo,
+                    CASE WHEN f.tiene_carro_hibrido = 1 THEN 'SI' ELSE 'NO' END as carro_hibrido,
                     COALESCE(v.placa, 'Sin vehículo') as placa,
                     COALESCE(p.numero_parqueadero, 'N/A') as numero_parqueadero,
                     CASE
@@ -1245,10 +1328,10 @@ class ReportesTab(QWidget):
                     f.cedula,
                     CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
                     f.cargo,
-                    CASE WHEN f.pico_placa_solidario = 1 THEN '✅ Sí' ELSE '❌ No' END as pico_placa_solidario,
-                    CASE WHEN f.discapacidad = 1 THEN '✅ Sí' ELSE '❌ No' END as discapacidad,
-                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
-                    CASE WHEN f.tiene_carro_hibrido = 1 THEN '✅ Sí' ELSE '❌ No' END as carro_hibrido,
+                    CASE WHEN f.pico_placa_solidario = 1 THEN 'SI' ELSE 'NO' END as pico_placa_solidario,
+                    CASE WHEN f.discapacidad = 1 THEN 'SI' ELSE 'NO' END as discapacidad,
+                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'SI' ELSE 'NO' END as parqueadero_exclusivo,
+                    CASE WHEN f.tiene_carro_hibrido = 1 THEN 'SI' ELSE 'NO' END as carro_hibrido,
                     COALESCE(v.placa, 'Sin vehículo') as placa,
                     COALESCE(p.numero_parqueadero, 'N/A') as numero_parqueadero,
                     CASE

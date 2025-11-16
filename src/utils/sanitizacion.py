@@ -29,7 +29,7 @@ class InputSanitizer:
     SQL_KEYWORDS = [
         'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER',
         'EXEC', 'EXECUTE', 'UNION', 'WHERE', 'FROM', 'TABLE', '--', '/*', '*/',
-        'SCRIPT', 'JAVASCRIPT', 'ONERROR', 'ONLOAD'
+        'SCRIPT', 'JAVASCRIPT', 'ONERROR', 'ONLOAD', 'TRUNCATE', 'XP_CMDSHELL'
     ]
 
     @staticmethod
@@ -367,3 +367,8 @@ sanitize_email = InputSanitizer.sanitize_email
 sanitize_path = InputSanitizer.sanitize_path
 sanitize_observaciones = InputSanitizer.sanitize_observaciones
 check_sql_injection = InputSanitizer.check_sql_injection
+
+# Alias adicionales para compatibilidad con tests
+sanitize_sql_input = InputSanitizer.sanitize_string  # Sanitiza texto general incluyendo SQL
+escape_html = lambda text: html.escape(text) if text else ""  # Escape HTML directo
+sanitize_file_path = InputSanitizer.sanitize_path  # Sanitiza rutas de archivo

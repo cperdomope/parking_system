@@ -7,6 +7,7 @@ from datetime import datetime
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QMessageBox
 )
+from PyQt5.QtGui import QIcon
 
 from src.database.manager import DatabaseManager
 from src.ui.dashboard_tab import DashboardWidget
@@ -16,6 +17,7 @@ from src.ui.parqueaderos_tab import ParqueaderosTab
 from src.ui.asignaciones_tab import AsignacionesTab
 from src.ui.reportes_tab import ReportesTab
 from src.ui.widgets.styles import AppStyles
+from src.utils.resource_path import get_resource_path
 
 
 class MainWindow(QMainWindow):
@@ -35,6 +37,13 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         """Configura la interfaz de usuario principal"""
         self.setWindowTitle("Sistema de Gestión de Parqueadero - Ssalud Plaza Claro")
+
+        # Configurar icono de la ventana
+        try:
+            icon_path = get_resource_path("src/assets/icons/supersalud.ico")
+            self.setWindowIcon(QIcon(icon_path))
+        except FileNotFoundError:
+            pass  # Si no encuentra el icono, continuar sin él
 
         # Configurar tamaño mínimo de ventana
         self.setMinimumSize(1200, 700)

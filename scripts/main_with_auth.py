@@ -12,28 +12,24 @@ Python: 3.8+
 =====================================================
 """
 
-import sys
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtCore import Qt
 
-# Importaciones de módulos locales
 from src.auth.login_window import FuturisticLoginWindow
 from scripts.main_modular import MainWindow
 
 
 class AuthenticatedApp:
     """
-    Aplicación principal que maneja la autenticación y luego lanza el sistema
+    Aplicación principal que maneja la autenticación y luego lanza el sistema.
+    Nota: La instancia de QApplication debe ser creada antes de instanciar esta clase.
     """
 
     def __init__(self):
-        self.app = QApplication(sys.argv)
-        self.app.setQuitOnLastWindowClosed(False)  # No cerrar al cerrar ventana principal
+        self.app = QApplication.instance()
+        if not self.app:
+            raise RuntimeError("QApplication debe ser creada antes de AuthenticatedApp")
 
-        # Configurar atributos de aplicación
-        self.app.setApplicationName("Sistema de Gestión de Parqueadero")
-        self.app.setApplicationVersion("1.0")
-        self.app.setOrganizationName("Ssalud Plaza Claro")
+        self.app.setQuitOnLastWindowClosed(False)
 
         self.login_window = None
         self.main_window = None
@@ -93,11 +89,7 @@ class AuthenticatedApp:
             # Conectar el evento de cierre para regresar al login
             self.main_window.closeEvent = self.on_main_window_close
 
-            # Asegurar que la ventana no esté maximizada
-            self.main_window.showNormal()
-
-            # Centrar y mostrar ventana principal
-            self.center_window(self.main_window)
+            # Mostrar ventana principal (respeta configuración de showMaximized en MainWindow)
             self.main_window.show()
 
         except Exception as e:
@@ -109,7 +101,7 @@ class AuthenticatedApp:
         """Configura la información del usuario en la ventana principal"""
         if self.main_window and self.current_user:
             # Actualizar título de ventana con información del usuario
-            title = f"Sistema de Gestión de Parqueadero - {self.current_user['usuario']} ({self.current_user['rol']})"
+            title = f"Sistema de Gestión de Parqueadero - {self.current_user['username']} ({self.current_user['rol']})"
             self.main_window.setWindowTitle(title)
 
             # Almacenar información del usuario en la ventana principal para uso posterior
@@ -117,8 +109,6 @@ class AuthenticatedApp:
 
     def on_main_window_close(self, event):
         """Maneja el cierre de la ventana principal para regresar al login"""
-        from PyQt5.QtWidgets import QMessageBox
-
         # Crear diálogo personalizado
         msg_box = QMessageBox(self.main_window)
         msg_box.setWindowTitle("Cerrar Sesión")
@@ -212,48 +202,3 @@ class AuthenticatedApp:
         center_point = screen.center()
         window_geometry.moveCenter(center_point)
         window.move(window_geometry.topLeft())
-
-
-def main():
-    """Función principal de la aplicación"""
-    from datetime import datetime
-
-    # Imprimir información del sistema en consola
-    print("=" * 70)
-    print("  SISTEMA DE GESTION DE PARQUEADERO - Ssalud Plaza Claro")
-    print("  (Con Autenticacion)")
-    print("=" * 70)
-    print(f"  Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  Version: 1.0")
-    print()
-    print("  Modulos cargados:")
-    print("    [OK] Sistema de Autenticacion")
-    print("    [OK] DatabaseManager")
-    print("    [OK] Dashboard")
-    print("    [OK] Funcionarios")
-    print("    [OK] Vehiculos")
-    print("    [OK] Parqueaderos")
-    print("    [OK] Asignaciones")
-    print("    [OK] Reportes (7 pestanas)")
-    print()
-    print("  Credenciales de prueba:")
-    print("    Usuario: splaza")
-    print("    Password: splaza123*")
-    print()
-    print("=" * 70)
-    print()
-
-    # Habilitar DPI alto en Windows
-    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-
-    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-    # Crear y ejecutar aplicación
-    app = AuthenticatedApp()
-    return app.start()
-
-
-if __name__ == "__main__":
-    sys.exit(main())

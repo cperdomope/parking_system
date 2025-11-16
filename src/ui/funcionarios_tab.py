@@ -428,7 +428,7 @@ class FuncionariosTab(QWidget):
                 "Cédula",
                 "Nombre",
                 "Apellidos",
-                "Dirección",
+                "Dirección Y/O Grupo",
                 "Cargo",
                 "Celular",
                 "Tarjeta Prox",
@@ -1316,6 +1316,8 @@ class FuncionariosTab(QWidget):
         msg_box.setText("Eliminación en cascada")
         msg_box.setInformativeText(mensaje)
         msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.button(QMessageBox.Yes).setText("Sí")
+        msg_box.button(QMessageBox.No).setText("No")
         msg_box.setDefaultButton(QMessageBox.No)
 
         if msg_box.exec_() == QMessageBox.Yes:
@@ -1347,19 +1349,22 @@ class FuncionariosTab(QWidget):
 
         # Confirmar reactivación
         nombre_completo = f"{funcionario_data['nombre']} {funcionario_data['apellidos']}"
-        respuesta = QMessageBox.question(
-            self,
-            "Confirmar Reactivación",
-            f"¿Está seguro de que desea reactivar al funcionario '{nombre_completo}'?\n\n"
-            f"Esto hará que:\n"
-            f"• El funcionario vuelva a aparecer en los listados\n"
-            f"• Sus vehículos estén disponibles para asignación\n"
-            f"• Pueda recibir nuevas asignaciones de parqueaderos",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setWindowTitle("Confirmar Reactivación")
+        msg_box.setText(f"¿Está seguro de que desea reactivar al funcionario '{nombre_completo}'?")
+        msg_box.setInformativeText(
+            "Esto hará que:\n"
+            "• El funcionario vuelva a aparecer en los listados\n"
+            "• Sus vehículos estén disponibles para asignación\n"
+            "• Pueda recibir nuevas asignaciones de parqueaderos"
         )
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.button(QMessageBox.Yes).setText("Sí")
+        msg_box.button(QMessageBox.No).setText("No")
+        msg_box.setDefaultButton(QMessageBox.No)
 
-        if respuesta == QMessageBox.Yes:
+        if msg_box.exec_() == QMessageBox.Yes:
             exito, mensaje = self.funcionario_model.reactivar(funcionario_id)
             if exito:
                 QMessageBox.information(
@@ -2240,6 +2245,8 @@ class EditarFuncionarioModal(QDialog):
 
         # Botones
         button_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        button_box.button(QDialogButtonBox.Save).setText("Guardar")
+        button_box.button(QDialogButtonBox.Cancel).setText("Cancelar")
         button_box.accepted.connect(self.guardar_cambios)
         button_box.rejected.connect(self.reject)
 
