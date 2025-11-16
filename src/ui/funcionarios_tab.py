@@ -47,7 +47,7 @@ class FuncionariosTab(QWidget):
         self.funcionario_model = FuncionarioModel(self.db)
 
         # Variables de paginación
-        self.filas_por_pagina = 4
+        self.filas_por_pagina = 5
         self.pagina_actual = 1
         self.total_funcionarios = 0
         self.funcionarios_completos = []  # Lista completa de funcionarios
@@ -376,31 +376,10 @@ class FuncionariosTab(QWidget):
             }
         """)
 
-        self.lbl_resultados = QLabel("")
-        self.lbl_resultados.setStyleSheet("font-size: 11px; color: #7f8c8d; font-style: italic;")
-
-        search_layout.addWidget(estado_label)
-        search_layout.addWidget(self.combo_filtro_estado)
-        search_layout.addWidget(search_label)
-        search_layout.addWidget(self.txt_buscar_cedula)
-        search_layout.addWidget(self.btn_limpiar_busqueda)
-        search_layout.addWidget(self.lbl_resultados)
-        search_layout.addStretch()
-
-        search_group.setLayout(search_layout)
-        layout.addWidget(search_group)
-
-        # Tabla de funcionarios con configuración fija y mejorada
-        tabla_group = QGroupBox("Lista de Funcionarios")
-        tabla_layout = QVBoxLayout()
-
-        # Botón Importar Data encima de la tabla
-        btn_importar_container = QHBoxLayout()
-        btn_importar_container.addStretch()
-
+        # Botón Importar Excel
         self.btn_importar_excel = QPushButton("📊 Importar")
         self.btn_importar_excel.setMinimumWidth(120)
-        self.btn_importar_excel.setMinimumHeight(35)
+        self.btn_importar_excel.setMinimumHeight(32)
         self.btn_importar_excel.setToolTip("Importar data desde Excel (.xlsx o .xls)")
         self.btn_importar_excel.setStyleSheet(
             """
@@ -422,9 +401,25 @@ class FuncionariosTab(QWidget):
         """
         )
         self.btn_importar_excel.clicked.connect(self.importar_desde_excel)
-        btn_importar_container.addWidget(self.btn_importar_excel)
-        btn_importar_container.addStretch()
-        tabla_layout.addLayout(btn_importar_container)
+
+        self.lbl_resultados = QLabel("")
+        self.lbl_resultados.setStyleSheet("font-size: 11px; color: #7f8c8d; font-style: italic;")
+
+        search_layout.addWidget(estado_label)
+        search_layout.addWidget(self.combo_filtro_estado)
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.txt_buscar_cedula)
+        search_layout.addWidget(self.btn_limpiar_busqueda)
+        search_layout.addWidget(self.btn_importar_excel)
+        search_layout.addWidget(self.lbl_resultados)
+        search_layout.addStretch()
+
+        search_group.setLayout(search_layout)
+        layout.addWidget(search_group)
+
+        # Tabla de funcionarios con configuración fija y mejorada
+        tabla_group = QGroupBox("Lista de Funcionarios")
+        tabla_layout = QVBoxLayout()
 
         self.tabla_funcionarios = QTableWidget()
         self.tabla_funcionarios.setColumnCount(15)
@@ -472,13 +467,13 @@ class FuncionariosTab(QWidget):
         self.tabla_funcionarios.setColumnWidth(14, 110)  # Acciones
 
         # Configurar altura de filas para mejor visualización
-        altura_fila = 50
+        altura_fila = 40
         self.tabla_funcionarios.verticalHeader().setDefaultSectionSize(altura_fila)
 
-        # Establecer altura para mostrar exactamente 4 filas + scroll horizontal visible
-        # Cálculo: altura_encabezado (45px) + (4 filas × 50px) + scroll horizontal (20px) = 265px
+        # Establecer altura para mostrar exactamente 5 filas + scroll horizontal visible
+        # Cálculo: altura_encabezado (45px) + (5 filas × 40px) + scroll horizontal (20px) = 265px
         altura_encabezado = 45
-        num_filas_visibles = 4
+        num_filas_visibles = 5
         espacio_scroll = 20
         altura_total = altura_encabezado + (num_filas_visibles * altura_fila) + espacio_scroll
         self.tabla_funcionarios.setMinimumHeight(altura_total)
@@ -491,7 +486,7 @@ class FuncionariosTab(QWidget):
                 background-color: #34B5A9;
                 color: white;
                 font-weight: bold;
-                padding: 8px;
+                padding: 6px;
                 border: none;
                 border-right: 1px solid #2D9B8F;
             }
@@ -884,8 +879,18 @@ class FuncionariosTab(QWidget):
                 if key not in custom_items:
                     custom_items[key] = []
 
-                if nuevo_item not in custom_items[key]:
+                # Verificar duplicados de forma case-insensitive antes de guardar
+                items_existentes_lower = [item.lower() for item in custom_items[key]]
+                if nuevo_item.lower() not in items_existentes_lower:
                     custom_items[key].append(nuevo_item)
+                else:
+                    # Si ya existe (case-insensitive), no agregar
+                    QMessageBox.warning(
+                        self,
+                        "⚠️ Item Duplicado",
+                        f"El {tipo_campo} '{nuevo_item}' ya existe en la lista (ignorando mayúsculas/minúsculas)."
+                    )
+                    return
 
                 # Guardar en el archivo
                 with open(config_file, "w", encoding="utf-8") as f:
@@ -986,8 +991,11 @@ class FuncionariosTab(QWidget):
             self.tabla_funcionarios.setItem(i, 6, tarjeta_item)
 
             # Formatear número de vehículos con mejor presentación
+            # Exclusivo Directivo: máximo 6 vehículos, Resto: máximo 3 vehículos
             total_vehiculos = func.get("total_vehiculos", 0)
-            vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/2")
+            tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+            max_vehiculos = 6 if tiene_exclusivo else 3
+            vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/{max_vehiculos}")
             vehiculos_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
             self.tabla_funcionarios.setItem(i, 7, vehiculos_item)
 
@@ -1078,27 +1086,28 @@ class FuncionariosTab(QWidget):
             btn_layout.setSpacing(8)  # Mayor espaciado entre botones
             btn_layout.setContentsMargins(5, 3, 5, 3)
 
-            # Botón Editar - Ícono con color fuerte para mejor visibilidad
+            # Botón Editar (solo ícono sin fondo)
             btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(32, 32)
+            btn_editar.setFixedSize(28, 28)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: rgba(52, 152, 219, 0.25);
+                    background-color: transparent;
                     border: none;
                     font-size: 18px;
                     padding: 0px;
-                    border-radius: 5px;
-                    color: #2c3e50;
+                    color: #3498db;
                 }
                 QPushButton:hover {
-                    background-color: rgba(52, 152, 219, 0.4);
-                    border-radius: 5px;
+                    background-color: rgba(52, 152, 219, 0.15);
+                    border-radius: 3px;
+                    color: #2980b9;
                 }
                 QPushButton:pressed {
-                    background-color: rgba(52, 152, 219, 0.6);
-                    border-radius: 5px;
+                    background-color: rgba(52, 152, 219, 0.3);
+                    border-radius: 3px;
+                    color: #21618c;
                 }
             """
             )
@@ -1504,8 +1513,11 @@ class FuncionariosTab(QWidget):
             self.tabla_funcionarios.setItem(i, 6, tarjeta_item)
 
             # Formatear número de vehículos con mejor presentación
+            # Exclusivo Directivo: máximo 6 vehículos, Resto: máximo 3 vehículos
             total_vehiculos = func.get("total_vehiculos", 0)
-            vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/2")
+            tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+            max_vehiculos = 6 if tiene_exclusivo else 3
+            vehiculos_item = QTableWidgetItem(f"{total_vehiculos}/{max_vehiculos}")
             vehiculos_item.setTextAlignment(0x0004 | 0x0080)  # Centro horizontal y vertical
             self.tabla_funcionarios.setItem(i, 7, vehiculos_item)
 
@@ -1582,27 +1594,28 @@ class FuncionariosTab(QWidget):
             btn_layout.setSpacing(8)  # Mayor espaciado entre botones
             btn_layout.setContentsMargins(5, 3, 5, 3)
 
-            # Botón Editar - Ícono con color fuerte para mejor visibilidad
+            # Botón Editar (solo ícono sin fondo)
             btn_editar = QPushButton("✏️")
-            btn_editar.setFixedSize(32, 32)
+            btn_editar.setFixedSize(28, 28)
             btn_editar.setToolTip("Editar funcionario")
             btn_editar.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: rgba(52, 152, 219, 0.25);
+                    background-color: transparent;
                     border: none;
                     font-size: 18px;
                     padding: 0px;
-                    border-radius: 5px;
-                    color: #2c3e50;
+                    color: #3498db;
                 }
                 QPushButton:hover {
-                    background-color: rgba(52, 152, 219, 0.4);
-                    border-radius: 5px;
+                    background-color: rgba(52, 152, 219, 0.15);
+                    border-radius: 3px;
+                    color: #2980b9;
                 }
                 QPushButton:pressed {
-                    background-color: rgba(52, 152, 219, 0.6);
-                    border-radius: 5px;
+                    background-color: rgba(52, 152, 219, 0.3);
+                    border-radius: 3px;
+                    color: #21618c;
                 }
             """
             )

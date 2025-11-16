@@ -3,7 +3,6 @@
 """Sistema de Gestión de Parqueadero - Aplicación Principal"""
 
 import sys
-import csv
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QMessageBox
@@ -133,11 +132,6 @@ class MainWindow(QMainWindow):
         # Menú Archivo
         menu_archivo = menubar.addMenu("&Archivo")
 
-        accion_exportar = menu_archivo.addAction("Exportar datos")
-        accion_exportar.triggered.connect(self.exportar_datos)
-
-        menu_archivo.addSeparator()
-
         accion_salir = menu_archivo.addAction("Salir")
         accion_salir.triggered.connect(self.close)
 
@@ -146,45 +140,6 @@ class MainWindow(QMainWindow):
 
         accion_acerca = menu_ayuda.addAction("Acerca de")
         accion_acerca.triggered.connect(self.mostrar_acerca_de)
-
-    def exportar_datos(self):
-        """Exporta los datos a un archivo CSV"""
-
-        filename = f"reporte_parqueadero_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-
-        try:
-            query = """
-                SELECT
-                    f.cedula,
-                    f.nombre,
-                    f.apellidos,
-                    f.direccion_grupo,
-                    f.cargo,
-                    f.celular,
-                    f.no_tarjeta_proximidad,
-                    v.tipo_vehiculo,
-                    v.placa,
-                    v.tipo_circulacion,
-                    p.numero_parqueadero
-                FROM funcionarios f
-                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
-                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
-                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
-                WHERE f.activo = TRUE
-                ORDER BY f.apellidos, f.nombre
-            """
-
-            datos = self.db.fetch_all(query)
-
-            with open(filename, 'w', newline='', encoding='utf-8') as file:
-                if datos:
-                    writer = csv.DictWriter(file, fieldnames=datos[0].keys())
-                    writer.writeheader()
-                    writer.writerows(datos)
-
-            QMessageBox.information(self, "Éxito", f"Datos exportados a {filename}")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al exportar: {str(e)}")
 
     def mostrar_acerca_de(self):
         """Muestra el diálogo 'Acerca de'"""

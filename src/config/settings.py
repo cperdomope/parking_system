@@ -330,17 +330,12 @@ CARGOS_DISPONIBLES = [
     "Jefe De Oficina",
     "Director(a)",
     "Auxiliar",
-    "Profesional",
-    "Coordinador(a)",
     "Asistencial",
     "Secretario(a)",
     "Coordinación",
     "Secretario E.",
     "Técnico Administrativo",
     "Contraloría",
-
-  
-    
 ]
 
 # Direcciones/Departamentos de la organización
@@ -392,7 +387,6 @@ DIRECCIONES_DISPONIBLES = [
     "Dirección IV",
     "Dirección Financiera / Grupo De Tesorería",
     "Dirección Financiera / Grupo De Contabilidad",
-    "Dirección Financiera / Grupo De Contabilidad",
     "Dirección Financiera / Coordinación Grupo De Tesorería",
     "Dirección Financiera / Coordinación Grupo De Presupuesto",
     "Dirección Financiera / Coordinación Grupo De Contabilidad",
@@ -409,18 +403,15 @@ DIRECCIONES_DISPONIBLES = [
     "Dirección De Procesos Jurisdiccionales",
     "Dirección De Medidas Especiales Para P.S.S",
     "Dirección De Investigaciones Para Prestadores De Servicios De Salud",
-    "Dirección De Investigaciones Para Prestadores De Servicios De Salud",
     "Dirección De Investigaciones Para Operadores Logísticos, Gestores Farmacéuticos, Entes Territoriales, Generadores, Recaudadores Y Administradores De Recursos Del Sistema General De Seguridad Social En Salud",
     "Dirección De Investigaciones Para Operadores Logísticos",
     "Dirección De Investigaciones Para Entidades De Aseguramiento En Salud",
     "Dirección De Inspección Y Vigilancia Para P.S.S",
     "Dirección De Inspección Y Vigilancia Para Entidades De Aseguramiento En Salud",
     "Dirección De Innovación Y Desarrollo",
-    "Dirección De Innovación Y Desarrollo",
     "Dirección De Contratación / Grupo De Gestión Postcontractual",
     "Dirección De Contratación / Grupo De gestión Contractual",
     "Dirección De Contratación",
-    "Dirección De Conciliación",
     "Dirección Administrativa / Coordinación Grupo De Recursos Físicos",
     "Dirección Administrativa / Coordinación Grupo Gestión De Notificaciones Y Comunicaciones",
     "Dirección Administrativa / Coordinación Grupo De Gestión Documental",
@@ -429,7 +420,6 @@ DIRECCIONES_DISPONIBLES = [
     "Dirección Administrativa - Director",
     "Dirección Administrativa - Coordinación Grupo De Correspondencia",
     "Dirección Administrativa",
-    "Dirección Administrativa",
     "Dirección",
     "Despacho - Delegada",
     "Despacho - Asesor",
@@ -437,7 +427,6 @@ DIRECCIONES_DISPONIBLES = [
     "Delegatura Para Prestadores De Servicios De Salud",
     "Delegatura Para Operadores Logísticos De Tecnologías En Salud Y Gestores Farmacéuticos",
     "Delegatura Para La Protección Al Usuario",
-    "Delegatura Para Entidades De Aseguramiento En Salud",
     "Delegatura Para Entidades De Aseguramiento En Salud",
     "Delegatura De Investigaciones Administrativas",
     "Coordinador - Dirección De Medidas Especiales Para EPS Y Entidades Adaptadas",
@@ -452,7 +441,6 @@ DIRECCIONES_DISPONIBLES = [
     "Coordinación Grupo De Defensa Judicial",
     "Coordinación De Soluciones Inmediatas En Salud",
     "Coordinación Grupo De Secretaría Jurisdiccional",
-    "Coordinación Grupo De Inspección Y Vigilancia Al Siau Y La Participación Ciudadana",
     "Grupo De Reconocimiento Económico",
     "Coordinación Grupo De Glosas",
     "Coordinación Grupo De Cobertura Y Afiliaciones",
@@ -475,7 +463,6 @@ DIRECCIONES_DISPONIBLES = [
     "Comunicaciones",
     "Análisis Y Evaluación",
     "Análisis",
-
 ]
 
 # Cargos que tienen privilegios especiales

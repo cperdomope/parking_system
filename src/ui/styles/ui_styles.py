@@ -11,32 +11,29 @@ class UIStyles:
     # ========== COMBOBOX STYLES ==========
     COMBOBOX = """
         QComboBox {
-            border: 2px solid #bdc3c7;
-            border-radius: 6px;
             padding: 8px;
-            font-size: 12px;
+            border: 2px solid #27ae60;
+            border-radius: 5px;
+            font-size: 13px;
+            min-width: 120px;
             background-color: white;
             min-height: 25px;
         }
         QComboBox:hover {
-            border-color: #3498db;
+            border-color: #229954;
         }
         QComboBox:focus {
-            border-color: #2980b9;
+            border: 2px solid #229954;
+            background-color: #e8f8f0;
         }
         QComboBox::drop-down {
             border: none;
-            width: 30px;
-        }
-        QComboBox::down-arrow {
-            image: url(down_arrow.png);
-            width: 12px;
-            height: 12px;
+            padding-right: 5px;
         }
         QComboBox QAbstractItemView {
-            border: 2px solid #3498db;
+            border: 2px solid #27ae60;
             background-color: white;
-            selection-background-color: #3498db;
+            selection-background-color: #27ae60;
             selection-color: white;
             outline: none;
         }

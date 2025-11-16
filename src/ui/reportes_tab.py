@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from ..config.settings import CARGOS_DISPONIBLES, DIRECCIONES_DISPONIBLES
 from ..database.manager import DatabaseManager
 
 # Imports opcionales para exportación
@@ -52,18 +53,6 @@ try:
 except ImportError:
     OPENPYXL_AVAILABLE = False
 
-# Imports para gráficos con matplotlib
-try:
-    import matplotlib
-
-    matplotlib.use("Qt5Agg")
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.figure import Figure
-
-    MATPLOTLIB_AVAILABLE = True
-except ImportError:
-    MATPLOTLIB_AVAILABLE = False
-
 
 class ReportesTab(QWidget):
     """Pestaña de generación y visualización de reportes del sistema"""
@@ -75,10 +64,17 @@ class ReportesTab(QWidget):
         super().__init__()
         self.db = db_manager
 
-        # Inicializar filtros
-        self.filtros_activos = {"tipo_vehiculo": None, "cargo": None, "fecha_inicio": None, "fecha_fin": None}
+        # Inicializar filtros sin fechas por defecto
+        self.filtros_activos = {
+            "tipo_vehiculo": None,
+            "cargo": None,
+            "direccion_grupo": None,
+            "fecha_inicio": None,
+            "fecha_fin": None,
+        }
 
         self.setup_ui()
+        # Actualizar reportes sin aplicar filtros inicialmente
         self.actualizar_reportes()
 
     def setup_ui(self):
@@ -127,21 +123,39 @@ class ReportesTab(QWidget):
         filtros_main_layout = QVBoxLayout()
         filtros_main_layout.setSpacing(10)
 
-        # FILA 1: ComboBox de Tipo de Vehículo y Cargo
+        # FILA 1: ComboBox de Tipo de Vehículo, Cargo y Dirección/Grupo
         fila1_layout = QHBoxLayout()
         fila1_layout.setSpacing(15)
 
         # ComboBox: Tipo de Vehículo
         fila1_layout.addWidget(QLabel("Tipo Vehículo:"))
         self.combo_tipo_vehiculo = QComboBox()
-        self.combo_tipo_vehiculo.addItems(["Todos", "Carro", "Moto", "Bicicleta"])
+        self.combo_tipo_vehiculo.addItem("📋 Todos")
+        self.combo_tipo_vehiculo.addItem("🚗 Carro")
+        self.combo_tipo_vehiculo.addItem("🏍️ Moto")
+        self.combo_tipo_vehiculo.addItem("🚲 Bicicleta")
         self.combo_tipo_vehiculo.setStyleSheet(
             """
             QComboBox {
-                padding: 5px;
+                padding: 5px 8px;
                 border: 1px solid #bdc3c7;
                 border-radius: 3px;
-                min-width: 120px;
+                background-color: white;
+                min-width: 140px;
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #bdc3c7;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                width: 0;
+                height: 0;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #666;
             }
         """
         )
@@ -150,31 +164,65 @@ class ReportesTab(QWidget):
         # ComboBox: Cargo
         fila1_layout.addWidget(QLabel("Cargo:"))
         self.combo_cargo = QComboBox()
-        self.combo_cargo.addItems(
-            [
-                "Todos",
-                "Director",
-                "Coordinador",
-                "Asesor",
-                "Auxiliar",
-                "Conductor",
-                "Jefe de Oficina",
-                "Profesional",
-                "Técnico",
-                "Otro",
-            ]
-        )
+        self.combo_cargo.addItem("Todos")
+        self.combo_cargo.addItems(CARGOS_DISPONIBLES)
         self.combo_cargo.setStyleSheet(
             """
             QComboBox {
                 padding: 5px;
+                padding-right: 20px;
                 border: 1px solid #bdc3c7;
                 border-radius: 3px;
                 min-width: 140px;
             }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #555;
+                width: 0;
+                height: 0;
+                margin-right: 5px;
+            }
         """
         )
         fila1_layout.addWidget(self.combo_cargo)
+
+        # ComboBox: Dirección/Grupo
+        fila1_layout.addWidget(QLabel("Dirección/Grupo:"))
+        self.combo_direccion = QComboBox()
+        self.combo_direccion.addItem("Todos")
+        self.combo_direccion.addItems(DIRECCIONES_DISPONIBLES)
+        self.combo_direccion.setStyleSheet(
+            """
+            QComboBox {
+                padding: 5px;
+                padding-right: 20px;
+                border: 1px solid #bdc3c7;
+                border-radius: 3px;
+                min-width: 200px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #555;
+                width: 0;
+                height: 0;
+                margin-right: 5px;
+            }
+        """
+        )
+        self.combo_direccion.view().setMinimumWidth(400)  # Para que se vean textos largos
+        fila1_layout.addWidget(self.combo_direccion)
         fila1_layout.addStretch()
 
         # FILA 2: Fechas y Botones
@@ -217,30 +265,6 @@ class ReportesTab(QWidget):
         )
         fila2_layout.addWidget(self.date_fin)
 
-        # Botón Aplicar Filtros
-        self.btn_aplicar_filtros = QPushButton("Aplicar Filtros")
-        self.btn_aplicar_filtros.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #27ae60;
-                color: white;
-                font-weight: bold;
-                padding: 8px 20px;
-                border-radius: 5px;
-                border: none;
-                min-width: 130px;
-            }
-            QPushButton:hover {
-                background-color: #229954;
-            }
-            QPushButton:pressed {
-                background-color: #1e8449;
-            }
-        """
-        )
-        self.btn_aplicar_filtros.clicked.connect(self.aplicar_filtros)
-        fila2_layout.addWidget(self.btn_aplicar_filtros)
-
         # Botón Limpiar Filtros
         self.btn_limpiar_filtros = QPushButton("Limpiar")
         self.btn_limpiar_filtros.setStyleSheet(
@@ -272,6 +296,13 @@ class ReportesTab(QWidget):
 
         filtros_group.setLayout(filtros_main_layout)
         main_layout.addWidget(filtros_group)
+
+        # Conectar filtros para actualización automática
+        self.combo_tipo_vehiculo.currentIndexChanged.connect(self.aplicar_filtros)
+        self.combo_cargo.currentIndexChanged.connect(self.aplicar_filtros)
+        self.combo_direccion.currentIndexChanged.connect(self.aplicar_filtros)
+        self.date_inicio.dateChanged.connect(self.aplicar_filtros_fechas)
+        self.date_fin.dateChanged.connect(self.aplicar_filtros_fechas)
 
         # Botón global de actualización
         btn_layout = QHBoxLayout()
@@ -331,14 +362,13 @@ class ReportesTab(QWidget):
         )
         main_layout.addWidget(self.tab_widget)
 
-        # Crear las 7 subpestañas
+        # Crear las 6 subpestañas
         self.tab_general = self._crear_tab_reporte_general()
         self.tab_funcionarios = self._crear_tab_funcionarios()
         self.tab_vehiculos = self._crear_tab_vehiculos()
         self.tab_parqueaderos = self._crear_tab_parqueaderos()
         self.tab_asignaciones = self._crear_tab_asignaciones()
         self.tab_excepciones = self._crear_tab_excepciones()
-        self.tab_estadisticas = self._crear_tab_estadisticas()
 
         self.tab_widget.addTab(self.tab_general, "📋 Reporte General")
         self.tab_widget.addTab(self.tab_funcionarios, "👥 Funcionarios")
@@ -346,7 +376,6 @@ class ReportesTab(QWidget):
         self.tab_widget.addTab(self.tab_parqueaderos, "🅿️ Parqueaderos")
         self.tab_widget.addTab(self.tab_asignaciones, "📍 Asignaciones")
         self.tab_widget.addTab(self.tab_excepciones, "🔄 Excepciones Pico y Placa")
-        self.tab_widget.addTab(self.tab_estadisticas, "📊 Estadísticas")
 
     def _crear_tab_reporte_general(self):
         """Crea la pestaña de Reporte General"""
@@ -624,14 +653,14 @@ class ReportesTab(QWidget):
 
         # Descripción
         desc_label = QLabel(
-            "Funcionarios con excepciones especiales: Pico y Placa Solidario, Discapacidad y Parqueadero Exclusivo"
+            "Funcionarios con excepciones especiales: Pico y Placa Solidario, Discapacidad, Parqueadero Exclusivo y Carro Híbrido"
         )
         desc_label.setStyleSheet("color: #7f8c8d; font-style: italic; padding: 5px;")
         layout.addWidget(desc_label)
 
         # Tabla
         self.tabla_excepciones = QTableWidget()
-        self.tabla_excepciones.setColumnCount(9)
+        self.tabla_excepciones.setColumnCount(10)
         self.tabla_excepciones.setHorizontalHeaderLabels(
             [
                 "Cédula",
@@ -640,6 +669,7 @@ class ReportesTab(QWidget):
                 "Pico y Placa Solidario",
                 "Discapacidad",
                 "Exclusivo Directivo",
+                "Carro Híbrido",
                 "Placa",
                 "N° Parqueadero",
                 "Observaciones",
@@ -668,70 +698,6 @@ class ReportesTab(QWidget):
         # Botones de acción
         btn_layout = self._crear_botones_exportacion(self.tabla_excepciones, "reporte_excepciones")
         layout.addLayout(btn_layout)
-
-        return widget
-
-    def _crear_tab_estadisticas(self):
-        """Crea la pestaña de Estadísticas con gráficos matplotlib"""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(10, 10, 10, 10)
-
-        if not MATPLOTLIB_AVAILABLE:
-            # Mensaje si matplotlib no está disponible
-            msg_label = QLabel(
-                "⚠️ La visualización de estadísticas requiere matplotlib.\n\n" "Instalar con: pip install matplotlib"
-            )
-            msg_label.setStyleSheet(
-                """
-                QLabel {
-                    color: #e67e22;
-                    font-size: 14px;
-                    padding: 20px;
-                    background-color: #fef5e7;
-                    border: 2px solid #f39c12;
-                    border-radius: 5px;
-                }
-            """
-            )
-            msg_label.setAlignment(Qt.AlignCenter)
-            layout.addWidget(msg_label)
-            return widget
-
-        # Descripción
-        desc_label = QLabel("Visualización gráfica de estadísticas del sistema en tiempo real")
-        desc_label.setStyleSheet("color: #7f8c8d; font-style: italic; padding: 5px;")
-        layout.addWidget(desc_label)
-
-        # Botón de actualización
-        btn_actualizar = QPushButton("🔄 Actualizar Gráficos")
-        btn_actualizar.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                font-weight: bold;
-                padding: 8px 15px;
-                border-radius: 5px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """
-        )
-        btn_actualizar.clicked.connect(self.actualizar_estadisticas)
-        layout.addWidget(btn_actualizar, alignment=Qt.AlignCenter)
-
-        # Layout de gráficos
-        graficos_layout = QVBoxLayout()
-
-        # Crear canvas para los 3 gráficos
-        self.figura_estadisticas = Figure(figsize=(12, 10))
-        self.canvas_estadisticas = FigureCanvas(self.figura_estadisticas)
-        graficos_layout.addWidget(self.canvas_estadisticas)
-
-        layout.addLayout(graficos_layout)
 
         return widget
 
@@ -807,10 +773,25 @@ class ReportesTab(QWidget):
         return btn_layout
 
     def aplicar_filtros(self):
-        """Aplica los filtros seleccionados y actualiza los reportes"""
-        # Capturar valores de filtros
-        tipo_vehiculo = self.combo_tipo_vehiculo.currentText()
+        """Aplica los filtros seleccionados (sin fechas) y actualiza los reportes"""
+        # Capturar valores de filtros (sin fechas)
+        tipo_vehiculo_texto = self.combo_tipo_vehiculo.currentText()
         cargo = self.combo_cargo.currentText()
+        direccion_grupo = self.combo_direccion.currentText()
+
+        # Extraer el valor sin emoji del tipo de vehículo (ej: "🚗 Carro" -> "Carro")
+        tipo_vehiculo = tipo_vehiculo_texto.split()[-1] if tipo_vehiculo_texto else "Todos"
+
+        # Actualizar filtros activos (sin tocar las fechas)
+        self.filtros_activos["tipo_vehiculo"] = None if tipo_vehiculo == "Todos" else tipo_vehiculo
+        self.filtros_activos["cargo"] = None if cargo == "Todos" else cargo
+        self.filtros_activos["direccion_grupo"] = None if direccion_grupo == "Todos" else direccion_grupo
+
+        # Actualizar reportes con filtros
+        self.actualizar_reportes()
+
+    def aplicar_filtros_fechas(self):
+        """Aplica los filtros de fechas y actualiza los reportes"""
         fecha_inicio = self.date_inicio.date().toPyDate()
         fecha_fin = self.date_fin.date().toPyDate()
 
@@ -819,9 +800,7 @@ class ReportesTab(QWidget):
             QMessageBox.warning(self, "Error en fechas", "La fecha de inicio no puede ser posterior a la fecha de fin.")
             return
 
-        # Actualizar filtros activos
-        self.filtros_activos["tipo_vehiculo"] = None if tipo_vehiculo == "Todos" else tipo_vehiculo
-        self.filtros_activos["cargo"] = None if cargo == "Todos" else cargo
+        # Actualizar filtros de fechas
         self.filtros_activos["fecha_inicio"] = fecha_inicio
         self.filtros_activos["fecha_fin"] = fecha_fin
 
@@ -833,13 +812,20 @@ class ReportesTab(QWidget):
         # Resetear combos
         self.combo_tipo_vehiculo.setCurrentIndex(0)  # "Todos"
         self.combo_cargo.setCurrentIndex(0)  # "Todos"
+        self.combo_direccion.setCurrentIndex(0)  # "Todos"
 
         # Resetear fechas
         self.date_inicio.setDate(QDate.currentDate().addMonths(-1))
         self.date_fin.setDate(QDate.currentDate())
 
         # Limpiar filtros activos
-        self.filtros_activos = {"tipo_vehiculo": None, "cargo": None, "fecha_inicio": None, "fecha_fin": None}
+        self.filtros_activos = {
+            "tipo_vehiculo": None,
+            "cargo": None,
+            "direccion_grupo": None,
+            "fecha_inicio": None,
+            "fecha_fin": None,
+        }
 
         # Actualizar reportes sin filtros
         self.actualizar_reportes()
@@ -906,13 +892,6 @@ class ReportesTab(QWidget):
         except Exception as e:
             errores.append(f"Excepciones: {str(e)}")
 
-        # Actualizar estadísticas si matplotlib está disponible
-        if MATPLOTLIB_AVAILABLE:
-            try:
-                self.actualizar_estadisticas()
-            except Exception as e:
-                errores.append(f"Estadísticas: {str(e)}")
-
         # Emitir señal de reporte generado
         self.reporte_generado.emit()
 
@@ -928,54 +907,129 @@ class ReportesTab(QWidget):
 
     def actualizar_reporte_general(self):
         """Actualiza el reporte general con datos consolidados"""
-        query = """
-            SELECT
-                f.cedula,
-                CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
-                f.cargo,
-                f.direccion_grupo,
-                f.celular,
-                v.tipo_vehiculo,
-                v.placa,
-                v.tipo_circulacion,
-                p.numero_parqueadero,
-                p.estado as estado_parqueadero,
-                CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario
-            FROM funcionarios f
-            LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
-            LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
-            LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
-            WHERE f.activo = TRUE
-            ORDER BY f.apellidos, f.nombre
-        """
-        datos = self.db.fetch_all(query)
+        params = []
+
+        # Construir query con filtro de tipo de vehículo en el JOIN si es necesario
+        if self.filtros_activos.get("tipo_vehiculo"):
+            query = """
+                SELECT
+                    f.cedula,
+                    CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
+                    f.cargo,
+                    f.direccion_grupo,
+                    f.celular,
+                    v.tipo_vehiculo,
+                    v.placa,
+                    v.tipo_circulacion,
+                    p.numero_parqueadero,
+                    p.estado as estado_parqueadero,
+                    CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE AND v.tipo_vehiculo = %s
+                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+                WHERE f.activo = TRUE
+            """
+            params.append(self.filtros_activos["tipo_vehiculo"])
+        else:
+            query = """
+                SELECT
+                    f.cedula,
+                    CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
+                    f.cargo,
+                    f.direccion_grupo,
+                    f.celular,
+                    v.tipo_vehiculo,
+                    v.placa,
+                    v.tipo_circulacion,
+                    p.numero_parqueadero,
+                    p.estado as estado_parqueadero,
+                    CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+                WHERE f.activo = TRUE
+            """
+
+        # Aplicar otros filtros
+        if self.filtros_activos.get("cargo"):
+            query += " AND f.cargo = %s"
+            params.append(self.filtros_activos["cargo"])
+
+        if self.filtros_activos.get("direccion_grupo"):
+            query += " AND f.direccion_grupo = %s"
+            params.append(self.filtros_activos["direccion_grupo"])
+
+        if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
+            query += " AND f.fecha_registro BETWEEN %s AND %s"
+            params.append(self.filtros_activos["fecha_inicio"])
+            params.append(self.filtros_activos["fecha_fin"])
+
+        query += " ORDER BY f.apellidos, f.nombre"
+
+        datos = self.db.fetch_all(query, tuple(params) if params else None)
         self._llenar_tabla(self.tabla_general, datos)
 
     def actualizar_funcionarios(self):
         """Actualiza el reporte de funcionarios"""
-        # Construir query base
-        query = """
-            SELECT
-                f.id,
-                f.cedula,
-                f.nombre,
-                f.apellidos,
-                f.direccion_grupo,
-                f.cargo,
-                f.celular,
-                f.no_tarjeta_proximidad,
-                COUNT(v.id) as total_vehiculos,
-                DATE_FORMAT(f.fecha_registro, '%Y-%m-%d') as fecha_registro
-            FROM funcionarios f
-            LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
-            WHERE f.activo = TRUE
-        """
-
-        # Aplicar filtros
+        # Construir query base con filtro de tipo de vehículo en el JOIN si es necesario
         params = []
+
+        if self.filtros_activos.get("tipo_vehiculo"):
+            # Si hay filtro de tipo de vehículo, aplicarlo en el JOIN
+            query = """
+                SELECT
+                    f.id,
+                    f.cedula,
+                    f.nombre,
+                    f.apellidos,
+                    f.direccion_grupo,
+                    f.cargo,
+                    f.celular,
+                    f.no_tarjeta_proximidad,
+                    CONCAT(
+                        COUNT(v.id),
+                        '/',
+                        CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '6' ELSE '3' END
+                    ) as total_vehiculos,
+                    DATE_FORMAT(f.fecha_registro, '%Y-%m-%d') as fecha_registro
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE AND v.tipo_vehiculo = %s
+                WHERE f.activo = TRUE
+            """
+            params.append(self.filtros_activos["tipo_vehiculo"])
+        else:
+            # Sin filtro de tipo de vehículo
+            query = """
+                SELECT
+                    f.id,
+                    f.cedula,
+                    f.nombre,
+                    f.apellidos,
+                    f.direccion_grupo,
+                    f.cargo,
+                    f.celular,
+                    f.no_tarjeta_proximidad,
+                    CONCAT(
+                        COUNT(v.id),
+                        '/',
+                        CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '6' ELSE '3' END
+                    ) as total_vehiculos,
+                    DATE_FORMAT(f.fecha_registro, '%Y-%m-%d') as fecha_registro
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+                WHERE f.activo = TRUE
+            """
+
+        # Aplicar otros filtros
         if self.filtros_activos.get("cargo"):
             query += " AND f.cargo = %s"
             params.append(self.filtros_activos["cargo"])
+
+        if self.filtros_activos.get("direccion_grupo"):
+            query += " AND f.direccion_grupo = %s"
+            params.append(self.filtros_activos["direccion_grupo"])
 
         if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
             query += " AND f.fecha_registro BETWEEN %s AND %s"
@@ -984,9 +1038,15 @@ class ReportesTab(QWidget):
 
         query += """
             GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.direccion_grupo,
-                     f.cargo, f.celular, f.no_tarjeta_proximidad, f.fecha_registro
-            ORDER BY f.apellidos, f.nombre
+                     f.cargo, f.celular, f.no_tarjeta_proximidad, f.fecha_registro,
+                     f.tiene_parqueadero_exclusivo
         """
+
+        # Filtrar solo funcionarios que tengan al menos un vehículo del tipo seleccionado
+        if self.filtros_activos.get("tipo_vehiculo"):
+            query += " HAVING COUNT(v.id) > 0"
+
+        query += " ORDER BY f.apellidos, f.nombre"
 
         datos = self.db.fetch_all(query, tuple(params) if params else None)
         self._llenar_tabla(self.tabla_funcionarios, datos)
@@ -1023,6 +1083,10 @@ class ReportesTab(QWidget):
         if self.filtros_activos.get("cargo"):
             query += " AND f.cargo = %s"
             params.append(self.filtros_activos["cargo"])
+
+        if self.filtros_activos.get("direccion_grupo"):
+            query += " AND f.direccion_grupo = %s"
+            params.append(self.filtros_activos["direccion_grupo"])
 
         if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
             query += " AND v.fecha_registro BETWEEN %s AND %s"
@@ -1117,255 +1181,109 @@ class ReportesTab(QWidget):
             INNER JOIN vehiculos v ON a.vehiculo_id = v.id
             INNER JOIN funcionarios f ON v.funcionario_id = f.id
             WHERE a.activo = TRUE
-            ORDER BY a.fecha_asignacion DESC
         """
-        datos = self.db.fetch_all(query)
+
+        # Aplicar filtros
+        params = []
+        if self.filtros_activos.get("tipo_vehiculo"):
+            query += " AND v.tipo_vehiculo = %s"
+            params.append(self.filtros_activos["tipo_vehiculo"])
+
+        if self.filtros_activos.get("cargo"):
+            query += " AND f.cargo = %s"
+            params.append(self.filtros_activos["cargo"])
+
+        if self.filtros_activos.get("direccion_grupo"):
+            query += " AND f.direccion_grupo = %s"
+            params.append(self.filtros_activos["direccion_grupo"])
+
+        if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
+            query += " AND a.fecha_asignacion BETWEEN %s AND %s"
+            params.append(self.filtros_activos["fecha_inicio"])
+            params.append(self.filtros_activos["fecha_fin"])
+
+        query += " ORDER BY a.fecha_asignacion DESC"
+
+        datos = self.db.fetch_all(query, tuple(params) if params else None)
         self._llenar_tabla(self.tabla_asignaciones, datos)
 
     def actualizar_excepciones(self):
-        """Actualiza el reporte de excepciones (Pico y Placa Solidario, Discapacidad, Exclusivo)"""
-        query = """
-            SELECT
-                f.cedula,
-                CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
-                f.cargo,
-                CASE WHEN f.pico_placa_solidario = 1 THEN '✅ Sí' ELSE '❌ No' END as pico_placa_solidario,
-                CASE WHEN f.discapacidad = 1 THEN '✅ Sí' ELSE '❌ No' END as discapacidad,
-                CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
-                COALESCE(v.placa, 'Sin vehículo') as placa,
-                COALESCE(p.numero_parqueadero, 'N/A') as numero_parqueadero,
-                CASE
-                    WHEN f.pico_placa_solidario = 1 THEN 'Puede usar parqueadero cualquier día'
-                    WHEN f.discapacidad = 1 THEN 'Prioridad para espacios especiales'
-                    WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Parqueadero exclusivo (hasta 4 vehículos)'
-                    ELSE 'Sin excepciones'
-                END as observaciones
-            FROM funcionarios f
-            LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
-            LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
-            LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
-            WHERE f.activo = TRUE
-                AND (f.pico_placa_solidario = 1 OR f.discapacidad = 1 OR f.tiene_parqueadero_exclusivo = 1)
-            ORDER BY f.apellidos, f.nombre
-        """
-        datos = self.db.fetch_all(query)
+        """Actualiza el reporte de excepciones (Pico y Placa Solidario, Discapacidad, Exclusivo, Carro Híbrido)"""
+        params = []
+
+        # Construir query con filtro de tipo de vehículo en el JOIN si es necesario
+        if self.filtros_activos.get("tipo_vehiculo"):
+            query = """
+                SELECT
+                    f.cedula,
+                    CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
+                    f.cargo,
+                    CASE WHEN f.pico_placa_solidario = 1 THEN '✅ Sí' ELSE '❌ No' END as pico_placa_solidario,
+                    CASE WHEN f.discapacidad = 1 THEN '✅ Sí' ELSE '❌ No' END as discapacidad,
+                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
+                    CASE WHEN f.tiene_carro_hibrido = 1 THEN '✅ Sí' ELSE '❌ No' END as carro_hibrido,
+                    COALESCE(v.placa, 'Sin vehículo') as placa,
+                    COALESCE(p.numero_parqueadero, 'N/A') as numero_parqueadero,
+                    CASE
+                        WHEN f.pico_placa_solidario = 1 THEN 'Puede usar parqueadero cualquier día'
+                        WHEN f.discapacidad = 1 THEN 'Prioridad para espacios especiales'
+                        WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Parqueadero exclusivo (hasta 4 vehículos)'
+                        WHEN f.tiene_carro_hibrido = 1 THEN 'Carro híbrido - Sin restricción pico y placa'
+                        ELSE 'Sin excepciones'
+                    END as observaciones
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE AND v.tipo_vehiculo = %s
+                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+                WHERE f.activo = TRUE
+                    AND (f.pico_placa_solidario = 1 OR f.discapacidad = 1 OR f.tiene_parqueadero_exclusivo = 1 OR f.tiene_carro_hibrido = 1)
+            """
+            params.append(self.filtros_activos["tipo_vehiculo"])
+        else:
+            query = """
+                SELECT
+                    f.cedula,
+                    CONCAT(f.nombre, ' ', f.apellidos) as nombre_completo,
+                    f.cargo,
+                    CASE WHEN f.pico_placa_solidario = 1 THEN '✅ Sí' ELSE '❌ No' END as pico_placa_solidario,
+                    CASE WHEN f.discapacidad = 1 THEN '✅ Sí' ELSE '❌ No' END as discapacidad,
+                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN '✅ Sí' ELSE '❌ No' END as parqueadero_exclusivo,
+                    CASE WHEN f.tiene_carro_hibrido = 1 THEN '✅ Sí' ELSE '❌ No' END as carro_hibrido,
+                    COALESCE(v.placa, 'Sin vehículo') as placa,
+                    COALESCE(p.numero_parqueadero, 'N/A') as numero_parqueadero,
+                    CASE
+                        WHEN f.pico_placa_solidario = 1 THEN 'Puede usar parqueadero cualquier día'
+                        WHEN f.discapacidad = 1 THEN 'Prioridad para espacios especiales'
+                        WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Parqueadero exclusivo (hasta 4 vehículos)'
+                        WHEN f.tiene_carro_hibrido = 1 THEN 'Carro híbrido - Sin restricción pico y placa'
+                        ELSE 'Sin excepciones'
+                    END as observaciones
+                FROM funcionarios f
+                LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
+                LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
+                LEFT JOIN parqueaderos p ON a.parqueadero_id = p.id
+                WHERE f.activo = TRUE
+                    AND (f.pico_placa_solidario = 1 OR f.discapacidad = 1 OR f.tiene_parqueadero_exclusivo = 1 OR f.tiene_carro_hibrido = 1)
+            """
+
+        # Aplicar otros filtros
+        if self.filtros_activos.get("cargo"):
+            query += " AND f.cargo = %s"
+            params.append(self.filtros_activos["cargo"])
+
+        if self.filtros_activos.get("direccion_grupo"):
+            query += " AND f.direccion_grupo = %s"
+            params.append(self.filtros_activos["direccion_grupo"])
+
+        if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
+            query += " AND f.fecha_registro BETWEEN %s AND %s"
+            params.append(self.filtros_activos["fecha_inicio"])
+            params.append(self.filtros_activos["fecha_fin"])
+
+        query += " ORDER BY f.apellidos, f.nombre"
+
+        datos = self.db.fetch_all(query, tuple(params) if params else None)
         self._llenar_tabla(self.tabla_excepciones, datos)
-
-    def actualizar_estadisticas(self):
-        """Actualiza los gráficos de estadísticas"""
-        if not MATPLOTLIB_AVAILABLE:
-            return
-
-        try:
-            # Limpiar figura
-            self.figura_estadisticas.clear()
-
-            # Crear subplots 2x2 (usaremos 3)
-            ax1 = self.figura_estadisticas.add_subplot(2, 2, 1)
-            ax2 = self.figura_estadisticas.add_subplot(2, 2, 2)
-            ax3 = self.figura_estadisticas.add_subplot(2, 1, 2)
-
-            # Gráfico 1: Ocupación de Parqueaderos
-            self._grafico_ocupacion_parqueaderos(ax1)
-
-            # Gráfico 2: Distribución de Tipos de Vehículo
-            self._grafico_distribucion_vehiculos(ax2)
-
-            # Gráfico 3: Funcionarios por Cargo
-            self._grafico_funcionarios_por_cargo(ax3)
-
-            # Ajustar layout
-            self.figura_estadisticas.tight_layout(pad=3.0)
-
-            # Refrescar canvas
-            self.canvas_estadisticas.draw()
-
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error al actualizar estadísticas: {str(e)}")
-
-    def _grafico_ocupacion_parqueaderos(self, ax):
-        """Genera gráfico de pastel para ocupación de parqueaderos"""
-        try:
-            query = """
-                SELECT
-                    estado,
-                    COUNT(*) as cantidad
-                FROM parqueaderos
-                WHERE activo = TRUE
-                GROUP BY estado
-            """
-            datos = self.db.fetch_all(query)
-
-            if not datos:
-                ax.text(0.5, 0.5, "Sin datos", ha="center", va="center")
-                return
-
-            estados = [d["estado"] for d in datos]
-            cantidades = [d["cantidad"] for d in datos]
-
-            # Colores personalizados
-            colores_map = {
-                "Disponible": "#2ecc71",  # Verde
-                "Parcialmente_Asignado": "#f39c12",  # Naranja
-                "Completo": "#e74c3c",  # Rojo
-            }
-            colores = [colores_map.get(e, "#95a5a6") for e in estados]
-
-            # Etiquetas más legibles
-            labels_map = {"Disponible": "Disponible", "Parcialmente_Asignado": "Parcial", "Completo": "Completo"}
-            labels = [labels_map.get(e, e) for e in estados]
-
-            # Crear gráfico de pastel
-            wedges, texts, autotexts = ax.pie(
-                cantidades,
-                labels=labels,
-                autopct="%1.1f%%",
-                colors=colores,
-                startangle=90,
-                textprops={"fontsize": 9, "weight": "bold"},
-            )
-
-            ax.set_title("Ocupación de Parqueaderos", fontsize=12, weight="bold", pad=10)
-
-        except Exception as e:
-            ax.text(0.5, 0.5, f"Error: {str(e)}", ha="center", va="center", fontsize=8)
-
-    def _grafico_distribucion_vehiculos(self, ax):
-        """Genera gráfico de barras para distribución de tipos de vehículo"""
-        try:
-            query = """
-                SELECT
-                    v.tipo_vehiculo,
-                    COUNT(*) as cantidad
-                FROM vehiculos v
-                INNER JOIN funcionarios f ON v.funcionario_id = f.id
-                WHERE v.activo = TRUE
-            """
-
-            # Aplicar filtros
-            params = []
-            if self.filtros_activos.get("tipo_vehiculo"):
-                query += " AND v.tipo_vehiculo = %s"
-                params.append(self.filtros_activos["tipo_vehiculo"])
-
-            if self.filtros_activos.get("cargo"):
-                query += " AND f.cargo = %s"
-                params.append(self.filtros_activos["cargo"])
-
-            if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
-                query += " AND v.fecha_registro BETWEEN %s AND %s"
-                params.append(self.filtros_activos["fecha_inicio"])
-                params.append(self.filtros_activos["fecha_fin"])
-
-            query += """
-                GROUP BY v.tipo_vehiculo
-                ORDER BY cantidad DESC
-            """
-
-            datos = self.db.fetch_all(query, tuple(params) if params else None)
-
-            if not datos:
-                ax.text(0.5, 0.5, "Sin datos", ha="center", va="center", transform=ax.transAxes)
-                return
-
-            tipos = [d["tipo_vehiculo"] for d in datos]
-            cantidades = [d["cantidad"] for d in datos]
-
-            # Colores personalizados
-            colores_map = {
-                "Carro": "#3498db",  # Azul
-                "Moto": "#9b59b6",  # Morado
-                "Bicicleta": "#1abc9c",  # Verde azulado
-            }
-            colores = [colores_map.get(t, "#95a5a6") for t in tipos]
-
-            # Crear gráfico de barras
-            bars = ax.bar(tipos, cantidades, color=colores, edgecolor="black", linewidth=1.5)
-
-            # Agregar valores encima de las barras
-            for bar in bars:
-                height = bar.get_height()
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2.0,
-                    height,
-                    f"{int(height)}",
-                    ha="center",
-                    va="bottom",
-                    fontsize=10,
-                    weight="bold",
-                )
-
-            ax.set_title("Distribución de Vehículos", fontsize=12, weight="bold", pad=10)
-            ax.set_xlabel("Tipo de Vehículo", fontsize=10)
-            ax.set_ylabel("Cantidad", fontsize=10)
-            ax.grid(axis="y", alpha=0.3, linestyle="--")
-
-        except Exception as e:
-            ax.text(0.5, 0.5, f"Error: {str(e)}", ha="center", va="center", transform=ax.transAxes, fontsize=8)
-
-    def _grafico_funcionarios_por_cargo(self, ax):
-        """Genera gráfico de barras horizontales para funcionarios por cargo"""
-        try:
-            query = """
-                SELECT
-                    cargo,
-                    COUNT(*) as cantidad
-                FROM funcionarios
-                WHERE activo = TRUE
-            """
-
-            # Aplicar filtros
-            params = []
-            if self.filtros_activos.get("cargo"):
-                query += " AND cargo = %s"
-                params.append(self.filtros_activos["cargo"])
-
-            if self.filtros_activos.get("fecha_inicio") and self.filtros_activos.get("fecha_fin"):
-                query += " AND fecha_registro BETWEEN %s AND %s"
-                params.append(self.filtros_activos["fecha_inicio"])
-                params.append(self.filtros_activos["fecha_fin"])
-
-            query += """
-                GROUP BY cargo
-                ORDER BY cantidad DESC
-                LIMIT 10
-            """
-
-            datos = self.db.fetch_all(query, tuple(params) if params else None)
-
-            if not datos:
-                ax.text(0.5, 0.5, "Sin datos", ha="center", va="center", transform=ax.transAxes)
-                return
-
-            cargos = [d["cargo"] if d["cargo"] else "Sin cargo" for d in datos]
-            cantidades = [d["cantidad"] for d in datos]
-
-            # Crear gráfico de barras horizontales
-            bars = ax.barh(cargos, cantidades, color="#34495e", edgecolor="black", linewidth=1.5)
-
-            # Agregar valores al final de las barras
-            for i, (bar, cantidad) in enumerate(zip(bars, cantidades)):
-                ax.text(
-                    bar.get_width() + 0.1,
-                    bar.get_y() + bar.get_height() / 2,
-                    f"{int(cantidad)}",
-                    ha="left",
-                    va="center",
-                    fontsize=9,
-                    weight="bold",
-                )
-
-            ax.set_title("Funcionarios por Cargo (Top 10)", fontsize=12, weight="bold", pad=10)
-            ax.set_xlabel("Cantidad de Funcionarios", fontsize=10)
-            ax.set_ylabel("Cargo", fontsize=10)
-            ax.grid(axis="x", alpha=0.3, linestyle="--")
-
-            # Ajustar límites del eje X para dar espacio a los números
-            max_val = max(cantidades) if cantidades else 1
-            ax.set_xlim(0, max_val * 1.15)
-
-        except Exception as e:
-            ax.text(0.5, 0.5, f"Error: {str(e)}", ha="center", va="center", transform=ax.transAxes, fontsize=8)
 
     def _llenar_tabla(self, tabla, datos):
         """Llena una tabla con los datos proporcionados"""

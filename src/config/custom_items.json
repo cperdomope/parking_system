@@ -1,9 +1,11 @@
 {
     "direcciones": [
         "Analista de Datos",
-        "Grupo Prueba"
+        "Grupo Prueba",
+        "Dirección-Grupo de Prueba"
     ],
     "cargos": [
-        "Cargo Prueba"
+        "Cargo Prueba",
+        "Cargo de Prueba"
     ]
 }
