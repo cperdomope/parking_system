@@ -88,6 +88,7 @@ class EditarVehiculoModal(QDialog):
         # Funcionario
         form_layout.addWidget(QLabel("Funcionario:"), 0, 0)
         self.combo_funcionario = QComboBox()
+        self.combo_funcionario.setMinimumWidth(450)
         form_layout.addWidget(self.combo_funcionario, 0, 1)
 
         # Tipo de vehículo
@@ -162,13 +163,25 @@ class EditarVehiculoModal(QDialog):
         self.txt_placa.setText(self.vehiculo_actual["placa"])
 
     def cargar_funcionarios(self):
-        """Carga el combo de funcionarios"""
+        """Carga el combo de funcionarios con iconos de excepciones"""
         funcionarios = self.funcionario_model.obtener_todos()
 
         self.combo_funcionario.clear()
 
         for func in funcionarios:
-            texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
+            # Construir iconos de excepciones
+            iconos = []
+            if func.get('tiene_parqueadero_exclusivo'):
+                iconos.append('🏢')
+            if func.get('tiene_carro_hibrido'):
+                iconos.append('🌿')
+            if func.get('pico_placa_solidario'):
+                iconos.append('🔄')
+            if func.get('discapacidad'):
+                iconos.append('♿')
+
+            iconos_str = ' '.join(iconos) + ' ' if iconos else ''
+            texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']} {iconos_str}"
             self.combo_funcionario.addItem(texto, func["id"])
 
             # Seleccionar el funcionario actual

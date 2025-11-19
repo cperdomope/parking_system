@@ -8,6 +8,7 @@ from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -168,7 +169,7 @@ class CargarComboFuncionariosWorker(QThread):
             connection = mysql.connector.connect(**self.db_config)
             cursor = connection.cursor(dictionary=True)
 
-            # Query optimizada que obtiene TODO en una sola consulta
+            # Query optimizada que obtiene TODO en una sola consulta (incluye TODOS los tipos de excepción)
             query = """
                 SELECT
                     f.id,
@@ -176,13 +177,18 @@ class CargarComboFuncionariosWorker(QThread):
                     f.nombre,
                     f.apellidos,
                     f.tiene_parqueadero_exclusivo,
+                    f.tiene_carro_hibrido,
+                    f.pico_placa_solidario,
+                    f.discapacidad,
+                    f.permite_compartir,
                     COUNT(CASE WHEN v.tipo_vehiculo = 'Carro' THEN 1 END) as cant_carros,
                     COUNT(CASE WHEN v.tipo_vehiculo = 'Moto' THEN 1 END) as cant_motos,
                     COUNT(CASE WHEN v.tipo_vehiculo = 'Bicicleta' THEN 1 END) as cant_bicicletas
                 FROM funcionarios f
                 LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
                 WHERE f.activo = TRUE
-                GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.tiene_parqueadero_exclusivo
+                GROUP BY f.id, f.cedula, f.nombre, f.apellidos, f.tiene_parqueadero_exclusivo,
+                         f.tiene_carro_hibrido, f.pico_placa_solidario, f.discapacidad, f.permite_compartir
                 ORDER BY f.apellidos, f.nombre
             """
 
@@ -194,27 +200,57 @@ class CargarComboFuncionariosWorker(QThread):
 
             for func in funcionarios_data:
                 funcionario_id = func["id"]
-                tiene_exclusivo = func.get("tiene_parqueadero_exclusivo", False)
+
+                # Obtener tipos de excepción
+                tiene_exclusivo_directivo = func.get("tiene_parqueadero_exclusivo", 0) == 1
+                tiene_carro_hibrido = func.get("tiene_carro_hibrido", 0) == 1
+                pico_placa_solidario = func.get("pico_placa_solidario", 0) == 1
+                discapacidad = func.get("discapacidad", 0) == 1
+                permite_compartir = func.get("permite_compartir", 1)
+
+                # Contadores de vehículos
                 cant_carros = func.get("cant_carros", 0)
                 cant_motos = func.get("cant_motos", 0)
                 cant_bicicletas = func.get("cant_bicicletas", 0)
+                total_vehiculos = cant_carros + cant_motos + cant_bicicletas
 
+                # Por defecto, NO mostrar (solo mostrar si NO ha alcanzado su límite)
                 mostrar_funcionario = False
 
-                if tiene_exclusivo:
-                    # Con parqueadero exclusivo siempre pueden registrar más vehículos
-                    mostrar_funcionario = True
-                else:
-                    # Verificar si completaron alguna combinación válida
-                    combinacion1_completa = (cant_carros == 1 and cant_motos == 1 and cant_bicicletas == 1)
-                    combinacion2_completa = (cant_carros == 2 and cant_bicicletas == 1 and cant_motos == 0)
-                    combinacion3_completa = (cant_carros == 2 and cant_motos == 1 and cant_bicicletas == 0)
+                # REGLA 1: Exclusivo Directivo - Máximo 6 vehículos (4 carros + 1 moto + 1 bicicleta)
+                if tiene_exclusivo_directivo:
+                    # Mostrar solo si tiene menos de 6 vehículos total
+                    if total_vehiculos < 6:
+                        mostrar_funcionario = True
 
-                    if not (combinacion1_completa or combinacion2_completa or combinacion3_completa):
+                # REGLA 2: Carro Híbrido, Pico y Placa Solidario, Discapacidad, No permite compartir
+                # Estos pueden tener máximo 3 vehículos (1 carro + 1 moto + 1 bicicleta)
+                elif tiene_carro_hibrido or pico_placa_solidario or discapacidad or (permite_compartir == 0):
+                    # Mostrar solo si tiene menos de 3 vehículos total
+                    if total_vehiculos < 3:
+                        mostrar_funcionario = True
+
+                # REGLA 3: Funcionarios regulares (sin excepciones)
+                # Máximo 3 vehículos con combinaciones válidas: 1C+1M+1B, 2C+1B, o 2C+1M
+                else:
+                    # Mostrar solo si tiene menos de 3 vehículos total
+                    if total_vehiculos < 3:
                         mostrar_funcionario = True
 
                 if mostrar_funcionario:
-                    texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']}"
+                    # Construir iconos de excepciones
+                    iconos = []
+                    if tiene_exclusivo_directivo:
+                        iconos.append('🏢')
+                    if tiene_carro_hibrido:
+                        iconos.append('🌿')
+                    if pico_placa_solidario:
+                        iconos.append('🔄')
+                    if discapacidad:
+                        iconos.append('♿')
+
+                    iconos_str = ' '.join(iconos) + ' ' if iconos else ''
+                    texto = f"{func['cedula']} - {func['nombre']} {func['apellidos']} {iconos_str}"
                     resultado.append((texto, funcionario_id))
 
             self.finished.emit(resultado)
@@ -283,7 +319,7 @@ class VehiculosTab(QWidget):
         inputs_layout.addWidget(lbl_funcionario)
 
         self.combo_funcionario = QComboBox()
-        self.combo_funcionario.setFixedWidth(280)
+        self.combo_funcionario.setFixedWidth(450)
         self.combo_funcionario.setFixedHeight(40)
         self.combo_funcionario.setStyleSheet(UIStyles.COMBOBOX)
         inputs_layout.addWidget(self.combo_funcionario)
@@ -385,6 +421,32 @@ class VehiculosTab(QWidget):
         )
         btn_limpiar.clicked.connect(self.limpiar_filtro)
         buscar_layout.addWidget(btn_limpiar)
+
+        # Botón Importar desde Excel
+        btn_importar = QPushButton("📊 Importar")
+        btn_importar.setFixedHeight(35)
+        btn_importar.setToolTip("Importar vehículos desde archivo Excel")
+        btn_importar.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #16a085;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #1abc9c;
+            }
+            QPushButton:pressed {
+                background-color: #117a65;
+            }
+        """
+        )
+        btn_importar.clicked.connect(self.importar_desde_excel)
+        buscar_layout.addWidget(btn_importar)
 
         buscar_layout.addStretch()
         tabla_layout.addLayout(buscar_layout)
@@ -1040,3 +1102,248 @@ class VehiculosTab(QWidget):
         # Resetear a la primera página al limpiar
         self.pagina_actual = 1
         self.mostrar_vehiculos(self.vehiculos_completos)
+
+    def importar_desde_excel(self):
+        """Importa vehículos masivamente desde un archivo Excel (.xlsx o .xls)"""
+        try:
+            # Verificar si pandas y openpyxl están instalados
+            try:
+                import pandas as pd
+            except ImportError:
+                QMessageBox.critical(
+                    self,
+                    "Error de Dependencias",
+                    "La librería 'pandas' no está instalada.\n\n"
+                    "Para usar esta función, ejecute:\n"
+                    "pip install pandas openpyxl xlrd"
+                )
+                return
+
+            # Abrir diálogo para seleccionar archivo
+            archivo, _ = QFileDialog.getOpenFileName(
+                self,
+                "Seleccionar archivo Excel de vehículos",
+                "",
+                "Archivos Excel (*.xlsx *.xls);;Todos los archivos (*.*)"
+            )
+
+            if not archivo:
+                return  # Usuario canceló
+
+            # Leer el archivo Excel
+            try:
+                df = pd.read_excel(archivo)
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error al Leer Archivo",
+                    f"No se pudo leer el archivo Excel.\n\nError: {str(e)}\n\n"
+                    "Asegúrese de que el archivo no esté abierto en otra aplicación."
+                )
+                return
+
+            # Validar columnas requeridas
+            columnas_requeridas = ["Cedula", "Tipo_Vehiculo", "Placa"]
+            columnas_opcionales = ["Numero_Parqueadero"]
+
+            columnas_faltantes = [col for col in columnas_requeridas if col not in df.columns]
+            if columnas_faltantes:
+                QMessageBox.critical(
+                    self,
+                    "Error en Estructura del Archivo",
+                    f"El archivo Excel no tiene las columnas requeridas.\n\n"
+                    f"Columnas faltantes: {', '.join(columnas_faltantes)}\n\n"
+                    f"Columnas requeridas:\n{', '.join(columnas_requeridas)}\n\n"
+                    f"Columnas opcionales:\n{', '.join(columnas_opcionales)}"
+                )
+                return
+
+            # Reemplazar valores NaN por vacío
+            df = df.fillna("")
+
+            # Validar que hay datos
+            if len(df) == 0:
+                QMessageBox.warning(self, "Archivo Vacío", "El archivo Excel no contiene datos para importar.")
+                return
+
+            # Confirmar importación
+            reply = QMessageBox.question(
+                self,
+                "Confirmar Importación",
+                f"Se encontraron {len(df)} registros en el archivo.\n\n"
+                "¿Desea proceder con la importación?\n\n"
+                "Los vehículos duplicados (misma placa) serán omitidos.\n"
+                "Las cédulas de funcionarios deben existir en la base de datos.",
+                QMessageBox.Yes | QMessageBox.No
+            )
+
+            if reply == QMessageBox.No:
+                return
+
+            # Procesar cada fila
+            importados = 0
+            omitidos = 0
+            errores = []
+
+            for index, row in df.iterrows():
+                try:
+                    # Extraer datos básicos
+                    cedula = str(row["Cedula"]).strip()
+                    tipo_vehiculo = str(row["Tipo_Vehiculo"]).strip()
+                    placa = str(row["Placa"]).strip().upper()
+                    numero_parqueadero = str(row.get("Numero_Parqueadero", "")).strip()
+
+                    # Validaciones básicas
+                    if not cedula or not tipo_vehiculo:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Cédula o Tipo de Vehículo vacíos")
+                        continue
+
+                    # Validar tipo de vehículo
+                    if tipo_vehiculo not in ["Carro", "Moto", "Bicicleta"]:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Tipo de vehículo inválido '{tipo_vehiculo}' (debe ser Carro, Moto o Bicicleta)")
+                        continue
+
+                    # Validar que la cédula exista en la BD
+                    query_funcionario = "SELECT id FROM funcionarios WHERE cedula = %s AND activo = TRUE"
+                    funcionario = self.db.fetch_one(query_funcionario, (cedula,))
+
+                    if not funcionario:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Funcionario con cédula '{cedula}' no existe en el sistema")
+                        continue
+
+                    funcionario_id = funcionario["id"]
+
+                    # Validar placa según tipo de vehículo
+                    if tipo_vehiculo == "Bicicleta":
+                        # Bicicletas NO deben tener placa
+                        if placa:
+                            omitidos += 1
+                            errores.append(f"Fila {index + 2}: Las bicicletas NO deben tener placa")
+                            continue
+                        placa = None  # Establecer como None para bicicletas
+                    else:
+                        # Carros y Motos SÍ requieren placa
+                        if not placa:
+                            omitidos += 1
+                            errores.append(f"Fila {index + 2}: La placa es obligatoria para {tipo_vehiculo}")
+                            continue
+
+                        # Validar formato de placa para Carros
+                        if tipo_vehiculo == "Carro":
+                            if len(placa) != 6 or not (placa[:3].isalpha() and placa[3:].isdigit()):
+                                omitidos += 1
+                                errores.append(f"Fila {index + 2}: Formato de placa inválido para Carro '{placa}' (debe ser ABC123)")
+                                continue
+
+                        # Validar formato de placa para Motos
+                        if tipo_vehiculo == "Moto":
+                            valido = False
+                            # Patrón 1: ABC12 (3 letras + 2 números)
+                            if len(placa) == 5 and placa[:3].isalpha() and placa[3:].isdigit():
+                                valido = True
+                            # Patrón 2: ABC12D (3 letras + 2 números + 1 letra)
+                            elif len(placa) == 6 and placa[:3].isalpha() and placa[3:5].isdigit() and placa[5].isalpha():
+                                valido = True
+
+                            if not valido:
+                                omitidos += 1
+                                errores.append(f"Fila {index + 2}: Formato de placa inválido para Moto '{placa}' (debe ser ABC12 o ABC12D)")
+                                continue
+
+                        # Verificar si la placa ya existe
+                        query_placa = "SELECT id FROM vehiculos WHERE placa = %s AND activo = TRUE"
+                        vehiculo_existente = self.db.fetch_one(query_placa, (placa,))
+
+                        if vehiculo_existente:
+                            omitidos += 1
+                            errores.append(f"Fila {index + 2}: La placa '{placa}' ya está registrada")
+                            continue
+
+                    # Validar reglas de negocio antes de insertar
+                    es_valido, mensaje = self.vehiculo_model.validar_vehiculo_antes_registro(
+                        funcionario_id, tipo_vehiculo, placa
+                    )
+
+                    if not es_valido:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: {mensaje}")
+                        continue
+
+                    # Insertar vehículo
+                    exito, mensaje_insercion = self.vehiculo_model.crear(
+                        funcionario_id=funcionario_id,
+                        tipo_vehiculo=tipo_vehiculo,
+                        placa=placa
+                    )
+
+                    if not exito:
+                        omitidos += 1
+                        errores.append(f"Fila {index + 2}: Error al insertar vehículo - {mensaje_insercion}")
+                        continue
+
+                    # Si se especificó un parqueadero, crear asignación
+                    if numero_parqueadero:
+                        try:
+                            num_parq = int(numero_parqueadero)
+
+                            # Verificar que el parqueadero existe
+                            query_parq = "SELECT id FROM parqueaderos WHERE numero_parqueadero = %s AND activo = TRUE"
+                            parqueadero = self.db.fetch_one(query_parq, (num_parq,))
+
+                            if parqueadero:
+                                # Obtener el ID del vehículo recién creado
+                                query_vehiculo = "SELECT id FROM vehiculos WHERE placa = %s AND activo = TRUE" if placa else \
+                                                 "SELECT id FROM vehiculos WHERE funcionario_id = %s AND tipo_vehiculo = %s AND activo = TRUE ORDER BY id DESC LIMIT 1"
+                                params = (placa,) if placa else (funcionario_id, tipo_vehiculo)
+                                vehiculo_nuevo = self.db.fetch_one(query_vehiculo, params)
+
+                                if vehiculo_nuevo:
+                                    # Crear asignación
+                                    query_asignacion = """
+                                        INSERT INTO asignaciones (parqueadero_id, vehiculo_id, activo)
+                                        VALUES (%s, %s, TRUE)
+                                    """
+                                    self.db.execute_query(query_asignacion, (parqueadero["id"], vehiculo_nuevo["id"]))
+                        except ValueError:
+                            # Número de parqueadero inválido, ignorar asignación pero el vehículo ya se creó
+                            pass
+
+                    importados += 1
+
+                except Exception as e:
+                    omitidos += 1
+                    errores.append(f"Fila {index + 2}: Error inesperado - {str(e)}")
+
+            # Mostrar reporte final
+            mensaje_final = f"Importación completada:\n\n"
+            mensaje_final += f"✅ Vehículos importados: {importados}\n"
+            mensaje_final += f"⚠️ Vehículos omitidos: {omitidos}\n\n"
+
+            if errores:
+                mensaje_final += "Detalles de errores:\n"
+                # Mostrar solo los primeros 10 errores para no saturar el diálogo
+                for error in errores[:10]:
+                    mensaje_final += f"  • {error}\n"
+
+                if len(errores) > 10:
+                    mensaje_final += f"\n... y {len(errores) - 10} errores más."
+
+            if importados > 0:
+                QMessageBox.information(self, "Importación Completada", mensaje_final)
+                # Recargar vehículos
+                self.db.force_reconnect()
+                self.cargar_vehiculos_async()
+                self.cargar_combo_funcionarios()
+                self.vehiculo_creado.emit()
+            else:
+                QMessageBox.warning(self, "Importación Sin Éxito", mensaje_final)
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error Crítico",
+                f"Ocurrió un error inesperado durante la importación:\n\n{str(e)}"
+            )

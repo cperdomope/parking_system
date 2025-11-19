@@ -350,7 +350,7 @@ class DetalleParqueaderoModal(QDialog):
                 print(f"Advertencia al verificar columna 'sotano': {e}")
                 column_exists = False
 
-            # Obtener información actual adaptable
+            # Obtener información actual adaptable, incluyendo datos de excepciones de funcionarios
             if column_exists:
                 query_actual = """
                     SELECT
@@ -359,10 +359,16 @@ class DetalleParqueaderoModal(QDialog):
                         COALESCE(p.sotano, 'Sótano-1') as sotano,
                         COUNT(CASE WHEN a.activo = TRUE AND v.tipo_vehiculo = 'Carro' THEN 1 END) as carros_asignados,
                         COUNT(CASE WHEN a.activo = TRUE AND v.tipo_vehiculo = 'Moto' THEN 1 END) as motos_asignadas,
-                        COUNT(CASE WHEN a.activo = TRUE AND v.tipo_vehiculo = 'Bicicleta' THEN 1 END) as bicicletas_asignadas
+                        COUNT(CASE WHEN a.activo = TRUE AND v.tipo_vehiculo = 'Bicicleta' THEN 1 END) as bicicletas_asignadas,
+                        MIN(CASE WHEN a.activo = TRUE THEN f.permite_compartir END) as permite_compartir,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.pico_placa_solidario END) as pico_placa_solidario,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.discapacidad END) as discapacidad,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.tiene_parqueadero_exclusivo END) as tiene_parqueadero_exclusivo,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.tiene_carro_hibrido END) as tiene_carro_hibrido
                     FROM parqueaderos p
                     LEFT JOIN asignaciones a ON p.id = a.parqueadero_id
                     LEFT JOIN vehiculos v ON a.vehiculo_id = v.id
+                    LEFT JOIN funcionarios f ON v.funcionario_id = f.id
                     WHERE p.id = %s
                     GROUP BY p.id
                 """
@@ -374,10 +380,16 @@ class DetalleParqueaderoModal(QDialog):
                         'Sótano-1' as sotano,
                         COUNT(CASE WHEN a.activo = TRUE AND v.tipo_vehiculo = 'Carro' THEN 1 END) as carros_asignados,
                         0 as motos_asignadas,
-                        0 as bicicletas_asignadas
+                        0 as bicicletas_asignadas,
+                        MIN(CASE WHEN a.activo = TRUE THEN f.permite_compartir END) as permite_compartir,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.pico_placa_solidario END) as pico_placa_solidario,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.discapacidad END) as discapacidad,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.tiene_parqueadero_exclusivo END) as tiene_parqueadero_exclusivo,
+                        MAX(CASE WHEN a.activo = TRUE THEN f.tiene_carro_hibrido END) as tiene_carro_hibrido
                     FROM parqueaderos p
                     LEFT JOIN asignaciones a ON p.id = a.parqueadero_id
                     LEFT JOIN vehiculos v ON a.vehiculo_id = v.id
+                    LEFT JOIN funcionarios f ON v.funcionario_id = f.id
                     WHERE p.id = %s
                     GROUP BY p.id
                 """
@@ -417,8 +429,15 @@ class DetalleParqueaderoModal(QDialog):
         icono_tipo = iconos_tipo.get(tipo_espacio, "🚗")
         self.lbl_tipo_espacio.setText(f"{icono_tipo} {tipo_espacio}")
 
-        # CALCULAR ESTADO CORRECTO según tipo de vehículo y asignaciones
+        # CALCULAR ESTADO CORRECTO según tipo de vehículo, asignaciones Y excepciones de funcionarios
         total_asignaciones = carros_asignados + motos_asignadas + bicicletas_asignadas
+
+        # Obtener información de excepciones de funcionarios
+        permite_compartir = info.get("permite_compartir")
+        pico_placa_solidario = info.get("pico_placa_solidario")
+        discapacidad = info.get("discapacidad")
+        tiene_parqueadero_exclusivo = info.get("tiene_parqueadero_exclusivo")
+        tiene_carro_hibrido = info.get("tiene_carro_hibrido")
 
         if tipo_espacio == "Moto":
             # Motos: 0 asignaciones = Disponible, ≥1 = Completo
@@ -433,13 +452,24 @@ class DetalleParqueaderoModal(QDialog):
             else:
                 estado = "Completo"
         elif tipo_espacio == "Carro":
-            # Carros: lógica normal (0=Disponible, 1=Parcial, 2=Completo)
+            # Carros con CUALQUIER tipo de excepción se marcan como Completo desde la primera asignación
             if carros_asignados == 0:
                 estado = "Disponible"
-            elif carros_asignados == 1:
-                estado = "Parcialmente_Asignado"
-            else:
-                estado = "Completo"
+            elif carros_asignados >= 1:
+                if (
+                    tiene_parqueadero_exclusivo == 1  # Exclusivo Directivo
+                    or pico_placa_solidario == 1  # Pico y Placa Solidario
+                    or discapacidad == 1  # Discapacidad
+                    or tiene_carro_hibrido == 1  # Carro Híbrido
+                    or permite_compartir == 0  # No permite compartir (cualquier tipo de exclusividad)
+                ):
+                    estado = "Completo"
+                elif carros_asignados == 1:
+                    # Funcionario regular con 1 carro → Parcialmente Asignado
+                    estado = "Parcialmente_Asignado"
+                else:
+                    # Funcionarios regulares con 2 carros → Completo
+                    estado = "Completo"
         else:  # Mixto
             if total_asignaciones == 0:
                 estado = "Disponible"
@@ -456,15 +486,37 @@ class DetalleParqueaderoModal(QDialog):
             f"border: 2px solid {color_estado};"
         )
 
-        # Actualizar ocupación basada en el tipo de espacio
+        # Actualizar ocupación basada en el tipo de espacio y excepciones
         if tipo_espacio == "Carro":
-            # Lógica original para carros
-            porcentaje = (carros_asignados / 2) * 100
+            # Determinar capacidad total según tipo de excepción
+            if tiene_parqueadero_exclusivo == 1:
+                capacidad_total = 4
+                tipo_ocupacion = "Exclusivo Directivo"
+            elif tiene_carro_hibrido == 1:
+                capacidad_total = 1
+                tipo_ocupacion = "Híbrido Ecológico"
+            elif permite_compartir == 0:
+                capacidad_total = 1
+                tipo_ocupacion = "Exclusivo"
+            elif pico_placa_solidario == 1:
+                capacidad_total = 1
+                tipo_ocupacion = "Pico y Placa Solidario"
+            elif discapacidad == 1:
+                capacidad_total = 1
+                tipo_ocupacion = "Prioritario (Discapacidad)"
+            else:
+                capacidad_total = 2
+                tipo_ocupacion = "Regular"
+
+            # Calcular porcentaje
+            porcentaje = (carros_asignados / capacidad_total) * 100
+
+            # Determinar colores e ícono
             if carros_asignados == 0:
                 color_ocupacion = "#4CAF50"
                 bg_ocupacion = "#E8F5E9"
                 icono = "🟢"
-            elif carros_asignados == 1:
+            elif carros_asignados < capacidad_total:
                 color_ocupacion = "#FF9800"
                 bg_ocupacion = "#FFF3E0"
                 icono = "🟡"
@@ -472,7 +524,9 @@ class DetalleParqueaderoModal(QDialog):
                 color_ocupacion = "#F44336"
                 bg_ocupacion = "#FFEBEE"
                 icono = "🔴"
-            texto_ocupacion = f"{icono} {carros_asignados}/2 carros ({porcentaje:.0f}%)"
+
+            # Texto de ocupación con capacidad correcta
+            texto_ocupacion = f"{icono} {carros_asignados}/{capacidad_total} carros ({porcentaje:.0f}%) - {tipo_ocupacion}"
 
         elif tipo_espacio == "Moto":
             # Para motos (capacidad ilimitada prácticamente)

@@ -2,10 +2,12 @@
     "direcciones": [
         "Analista de Datos",
         "Grupo Prueba",
-        "Dirección-Grupo de Prueba"
+        "Dirección-Grupo de Prueba",
+        "Ultima Direccion/Grupo De Prueba"
     ],
     "cargos": [
         "Cargo Prueba",
-        "Cargo de Prueba"
+        "Cargo de Prueba",
+        "Ultimo Cargo de Prueba"
     ]
 }

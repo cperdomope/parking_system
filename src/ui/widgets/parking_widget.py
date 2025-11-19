@@ -77,28 +77,22 @@ class ParkingSpaceWidget(QFrame):
 
         header_layout.addStretch()
 
-        # === LÍNEA 2: Iconos de vehículos + Barra de progreso + Contador ===
+        # === LÍNEA 2: Barra de progreso + Contador ===
         ocupacion_layout = QHBoxLayout()
-        ocupacion_layout.setSpacing(3)
-
-        # Iconos de vehículos asignados
-        iconos_vehiculos = self._obtener_iconos_vehiculos()
-        lbl_iconos = QLabel(iconos_vehiculos)
-        lbl_iconos.setStyleSheet("font-size: 16px;")
-        ocupacion_layout.addWidget(lbl_iconos)
+        ocupacion_layout.setSpacing(5)
 
         # Barra de progreso
         self.progress_bar = QProgressBar()
         self.progress_bar.setMaximum(self.capacidad_total)
         self.progress_bar.setValue(self.vehiculos_actuales)
-        self.progress_bar.setFixedHeight(12)
+        self.progress_bar.setFixedHeight(14)
         self.progress_bar.setTextVisible(False)
         self.progress_bar.setStyleSheet(self._get_progressbar_style())
         ocupacion_layout.addWidget(self.progress_bar)
 
         # Contador
         lbl_contador = QLabel(f"{self.vehiculos_actuales}/{self.capacidad_total}")
-        lbl_contador.setStyleSheet("font-size: 11px; font-weight: bold; color: #333;")
+        lbl_contador.setStyleSheet("font-size: 12px; font-weight: bold; color: #333;")
         ocupacion_layout.addWidget(lbl_contador)
 
         # === LÍNEA 3: Etiqueta especial (tipo de ocupación) ===
@@ -163,34 +157,12 @@ class ParkingSpaceWidget(QFrame):
         iconos = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲", "Mixto": "🅿️"}
         return iconos.get(self.tipo_espacio, "🅿️")
 
-    def _obtener_iconos_vehiculos(self) -> str:
-        """Genera iconos visuales de los vehículos asignados"""
-        if self.vehiculos_actuales == 0:
-            return "⬜"  # Espacio vacío
-
-        iconos = []
-        for vehiculo in self.vehiculos_detalle:
-            tipo = vehiculo.get("tipo_vehiculo", "Carro")
-            if tipo == "Carro":
-                iconos.append("🚗")
-            elif tipo == "Moto":
-                iconos.append("🏍️")
-            elif tipo == "Bicicleta":
-                iconos.append("🚲")
-
-        # Si no hay detalles, usar iconos genéricos
-        if not iconos:
-            icono_tipo = self._obtener_icono_tipo_espacio()
-            iconos = [icono_tipo] * min(self.vehiculos_actuales, 4)
-
-        return "".join(iconos[:4])  # Máximo 4 iconos
-
     def _obtener_etiqueta_especial(self) -> str:
         """Retorna la etiqueta especial según el tipo de ocupación"""
         etiquetas = {
             "Regular (PAR/IMPAR)": "⚡ PAR/IMPAR",
             "Exclusivo Directivo": "🏢 Exclusivo Directivo",
-            "Híbrido Ecológico": "⚡ Híbrido (No comparte)",
+            "Híbrido Ecológico": "🌿 Híbrido (No comparte)",
             "Exclusivo": "🔒 Exclusivo",
             "Pico y Placa Solidario": "🔄 Pico y Placa Solidario",
             "Prioritario (Discapacidad)": "♿ Prioritario",
@@ -227,68 +199,37 @@ class ParkingSpaceWidget(QFrame):
         """
 
     def _generar_tooltip(self) -> str:
-        """Genera un tooltip enriquecido con información detallada"""
+        """Genera un tooltip breve con información esencial"""
         numero_display = format_numero_parqueadero(self.numero)
+
         if self.vehiculos_actuales == 0:
             return (
-                f"📊 PARQUEADERO {numero_display}\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"Estado: Disponible\n"
-                f"Capacidad: 0/{self.capacidad_total}\n"
-                f"Tipo: {self.tipo_espacio}\n\n"
-                f"✅ Espacio libre"
+                f"🅿️ {numero_display} - {self.sotano}\n"
+                f"✅ Disponible ({self.tipo_espacio})"
             )
 
-        # Generar información de vehículos asignados
+        # Información breve de vehículos
         vehiculos_info = []
-        for i, vehiculo in enumerate(self.vehiculos_detalle, 1):
-            tipo_icon = "🚗" if vehiculo.get("tipo_vehiculo") == "Carro" else "🏍️" if vehiculo.get("tipo_vehiculo") == "Moto" else "🚲"
+        for vehiculo in self.vehiculos_detalle:
+            tipo_icon = {"Carro": "🚗", "Moto": "🏍️", "Bicicleta": "🚲"}.get(vehiculo.get("tipo_vehiculo"), "🚗")
             placa = vehiculo.get("placa", "N/A")
-            tipo_circ = vehiculo.get("tipo_circulacion", "N/A")
-            funcionario = vehiculo.get("funcionario_nombre", "N/A")
-            cargo = vehiculo.get("cargo", "N/A")
+            nombre = vehiculo.get("funcionario_nombre", "N/A")
+            vehiculos_info.append(f"{tipo_icon} {placa} - {nombre}")
 
-            # Etiquetas especiales
-            etiquetas = []
-            if vehiculo.get("tiene_parqueadero_exclusivo"):
-                etiquetas.append("🏢 Directivo")
-            if vehiculo.get("tiene_carro_hibrido"):
-                etiquetas.append("⚡ Híbrido")
-            if vehiculo.get("pico_placa_solidario"):
-                etiquetas.append("🔄 Solidario")
-            if vehiculo.get("discapacidad"):
-                etiquetas.append("♿ Discapacidad")
+        vehiculos_texto = "\n".join(vehiculos_info)
 
-            etiqueta_str = f" [{', '.join(etiquetas)}]" if etiquetas else ""
-
-            vehiculos_info.append(
-                f"{tipo_icon} Vehículo {i}:\n"
-                f"   Placa: {placa} ({tipo_circ})\n"
-                f"   Funcionario: {funcionario}\n"
-                f"   Cargo: {cargo}{etiqueta_str}"
-            )
-
-        vehiculos_texto = "\n\n".join(vehiculos_info)
-
-        # Estado de ocupación
+        # Estado breve
         if self.vehiculos_actuales >= self.capacidad_total:
-            estado_ocupacion = "🔴 Espacio completo"
-        elif self.vehiculos_actuales > 0:
-            estado_ocupacion = f"🟠 Espacio parcial ({self.capacidad_total - self.vehiculos_actuales} cupo{'s' if self.capacidad_total - self.vehiculos_actuales > 1 else ''} disponible{'s' if self.capacidad_total - self.vehiculos_actuales > 1 else ''})"
+            estado = "🔴 Completo"
         else:
-            estado_ocupacion = "🟢 Espacio disponible"
+            cupos = self.capacidad_total - self.vehiculos_actuales
+            estado = f"🟠 {cupos} cupo{'s' if cupos > 1 else ''} libre{'s' if cupos > 1 else ''}"
 
-        numero_display = format_numero_parqueadero(self.numero)
         return (
-            f"📊 INFORMACIÓN DETALLADA\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Parqueadero: {numero_display}\n"
-            f"Sótano: {self.sotano or 'N/A'}\n"
-            f"Tipo: {self.tipo_espacio}\n"
-            f"Ocupación: {self.vehiculos_actuales}/{self.capacidad_total}\n"
-            f"Modalidad: {self.tipo_ocupacion}\n\n"
-            f"{vehiculos_texto}\n\n"
-            f"{estado_ocupacion}"
+            f"🅿️ {numero_display} - {self.sotano}\n"
+            f"{estado} | {self.tipo_ocupacion}\n"
+            f"━━━━━━━━━━━━━━\n"
+            f"{vehiculos_texto}"
         )
 
     def get_estado_style(self) -> str:

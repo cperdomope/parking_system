@@ -304,34 +304,6 @@ class ReportesTab(QWidget):
         self.date_inicio.dateChanged.connect(self.aplicar_filtros_fechas)
         self.date_fin.dateChanged.connect(self.aplicar_filtros_fechas)
 
-        # Botón global de actualización
-        btn_layout = QHBoxLayout()
-        self.btn_actualizar_global = QPushButton("🔄 Actualizar Todos los Reportes")
-        self.btn_actualizar_global.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 10px 20px;
-                border-radius: 5px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:pressed {
-                background-color: #21618c;
-            }
-        """
-        )
-        self.btn_actualizar_global.clicked.connect(self.actualizar_reportes)
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.btn_actualizar_global)
-        btn_layout.addStretch()
-        main_layout.addLayout(btn_layout)
-
         # TabWidget para las subpestañas de reportes
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet(
@@ -344,19 +316,19 @@ class ReportesTab(QWidget):
             QTabBar::tab {
                 background-color: #ecf0f1;
                 color: #2c3e50;
-                padding: 10px 30px;
+                padding: 10px 25px;
                 margin-right: 2px;
                 border-top-left-radius: 5px;
                 border-top-right-radius: 5px;
                 font-weight: bold;
-                min-width: 165px;
+                font-size: 12px;
             }
             QTabBar::tab:selected {
-                background-color: #3498db;
+                background-color: #00B54E;
                 color: white;
             }
             QTabBar::tab:hover {
-                background-color: #5dade2;
+                background-color: #00623A;
                 color: white;
             }
         """
@@ -376,7 +348,7 @@ class ReportesTab(QWidget):
         self.tab_widget.addTab(self.tab_vehiculos, "🚗 Vehículos")
         self.tab_widget.addTab(self.tab_parqueaderos, "🅿️ Parqueaderos")
         self.tab_widget.addTab(self.tab_asignaciones, "📍 Asignaciones")
-        self.tab_widget.addTab(self.tab_excepciones, "🔄 Excepciones Pico y Placa")
+        self.tab_widget.addTab(self.tab_excepciones, "🔄 Excepciones")
 
     def _crear_tab_reporte_general(self):
         """Crea la pestaña de Reporte General"""
@@ -391,7 +363,7 @@ class ReportesTab(QWidget):
 
         # Tabla
         self.tabla_general = QTableWidget()
-        self.tabla_general.setColumnCount(11)
+        self.tabla_general.setColumnCount(15)
         self.tabla_general.setHorizontalHeaderLabels(
             [
                 "Cédula",
@@ -404,7 +376,11 @@ class ReportesTab(QWidget):
                 "Circulación",
                 "N° Parqueadero",
                 "Estado Parq.",
-                "Pico y Placa Solidario",
+                "Pico y Placa",
+                "Discapacidad",
+                "Parq. Exclusivo",
+                "Carro Híbrido",
+                "Permite Compartir",
             ]
         )
         # Configurar anchos de columnas apropiados
@@ -418,7 +394,11 @@ class ReportesTab(QWidget):
         self.tabla_general.setColumnWidth(7, 100)  # Circulación
         self.tabla_general.setColumnWidth(8, 120)  # N° Parqueadero
         self.tabla_general.setColumnWidth(9, 110)  # Estado Parq.
-        self.tabla_general.setColumnWidth(10, 170) # Pico y Placa Solidario
+        self.tabla_general.setColumnWidth(10, 110) # Pico y Placa
+        self.tabla_general.setColumnWidth(11, 110) # Discapacidad
+        self.tabla_general.setColumnWidth(12, 120) # Parq. Exclusivo
+        self.tabla_general.setColumnWidth(13, 110) # Carro Híbrido
+        self.tabla_general.setColumnWidth(14, 130) # Permite Compartir
         self.tabla_general.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.tabla_general.horizontalHeader().setStretchLastSection(False)
         self.tabla_general.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -432,11 +412,11 @@ class ReportesTab(QWidget):
                 alternate-background-color: #ecf0f1;
             }
             QHeaderView::section {
-                background-color: #34495e;
+                background-color: #00B54E;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
-                border: 1px solid #2c3e50;
+                border: 1px solid #009642;
             }
         """
         )
@@ -500,11 +480,11 @@ class ReportesTab(QWidget):
                 alternate-background-color: #ecf0f1;
             }
             QHeaderView::section {
-                background-color: #16a085;
+                background-color: #00B54E;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
-                border: 1px solid #138d75;
+                border: 1px solid #009642;
             }
         """
         )
@@ -566,11 +546,11 @@ class ReportesTab(QWidget):
                 alternate-background-color: #ecf0f1;
             }
             QHeaderView::section {
-                background-color: #8e44ad;
+                background-color: #00B54E;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
-                border: 1px solid #7d3c98;
+                border: 1px solid #009642;
             }
         """
         )
@@ -630,11 +610,11 @@ class ReportesTab(QWidget):
                 alternate-background-color: #ecf0f1;
             }
             QHeaderView::section {
-                background-color: #e67e22;
+                background-color: #00B54E;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
-                border: 1px solid #d35400;
+                border: 1px solid #009642;
             }
         """
         )
@@ -698,11 +678,11 @@ class ReportesTab(QWidget):
                 alternate-background-color: #ecf0f1;
             }
             QHeaderView::section {
-                background-color: #2980b9;
+                background-color: #00B54E;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
-                border: 1px solid #1f618d;
+                border: 1px solid #009642;
             }
         """
         )
@@ -768,11 +748,11 @@ class ReportesTab(QWidget):
                 alternate-background-color: #ecf0f1;
             }
             QHeaderView::section {
-                background-color: #c0392b;
+                background-color: #00B54E;
                 color: white;
                 font-weight: bold;
                 padding: 8px;
-                border: 1px solid #a93226;
+                border: 1px solid #009642;
             }
         """
         )
@@ -1006,7 +986,11 @@ class ReportesTab(QWidget):
                     v.tipo_circulacion,
                     p.numero_parqueadero,
                     p.estado as estado_parqueadero,
-                    CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario
+                    CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario,
+                    CASE WHEN f.discapacidad = 1 THEN 'Sí' ELSE 'No' END as discapacidad,
+                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Sí' ELSE 'No' END as parq_exclusivo,
+                    CASE WHEN f.tiene_carro_hibrido = 1 THEN 'Sí' ELSE 'No' END as carro_hibrido,
+                    CASE WHEN f.permite_compartir = 1 THEN 'Sí' ELSE 'No' END as permite_compartir
                 FROM funcionarios f
                 LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE AND v.tipo_vehiculo = %s
                 LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
@@ -1027,7 +1011,11 @@ class ReportesTab(QWidget):
                     v.tipo_circulacion,
                     p.numero_parqueadero,
                     p.estado as estado_parqueadero,
-                    CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario
+                    CASE WHEN f.pico_placa_solidario = 1 THEN 'Sí' ELSE 'No' END as pico_placa_solidario,
+                    CASE WHEN f.discapacidad = 1 THEN 'Sí' ELSE 'No' END as discapacidad,
+                    CASE WHEN f.tiene_parqueadero_exclusivo = 1 THEN 'Sí' ELSE 'No' END as parq_exclusivo,
+                    CASE WHEN f.tiene_carro_hibrido = 1 THEN 'Sí' ELSE 'No' END as carro_hibrido,
+                    CASE WHEN f.permite_compartir = 1 THEN 'Sí' ELSE 'No' END as permite_compartir
                 FROM funcionarios f
                 LEFT JOIN vehiculos v ON f.id = v.funcionario_id AND v.activo = TRUE
                 LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
@@ -1197,19 +1185,48 @@ class ReportesTab(QWidget):
                     p.numero_parqueadero,
                     COALESCE(p.sotano, 'Sótano-1') as sotano,
                     p.tipo_espacio,
-                    p.estado,
+                    CASE
+                        -- REGLA 1: Motos y Bicicletas SIEMPRE se marcan como Completo con 1 asignación
+                        WHEN p.tipo_espacio IN ('Moto', 'Bicicleta') AND COUNT(a.id) >= 1 THEN 'Completo'
+
+                        -- REGLA 2: Carros con CUALQUIER tipo de excepción se marcan como Completo desde la primera asignación
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 1 AND (
+                            MAX(f.tiene_parqueadero_exclusivo) = 1  -- Exclusivo Directivo
+                            OR MAX(f.pico_placa_solidario) = 1      -- Pico y Placa Solidario
+                            OR MAX(f.discapacidad) = 1              -- Discapacidad
+                            OR MAX(f.tiene_carro_hibrido) = 1       -- Carro Híbrido
+                            OR MIN(f.permite_compartir) = 0         -- No permite compartir
+                        ) THEN 'Completo'
+
+                        -- REGLA 3: Carros regulares (sin excepciones)
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) = 1 THEN 'Parcialmente_Asignado'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 2 THEN 'Completo'
+
+                        -- REGLA 4: Sin asignaciones
+                        ELSE p.estado
+                    END as estado,
                     COUNT(a.id) as vehiculos_asignados,
                     GROUP_CONCAT(CASE WHEN v.tipo_circulacion = 'PAR' THEN v.placa END) as circulacion_par,
                     GROUP_CONCAT(CASE WHEN v.tipo_circulacion = 'IMPAR' THEN v.placa END) as circulacion_impar,
                     CASE
+                        -- Mismo cálculo de estado para observaciones
+                        WHEN p.tipo_espacio IN ('Moto', 'Bicicleta') AND COUNT(a.id) >= 1 THEN 'Ocupado'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 1 AND (
+                            MAX(f.tiene_parqueadero_exclusivo) = 1
+                            OR MAX(f.pico_placa_solidario) = 1
+                            OR MAX(f.discapacidad) = 1
+                            OR MAX(f.tiene_carro_hibrido) = 1
+                            OR MIN(f.permite_compartir) = 0
+                        ) THEN 'Ocupado'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) = 1 THEN 'Puede compartir'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 2 THEN 'Ocupado'
                         WHEN p.estado = 'Disponible' THEN 'Libre'
-                        WHEN p.estado = 'Parcialmente_Asignado' THEN 'Puede compartir'
-                        WHEN p.estado = 'Completo' THEN 'Ocupado'
                         ELSE p.estado
                     END as observaciones
                 FROM parqueaderos p
                 LEFT JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
                 LEFT JOIN vehiculos v ON a.vehiculo_id = v.id
+                LEFT JOIN funcionarios f ON v.funcionario_id = f.id
                 WHERE p.activo = TRUE
                 GROUP BY p.id, p.numero_parqueadero, p.sotano, p.tipo_espacio, p.estado
                 ORDER BY COALESCE(p.sotano, 'Sótano-1'), p.numero_parqueadero
@@ -1220,19 +1237,48 @@ class ReportesTab(QWidget):
                     p.numero_parqueadero,
                     'Sótano-1' as sotano,
                     p.tipo_espacio,
-                    p.estado,
+                    CASE
+                        -- REGLA 1: Motos y Bicicletas SIEMPRE se marcan como Completo con 1 asignación
+                        WHEN p.tipo_espacio IN ('Moto', 'Bicicleta') AND COUNT(a.id) >= 1 THEN 'Completo'
+
+                        -- REGLA 2: Carros con CUALQUIER tipo de excepción se marcan como Completo desde la primera asignación
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 1 AND (
+                            MAX(f.tiene_parqueadero_exclusivo) = 1  -- Exclusivo Directivo
+                            OR MAX(f.pico_placa_solidario) = 1      -- Pico y Placa Solidario
+                            OR MAX(f.discapacidad) = 1              -- Discapacidad
+                            OR MAX(f.tiene_carro_hibrido) = 1       -- Carro Híbrido
+                            OR MIN(f.permite_compartir) = 0         -- No permite compartir
+                        ) THEN 'Completo'
+
+                        -- REGLA 3: Carros regulares (sin excepciones)
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) = 1 THEN 'Parcialmente_Asignado'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 2 THEN 'Completo'
+
+                        -- REGLA 4: Sin asignaciones
+                        ELSE p.estado
+                    END as estado,
                     COUNT(a.id) as vehiculos_asignados,
                     GROUP_CONCAT(CASE WHEN v.tipo_circulacion = 'PAR' THEN v.placa END) as circulacion_par,
                     GROUP_CONCAT(CASE WHEN v.tipo_circulacion = 'IMPAR' THEN v.placa END) as circulacion_impar,
                     CASE
+                        -- Mismo cálculo de estado para observaciones
+                        WHEN p.tipo_espacio IN ('Moto', 'Bicicleta') AND COUNT(a.id) >= 1 THEN 'Ocupado'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 1 AND (
+                            MAX(f.tiene_parqueadero_exclusivo) = 1
+                            OR MAX(f.pico_placa_solidario) = 1
+                            OR MAX(f.discapacidad) = 1
+                            OR MAX(f.tiene_carro_hibrido) = 1
+                            OR MIN(f.permite_compartir) = 0
+                        ) THEN 'Ocupado'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) = 1 THEN 'Puede compartir'
+                        WHEN p.tipo_espacio = 'Carro' AND COUNT(a.id) >= 2 THEN 'Ocupado'
                         WHEN p.estado = 'Disponible' THEN 'Libre'
-                        WHEN p.estado = 'Parcialmente_Asignado' THEN 'Puede compartir'
-                        WHEN p.estado = 'Completo' THEN 'Ocupado'
                         ELSE p.estado
                     END as observaciones
                 FROM parqueaderos p
                 LEFT JOIN asignaciones a ON p.id = a.parqueadero_id AND a.activo = TRUE
                 LEFT JOIN vehiculos v ON a.vehiculo_id = v.id
+                LEFT JOIN funcionarios f ON v.funcionario_id = f.id
                 WHERE p.activo = TRUE
                 GROUP BY p.id, p.numero_parqueadero, p.tipo_espacio, p.estado
                 ORDER BY p.numero_parqueadero

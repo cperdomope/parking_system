@@ -844,6 +844,7 @@ class AsignacionesTab(QWidget):
         assign_layout.addWidget(lbl_vehiculo, 0, 0)
 
         self.combo_vehiculo_sin_asignar = QComboBox()
+        self.combo_vehiculo_sin_asignar.setMinimumWidth(550)
         self.combo_vehiculo_sin_asignar.setFixedHeight(38)
         self.combo_vehiculo_sin_asignar.setStyleSheet(
             """
@@ -1390,7 +1391,7 @@ class AsignacionesTab(QWidget):
             SELECT v.*,
                    f.nombre, f.apellidos, f.cedula, f.cargo,
                    f.permite_compartir, f.pico_placa_solidario, f.discapacidad,
-                   f.tiene_parqueadero_exclusivo
+                   f.tiene_parqueadero_exclusivo, f.tiene_carro_hibrido
             FROM vehiculos v
             JOIN funcionarios f ON v.funcionario_id = f.id
             LEFT JOIN asignaciones a ON v.id = a.vehiculo_id AND a.activo = TRUE
@@ -1422,19 +1423,23 @@ class AsignacionesTab(QWidget):
                 vehiculo.get("tipo_vehiculo", "Carro"), "🚗"
             )
 
-            # Agregar indicadores visuales
-            indicadores = []
+            # Construir iconos de excepciones del funcionario
+            iconos = []
+            if vehiculo.get("tiene_parqueadero_exclusivo"):
+                iconos.append("🏢")
+            if vehiculo.get("tiene_carro_hibrido"):
+                iconos.append("🌿")
             if vehiculo.get("pico_placa_solidario"):
-                indicadores.append("🔄SOL")
+                iconos.append("🔄")
             if vehiculo.get("discapacidad"):
-                indicadores.append("♿DISC")
+                iconos.append("♿")
 
-            indicadores_str = f" [{' '.join(indicadores)}]" if indicadores else ""
+            iconos_str = " " + " ".join(iconos) if iconos else ""
 
-            # Formato: [ICONO] PLACA - NOMBRE (CIRCULACIÓN) [INDICADORES]
+            # Formato: [ICONO] PLACA - NOMBRE (CIRCULACIÓN) [ICONOS]
             tipo_circ = vehiculo.get("tipo_circulacion", "N/A")
             circulacion_str = f" ({tipo_circ})" if tipo_circ != "N/A" else ""
-            texto = f"{icono_tipo} {vehiculo['placa']} - {vehiculo['nombre']} {vehiculo['apellidos']}{circulacion_str}{indicadores_str}"
+            texto = f"{icono_tipo} {vehiculo['placa']} - {vehiculo['nombre']} {vehiculo['apellidos']}{circulacion_str}{iconos_str}"
             self.combo_vehiculo_sin_asignar.addItem(texto, vehiculo)
 
     def cargar_sotanos(self):
